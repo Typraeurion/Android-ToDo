@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent"
+  android:background="@color/white"
+  android:scrollbars="vertical"
+  android:scrollbarAlwaysDrawVerticalTrack="false">
+  <LinearLayout android:id="@+id/LinearLayout01"
+    android:layout_height="wrap_content"
+    android:layout_width="fill_parent"
+    android:orientation="vertical">
+    <RadioGroup android:id="@+id/RepeatRadioGroupInterval"
+     android:layout_height="wrap_content"
+     android:layout_width="fill_parent"
+     android:orientation="horizontal">
+	<RadioButton android:id="@+id/RepeatRadioButtonNone"
+	 style="@style/RepeatEditor.Button.Interval"
+	 android:text="@string/RepeatTabNone"
+	 android:checked="true"/>
+	<RadioButton android:id="@+id/RepeatRadioButtonDaily"
+	 style="@style/RepeatEditor.Button.Interval"
+	 android:text="@string/RepeatTabDaily"/>
+	<RadioButton android:id="@+id/RepeatRadioButtonWeekly"
+	 style="@style/RepeatEditor.Button.Interval"
+	 android:text="@string/RepeatTabWeekly"/>
+	<RadioButton android:id="@+id/RepeatRadioButtonSemiMonthly"
+	 style="@style/RepeatEditor.Button.Interval"
+	 android:text="@string/RepeatTabSemiMonthly"/>
+	<RadioButton android:id="@+id/RepeatRadioButtonMonthly"
+	 style="@style/RepeatEditor.Button.Interval"
+	 android:text="@string/RepeatTabMonthly"/>
+	<RadioButton android:id="@+id/RepeatRadioButtonYearly"
+	 style="@style/RepeatEditor.Button.Interval"
+	 android:text="@string/RepeatTabYearly"/>
+    </RadioGroup>
+
+    <FrameLayout android:id="@+id/FrameLayout01"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
+     android:scrollbars="vertical">
+	<TextView android:id="@+id/RepeatTextNone"
+	 android:layout_width="fill_parent"
+	 android:layout_height="fill_parent"
+	 android:text="@string/RepeatTextNone"
+	 android:gravity="center"
+	 android:padding="10dip"
+	 android:textColor="@color/black"/>
+
+	<LinearLayout android:id="@+id/RepeatLayout"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+	 android:orientation="vertical">
+	    <RadioGroup android:id="@+id/RepeatRadioGroupReset"
+	     android:layout_width="fill_parent"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal">
+		<RadioButton android:id="@+id/RepeatRadioButtonFixedSchedule"
+		 style="@style/RepeatEditor.Button.Reset"
+		 android:text="@string/RepeatOptionFixedSchedule"
+		 android:checked="true"/>
+		<RadioButton android:id="@+id/RepeatRadioButtonAfterCompleted"
+		 style="@style/RepeatEditor.Button.Reset"
+		 android:text="@string/RepeatOptionAfterCompleted"/>
+	    </RadioGroup>
+
+	    <TableLayout android:id="@+id/TableLayout01"
+	     android:layout_width="fill_parent"
+	     android:layout_height="wrap_content">
+		<TableRow android:id="@+id/TableRow01"
+		 android:layout_width="wrap_content"
+		 android:layout_height="fill_parent">
+		    <TextView android:id="@+id/RepeatTextEvery"
+		     android:layout_width="wrap_content"
+		     android:layout_height="fill_parent"
+		     android:text="@string/RepeatTextEvery"
+		     android:gravity="right|center_vertical"
+		     android:padding="5dip"
+		     android:textColor="@color/black"
+		     android:layout_weight="1"/>
+		    <LinearLayout android:id="@+id/LinearLayout04"
+		     android:layout_width="wrap_content"
+		     android:layout_height="wrap_content"
+		     android:layout_weight="1">
+			<EditText android:id="@+id/RepeatEditTextEvery"
+			 android:layout_width="wrap_content"
+			 android:layout_height="wrap_content"
+			 android:inputType="number"
+			 android:text="1"
+			 android:width="50sp"/>
+			<TextView android:id="@+id/RepeatTextPeriod"
+			 android:layout_width="wrap_content"
+			 android:layout_height="fill_parent"
+			 android:text="@string/RepeatTextDays"
+			 android:padding="5dip"
+			 android:textColor="@color/black"
+			 android:layout_weight="1"
+			 android:gravity="left|center_vertical"/>
+		    </LinearLayout>
+		</TableRow>
+
+		<TableRow android:id="@+id/TableRow02"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		    <TextView android:id="@+id/RepeatTextEndOn"
+		     android:layout_width="wrap_content"
+		     android:layout_height="fill_parent"
+		     android:text="@string/RepeatTextEndOn"
+		     android:gravity="right|center_vertical"
+		     android:padding="5dip"
+		     android:textColor="@color/black"
+		     android:layout_weight="1"/>
+		    <Button android:id="@+id/RepeatButtonEndDate"
+		     android:layout_width="wrap_content"
+		     android:layout_height="wrap_content"
+		     android:text="@string/RepeatButtonNoEndDate"
+		     android:layout_weight="1"/>
+		</TableRow>
+
+		<TableRow android:id="@+id/RepeatRowWeekdays"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		    <TextView android:id="@+id/RepeatTextRepeatOn"
+		     android:layout_width="wrap_content"
+		     android:layout_height="fill_parent"
+		     android:text="@string/RepeatTextRepeatOn"
+		     android:gravity="right|center_vertical"
+		     android:padding="5dip"
+		     android:textColor="@color/black"
+		     android:layout_weight="1"/>
+		    <LinearLayout android:id="@+id/LinearLayout05"
+		     android:layout_width="wrap_content"
+		     android:layout_height="wrap_content"
+		     android:orientation="horizontal"
+		     android:layout_weight="1">
+			<ToggleButton android:id="@+id/RepeatToggleSunday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerSun"
+			 android:textOff="@string/DatePickerSun"
+			 android:textOn="@string/DatePickerSun"/>
+			<ToggleButton android:id="@+id/RepeatToggleMonday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerMon"
+			 android:textOff="@string/DatePickerMon"
+			 android:textOn="@string/DatePickerMon"/>
+			<ToggleButton android:id="@+id/RepeatToggleTuesday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerTue"
+			 android:textOff="@string/DatePickerTue"
+			 android:textOn="@string/DatePickerTue"/>
+			<ToggleButton android:id="@+id/RepeatToggleWednesday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerWed"
+			 android:textOff="@string/DatePickerWed"
+			 android:textOn="@string/DatePickerWed"/>
+			<ToggleButton android:id="@+id/RepeatToggleThursday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerThu"
+			 android:textOff="@string/DatePickerThu"
+			 android:textOn="@string/DatePickerThu"/>
+			<ToggleButton android:id="@+id/RepeatToggleFriday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerFri"
+			 android:textOff="@string/DatePickerFri"
+			 android:textOn="@string/DatePickerFri"/>
+			<ToggleButton android:id="@+id/RepeatToggleSaturday"
+			 style="@style/RepeatEditor.Button.Weekday"
+			 android:checked="true"
+			 android:text="@string/DatePickerSat"
+			 android:textOff="@string/DatePickerSat"
+			 android:textOn="@string/DatePickerSat"/>
+		    </LinearLayout>
+		</TableRow>
+
+		<TableRow android:id="@+id/RepeatRowAlternateDirection"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		    <TextView android:id="@+id/RepeatTextAlternate"
+		     android:layout_width="wrap_content"
+		     android:layout_height="fill_parent"
+		     android:text="From actual date:"
+		     android:gravity="right|center_vertical"
+		     android:padding="5dip"
+		     android:textColor="@color/black"
+		     android:layout_weight="1"/>
+		    <RadioGroup android:id="@+id/RepeatRadioGroupAlternateDirection"
+		     android:layout_width="wrap_content"
+		     android:layout_height="wrap_content"
+		     android:layout_weight="1"
+		     android:orientation="horizontal">
+			<ToggleButton android:id="@+id/RepeatToggleNearest"
+			 style="@style/RepeatEditor.Button.Alternate"
+			 android:text="Nearest, or:"
+			 android:textOff="Nearest, or:"
+			 android:textOn="Nearest, or:"/>
+			<RadioButton android:id="@+id/RepeatRadioButtonPrevious"
+			 style="@style/RepeatEditor.Button.Alternate"
+			 android:background="@drawable/btn_radio_small"
+			 android:text="Previous"
+			 android:checked="true"/>
+			<RadioButton android:id="@+id/RepeatRadioButtonNext"
+			 style="@style/RepeatEditor.Button.Alternate"
+			 android:background="@drawable/btn_radio_small"
+			 android:text="Next"/>
+		    </RadioGroup>
+		</TableRow>
+
+		<TableRow android:id="@+id/RepeatRowDayDate"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		    <TextView android:id="@+id/RepeatTextRepeatBy"
+		     android:layout_width="wrap_content"
+		     android:layout_height="fill_parent"
+		     android:text="@string/RepeatTextRepeatBy"
+		     android:gravity="right|center_vertical"
+		     android:padding="5dip"
+		     android:textColor="@color/black"
+		     android:layout_weight="1"/>
+		    <RadioGroup android:id="@+id/RepeatRadioGroupDayte"
+		     android:layout_width="wrap_content"
+		     android:layout_height="wrap_content"
+		     android:layout_weight="1"
+		     android:orientation="horizontal">
+			<RadioButton android:id="@+id/RepeatRadioButtonByDay"
+			 style="@style/RepeatEditor.Button.Reset"
+			 android:text="@string/RepeatOptionByDay"
+			 android:checked="true"/>
+			<RadioButton android:id="@+id/RepeatRadioButtonByDate"
+			 style="@style/RepeatEditor.Button.Reset"
+			 android:text="@string/RepeatOptionByDate"/>
+		    </RadioGroup>
+		</TableRow>
+	    </TableLayout>
+	</LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout android:id="@+id/LinearLayout07"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
+     android:layout_margin="10dip"
+     android:background="@color/black">
+	<TextView android:id="@+id/RepeatTextDescription"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+	 android:layout_margin="1px"
+	 android:background="@color/white"
+	 android:padding="8dip"
+	 android:text="No Repeat"
+	 android:textColor="@color/black"
+	 android:lines="2"/>
+    </LinearLayout>
+  </LinearLayout>
+</ScrollView>

@@ -1,0 +1,753 @@
+\input texinfo   @c -*-texinfo-*-
+@setfilename ToDo.info
+@settitle To Do list for Android
+
+@smallbook
+@setchapternewpage on
+
+@titlepage
+@title{To Do list}
+@subtitle{for Android}
+@author{by Trevin Beattie}
+
+@page
+Copyleft @copyright{} 2011--2017 Trevin Beattie
+
+To Do for Android is distributed under the terms of the Gnu Public
+License, version 3.0.
+
+@quotation [Encryption code]
+Copyright © 2000-2013 The Legion of the Bouncy Castle
+Inc. (@uref{http://www.bouncycastle.org})
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+@end quotation
+
+Some of the images used by the program are reproduced from work created
+and shared by the Android Open Source Project and used according to the
+terms described in the Creative Commons 2.5 Attribution License.
+
+This manual and other images used by the program were created by Trevin
+Beattie and are shared according to the terms described in the Creative
+Commons 3.0 Attribution-ShareAlike License.
+@end titlepage
+
+@contents
+
+@ifinfo
+@node Top, The Basics, (dir), (dir)
+@top Menu
+@menu
+* The Basics::
+* Categorizing Lists::
+* Due Dates and Alarms::
+* Repeating Tasks::
+* Private Records::
+* Exporting and Importing::
+* Known Bugs::
+@end menu
+@end ifinfo
+
+@node The Basics, Categorizing Lists, Top, Top
+@chapter The Basics
+
+To Do was designed to be simple and intuitive, so you should be able to
+get started creating lists and exploring many of the application
+features without using this manual.
+
+The application runs on Android 2.1 or later (tested on 2.1 -- 5.0,)
+which should cover 99.9% of Android devices on the market.
+
+@ifinfo
+@menu
+* Adding To Do Items::
+* Changing To Do Items::
+* Completing Items::
+* Changing How Items Are Listed::
+@end menu
+@end ifinfo
+
+@node Adding To Do Items, Changing To Do Items, The Basics, The Basics
+@section Adding To Do Items
+
+To add an item to the list, press ``New'', then enter a short
+description of the item.
+
+@image{New_item,72mm,84mm}
+
+You can optionally add a priority, which is any positive number, to sort
+more important items before less important ones; the highest priority
+(first listed) is 1.
+
+You can also add a longer note to the item by pressing the note icon at
+the bottom right of the form.  This will bring up a separate page for
+entering your notes.  Press ``Done'' when you have finished your notes,
+or ``Delete...'' if you no longer need the note.
+
+@image{New_note,72mm,128.1mm}
+
+When finished entering your new item, press ``OK''.
+
+@node Changing To Do Items, Completing Items, Adding To Do Items, The Basics
+@section Changing To Do Items
+
+To change an existing item in the list, hold your finger on the item for
+a second or so (``long press'') to bring back the item details form.
+After making your changes press ``OK'' to save them; or you can press
+``Cancel'' to discard your changes, or ``Delete...'' to remove the item
+from your list.
+
+@node Completing Items, Changing How Items Are Listed, Changing To Do Items, The Basics
+@section Completing Items
+
+On the To Do list, each item has a checkbox next to it.
+
+@image{Simple_list,72mm,66mm}
+
+Tapping this will mark the item as done, but it will not be removed
+from the list, so you can always go back to the item and review or
+un-check it.
+
+@node Changing How Items Are Listed,  , Completing Items, The Basics
+@section Changing How Items Are Listed
+
+From the To Do list, push the Android menu button (the vertical ellipsis
+in the top corner on modern Android devices) and then press
+``Settings''.  This will let you set different options regarding what is
+shown in the list and in what order.
+
+The first item in the settings tells the application in what order your
+items are displayed --- by a combination of priority, category (see
+@ref{Categorizing Lists},) due date (see @ref{Due Dates and Alarms},)
+and alphabetically.  All options will sort items alphabetically where
+the other fields are equal.
+
+@image{Sort_options,72mm,128.1mm}
+
+As mentioned in the previous section, items which have been checked off
+are not actually removed from the list, but by default they are hidden
+from view so you only see the items which haven't been done yet.  If you
+turn on ``Show completed and hidden tasks'', then both completed and
+incompleted items will be shown.
+
+There is also a dedicated menu option just for toggling whether to show
+completed and hidden tasks.  (On Android 3 and newer devices, this
+option is shown as a check box on the main application title bar.)
+
+@image{Settings,72mm,90mm}
+
+The next three options will display additional fields next to each
+item.  (Items which do not have a due date will show a horizontal dash
+when ``Show due dates'' is selected.)
+
+The rest of the settings will be covered in later applicable chapters.
+
+Press the Android back button to close the settings screen.
+
+@node Categorizing Lists, Due Dates and Alarms, The Basics, Top
+@chapter Categorizing Lists
+
+Each item can be assigned to a different category, allowing you to
+create many unrelated lists --- for example, you can have a list of
+things to do, a shopping list, a packing list, books to read, etc.
+
+When the application is first installed it comes with just one category,
+``Unfiled,'' and all new items will be in this category.  To add new
+categories, open the category drop-down list next to the ``New'' button,
+then select ``Edit categories...''.
+
+@image{Default_category_list,72mm,128.1mm}
+
+From the next screen, press ``New'' to make a new line in the category
+list, then enter the name of the category right on that page.  Repeat
+for every category you want to create.  You can also change previously
+entered categories on this page.  When finished, press ``OK'' to save
+the new category list, or ``Cancel'' to discard your changes.
+
+@image{Edit_categories,72mm,48mm}
+
+Now when you create a new item, you will have the option of changing the
+category it is assigned to.
+
+@image{Custom_category_list,72mm,128.1mm}
+
+On the main list, open the category drop-down and select one of your
+custom categories to show only the items in that category.  New items
+will default to the currently selected category.  If you select ``All,''
+then all items from all categories will be shown.
+
+@image{Single_list,72mm,128.1mm}
+
+@node Due Dates and Alarms, Repeating Tasks, Categorizing Lists, Top
+@chapter Due Dates and Alarms
+
+Each item can be given a due date.  From the item detail form, press the
+button next to ``Due date'' to bring up a list of the next eight days
+(from today until next week.)
+
+@image{Default_due_dates,72mm,128.1mm}
+
+If you need to set a due date more than a week later, press ``Choose
+Date...'' which will bring up a calendar view.  From there you can
+select the year, month, and day.
+
+@image{Calendar_picker,72mm,128.1mm}
+
+To remove the due date, press the button next to ``Due date'' and then
+select ``None'' from the list.
+
+If you have enabled ``Show due dates'' in the application settings
+(@pxref{Changing How Items Are Listed}) then you can also set the due
+date of an item by pressing the dash or previously set date to the right
+of the item.
+
+@image{Listed_due_dates,72mm,72mm}
+
+You can optionally hide an item that has a due date until that date
+approaches.  After selecting the due date in the item details form, a
+new button will appear labeled ``Hide until.''  Press this button to
+bring up another form where you can enable or disable hiding the record,
+and specify how many days before the due date to reveal it.
+
+@image{Hide_dialog,72mm,128.1mm}
+
+Hidden records will still be displayed if you have selected ``Show
+completed and hidden tasks'' in the application settings.
+
+Items that have a due date may optionally have an alarm as well.  If an
+item has a due date in the item details form, a button labeled ``Alarm''
+will be available.  Press this to bring up another form where you can
+enable or disable the alarm, set how many days before the due date and
+what time you want the alarm to go off.  The alarm will sound on the
+selected day and every day after that at the same time until the item
+has been marked completed.
+
+@image{Alarm_dialog,72mm,128.1mm}
+
+In the application settings, you can choose which sound to use for all
+of your To Do alarms.
+
+@node Repeating Tasks, Private Records, Due Dates and Alarms, Top
+@chapter Repeating Tasks
+
+Items which have a due date can be made into repeating task.  When a
+repeating task is marked as completed, its due date is automatically
+moved ahead to the next due date according to the schedule you set, and
+the item un-checked again.
+
+@ifinfo
+@menu
+* Simple Repeats::
+* Advance Repeats::
+@end menu
+@end ifinfo
+
+@node Simple Repeats, Advance Repeats, Repeating Tasks, Repeating Tasks
+@section Simple Repeats
+
+Pressing the ``Repeat'' button will bring up a list of several common
+types of repeating schedules.  These are:
+
+@image{Default_repeats,72mm,128.1mm}
+
+@itemize @bullet
+@item
+``Daily until...'' will bring up a calendar where you can select the
+final day to repeat the task.  Then every time you complete the task on
+or after its current due date, it will advance the due date to the next
+day until it reaches the end date.  After that, the task is left in a
+completed state.
+
+@item
+``Every week'' will advance the due date by one week every time it is
+completed.
+
+@item
+``Semi-monthly'' will advance the due date by 15 days if the original
+due date was on the 1st to the 14th of the month; to the last day of the
+month if the original due date was on the 15th; to 15 days earlier in
+the @emph{next} month if the original due date was on the 16th to the
+29th; or to the 15th of the next month if the original due date was on
+the 30th or 31st.  The next time the task is completed, it advances to
+the date of the next month that corresponds to the original due date, or
+to the end of the month if the next month does not have enough days.
+
+For example: if the original due date is January 30, 2014, then the next
+due dates will be February 15, February 28, March 15, March 30, etc.
+
+@item
+``Every month'' will advance the due date by one month every time it is
+completed, on the same day of the month or at the end of the month if
+the next month does not have enough days.
+
+@item
+``Every year'' will advance the due date by one year every time it is
+completed, on the same day and month of the year.
+@end itemize
+
+For all of these options, you can customize the schedule further by
+pressing the repeat button again and selecting ``Other...''.
+
+@node Advance Repeats, Private Records, Simple Repeats, Repeating Tasks
+@section Advance Repeats
+
+Some schedules aren't as predictable as calendar dates, but To Do gives
+you a great deal of additional flexibility in setting up repeating
+tasks.  Selecting ``Other...'' from the Repeat list will give you access
+to a ``Change Repeat'' form with these options.
+
+The top row of buttons lets you select the unit of time in which
+intervals between tasks are measured: days, weeks, months, or years.
+
+For each of the four standard units of time, two more buttons let you
+select whether the task repeats at a fixed schedule (for example, paying
+bills) or a certain amount of time after the task was last completed
+(for example, changing a filter.)
+
+Next, you can enter how many units of time elapse between doing the
+task, for example every 2 days or every 7 years.
+
+You can optionally pick a date after which the task no longer repeats.
+If you leave this as ``No End Date,'' the task will repeat indefinitely.
+
+Depending on the unit of time and scheduling option chosen, you may have
+additional options for further fine-tuning when the task is repeated.
+More detail on these is given below.
+
+At the bottom of the form, a text box summarizes how often the task will
+repeat given the option you've currently selected.
+
+@ifinfo
+@menu
+* Day Options::
+* Week Options::
+* Semi Options::
+* Month Options::
+* Year Options::
+@end menu
+@end ifinfo
+
+@node Day Options, Week Options, Advance Repeats, Advance Repeats
+@subsection Day Options
+
+When advancing a task by days, whether on a fixed schedule or after the
+task was last completed, you can choose to make it due only on certain
+days of the week --- for example, weekdays, weekends, never on a Sunday,
+etc.
+
+@image{Change_repeat-day-after,72mm,128.1mm}
+
+If the next advancement of the due date would put it on a day of the
+week that isn't allowed, To Do will normally move the due date forward
+to the next allowed day.  You can change this behavior by selecting
+``Previous'' to have it move the due date @i{backward} to the previous
+allowed day, provided that day still comes after the task's previous due
+date.  @i{(The application will never move a due date backward in
+time.)}
+
+Selecting the ``Nearest, or:'' button will tell the application to
+choose the allowed day nearest the target.  For example if the allowed
+days were Monday and Friday and the due date would land on a Tuesday, it
+would be pushed back to Monday; while if the due date would land on a
+Thursday, it would be pushed forward to Friday.  If the target date is
+the same distance from the allowed days, e.g. Wednesday, then the due
+date would be chosen according to the ``Previous'' or ``Next'' button.
+
+@node Week Options, Semi Options, Day Options, Advance Repeats
+@subsection Week Options
+
+For weekly tasks on a fixed schedule, you can select multiple days of
+the week on which the task occurs --- for example, every Tuesday and
+Friday.
+
+@image{Change_repeat-week-fixed,72mm,128.1mm}
+
+This gets tricky if your interval is every 2 or more weeks.  In that
+case, the due date will advance from one chosen day of the week to the
+next within the current week, until it reaches the last chosen day.
+After that, it will skip the next week(s) and land on the first chosen
+day of the @i{n}th week from where it started.
+
+For tasks that repeat a number of weeks after its last completion, you
+can choose to make it due only on certain days of the week just the same
+as with daily tasks.  @i{(In this respect, every @math{n} weeks after
+completed is identical to every @math{7 @times n} days after
+completed.)}
+
+@node Semi Options, Month Options, Week Options, Advance Repeats
+@subsection Semi Options
+
+Semi-monthly events have two forms: by day of the week or day of the
+month.
+
+The first case starts from the day of the week of the initial due date,
+and advances every two or three weeks depending on whether there are
+four or five of those days in the month.  Normally, the second week
+is chosen either two weeks after or two weeks before the initial due
+date, depending on whether the first due date is after the second week
+of the month.
+
+@image{Change_repeat-semi-day,72mm,128.1mm}
+
+In the event that the initial due date is on the 5th occurrence of a day
+of the week, the alternate due date will be on the 2nd week.  For
+example, if the first due date is Sunday, March 16, then semi-monthly
+repeats would be on the 1st and 3rd Sunday.  On the other hand if the
+first due date is Sunday, March 30, then semi-monthly repeats would be
+on the 2nd and @i{last} Sunday --- ``last'' being the 4th or 5th,
+depending on how many Sundays are in the month.
+
+The second case of semi-monthly events, by date, sets the alternate due
+date either 15 days after or 15 days before the initial due date,
+depending on whether the first due date is after the 15th day of the
+month.  With this form you also have the option to select which days of
+the week the due date can fall on, just the same as with daily tasks.
+
+@image{Change_repeat-semi-date,72mm,128.1mm}
+
+@node Month Options, Year Options, Semi Options, Advance Repeats
+@subsection Month Options
+
+Monthly tasks can be repeated on a fixed schedule by day of the week,
+for example the 4th Monday.  In case the initial due date is on the 5th
+occurence of a day of the week, it will be repeated on the @i{last} such
+day of the following months.
+
+@image{Change_repeat-month-day,72mm,128.1mm}
+
+Monthly tasks can be also repeated on a fixed schedule by day of the
+month based on the initial due date, or a number of months after the
+task was last completed.  With these options you can choose to have it
+occur only on certain days of the week, in which case the actual due
+date will be either the next, previous, or nearest allowed day to the
+target day of the month.
+
+@node Year Options, Private Records, Month Options, Advance Repeats
+@subsection Year Options
+
+Yearly tasks can be repeated on a fixed schedule by day of the week, for
+example the 3rd Monday of February.  This is an ideal option for certain
+holidays that always take place on a certain day of the week rather than
+a day of the month.
+
+Yearly tasks can be also repeated on a fixed schedule by month and date
+based on the initial due date, or a number of years after the task was
+last completed.  With these options you can choose to have it occur only
+on certain days of the week, in which case the actual due date will be
+either the next, previous, or nearest allowed day to the target day.
+
+@node Private Records, Exporting and Importing, Repeating Tasks, Top
+@chapter Private Records
+
+Items can be marked as ``Private'', in which case they are normally
+hidden in your To Do list unless you turn on ``Show private records'' in
+the application settings.
+
+You can add an extra layer of security to your private records by
+setting a password from the application's main menu.  After setting a
+password, all of your private records will be encrypted and will show up
+as ``[Locked]'' in your To Do list and you will not be able to edit them
+until you enter your password in the application settings.  When you
+exit the application, it forgets your password so that the private
+records become locked again the next time anybody opens your To Do list.
+
+@image{Locked_record,72mm,72mm}
+
+@b{Important!  If you have not entered your password in the application
+settings and you mark a record as Private, it will @i{not} be
+encrypted.}  If you want to encrypt a new record but have not entered
+your password yet, simply save it, enter your password in the
+application settings, open up your new record and save it again.
+
+You can remove your password and un-encrypt your private records by
+choosing ``Set Password'' from the main menu, enter your old password,
+but leave the new password blank.
+
+@ifinfo
+@menu
+* Lost Password::
+@end menu
+@end ifinfo
+
+@node Lost Password, Exporting and Importing, Private Records, Private Records
+@section Lost Password
+
+If you have set a password and later forget what it was, you will not be
+able to access your encrypted private records.  The only way to recover
+from this situation and reset your password is to erase the application
+data.
+
+@enumerate
+@item
+If you have any private records which were @i{not} encrypted (because
+they were created without a password,) change them so they are not
+private.
+
+@item
+Export a backup copy of your To Do list, but @i{do not} include private
+records.
+
+@image{Export_exclude_private,72mm,57.6mm}
+
+@item
+Exit the To Do application, and open up the Android Settings
+application.
+
+@image{Android_home_screen,72mm,128.1mm}
+
+@item
+Choose ``Applications''
+
+@image{Android_settings,72mm,128.1mm}
+
+@item
+Choose ``Manage applications''.
+
+@item
+Choose ``To Do''.
+
+@item
+Press the ``Clear data'' button, and confirm that you really want to do
+this.
+
+@image{Android_application_info,72mm,128.1mm}
+
+@item
+Exit all the way out of the Android Settings, and go back to the To Do
+application.  It should now be empty.
+
+@item
+Import the file you had previously backed up.
+
+@item
+If you had any records which were private but not encrypted, change them
+back to private.
+
+@item
+Set a new password.  Make sure you remember this one!
+
+@end enumerate
+
+@node Exporting and Importing, Known Bugs, Private Records, Top
+@chapter Exporting and Importing
+
+In order to protect against the loss of data on your Android device, you
+should periodically make a backup copy.  In the main menu select
+``Export Data'' to save all of your To Do items to a file on your
+device.  You can choose where to save the file and what to name it, but
+by default it is saved to your device's mass storage media, for example
+@file{/sdcard/Android/Data/.../todo.xml}.  That way you can plug it into
+your computer and copy the file there to keep it safe.
+
+When you need to restore To Do items from your backup file, select
+``Import Data'' from the main menu, make sure the file shown is the same
+one you wish to import (by default it remembers the last file entered,)
+and select the type of import you wish to perform.  The choices are:
+
+@itemize @bullet
+@item ``Clean'':
+Use this when importing a backup file to a new device, or if you need to
+undo all changes which have been made since the file was exported.  This
+will erase all of your To Do items and categories before importing
+records fom the file.
+
+@item ``Overwrite'':
+This option will restore all records from your backup file --- even if
+the title has changed --- but leave any new records in the application
+alone.
+
+@item ``Update'':
+This option will only import records from the backup file whose
+modification time is newer than the corresponing record in the
+application database.  Use this if you want to keep your To Do list on
+multiple devices, to synchronize changes between the two.  Note that if
+you update a record on both devices and then try to synchronize them
+with an update, the earlier changes will be lost in favor of the later
+ones.
+
+@item ``Merge'':
+This option will import records from the backup file which have the same
+category and title as the corresponding record in the application
+database, @i{if} it has a newer modification time, similar to an
+Update.  However if the record in the backup file has a different
+category or title, or it does not exist in the application database, it
+will be added.
+
+@item ``Add'':
+This option will add all records from the backup file as new items in
+your To Do list, regardless of duplicates.  This should be used if you
+created different lists on separate devices and want to copy the list
+from one to the other.
+
+@item ``Test'':
+This option simply parses the backup file and reads all of its records
+without importing any.  Use this if you need to verify the integrity of
+your backup file, particularly if you have manually edited it or had it
+created by a different application.
+
+@end itemize
+
+@image{Import_activity,72mm,90mm}
+
+If you have set a password for your private records, you do not need to
+enter it to back up your private data; the application saves the
+encrypted records.  You @i{will} need that password when you need to
+import those private records back in to the application.  This may be
+different than your current password.  @b{Important!  Do not forget the
+password you had when you made the backup file.}  Without thet password,
+it will be practically impossible to recover your private records;
+however you may still restore all of your non-private records by
+un-checking ``Include Private'' on the Import form.
+
+If you have not entered your password in the application settings when
+you attempt to import a backup file, the import form will warn you that
+any private records imported will not be encrypted.  You may either
+cancel the operation to go enter your password and then try again, or go
+ahead and import the data and then re-encrypt the private records
+later.  To encrypt them afterward, either open up and save each private
+record individually, or choose ``Set Password'' from the main menu and
+change the password.  @i{(You can change it to the same password if you
+wish.)}
+
+@node Known Bugs, , Exporting and Importing, Top
+@chapter Known Bugs
+
+The following bugs are known to exist in the 2017.07.25 release of To
+Do.  If you encounter any other bugs, please go to my project page on
+SourceForge to report them:
+
+@uref{https://sourceforge.net/p/androidtodolist/tickets/}
+
+@itemize @bullet
+@item
+It is not possible to enter a new item or change the text of an existing
+item directly in the To Do list; this can only be done in the item
+details form.  I tried making the text in the list editable, but had
+difficulty getting it to work.
+
+@item
+If you start to create a new item and then press ``Cancel'' instead of
+``OK'', a blank item will be left in the list.
+
+@item
+If all categories are shown in the list page and you click ``New'', the
+application may or may not crash; normally it should create the item
+with a category of ``Unfiled.''  I haven't been able to reproduce this
+bug consistently.
+
+@item
+It is not possible to delete the last remaining category in the category
+list.
+
+@item
+When choosing an end date for a repeating task, the ``End on'' button
+text is not changed to show the chosen date.  (The end date will be
+saved when you click ``OK''.)
+
+@item
+If an end date has been chosen for a repeating task, there is no way to
+change it back to ``no end date.''
+
+@item
+The number of records that can be imported from a previously exported
+file is limited by the amount of memory available to the application.
+If you find that the application dies when importing a file, try
+splitting the file into two or more smaller files, copying the
+@samp{<Metadata>} and @samp{<Categories>} sections into each file, and
+import them separately.
+
+@item
+When importing a backup file, the progress bar may not update properly.
+
+@item
+It is not possible to restore the preferences from a previously exported
+file.
+@end itemize
+
+The following bugs were in the 2014.06.02 release but have been fixed as
+of 2017.07.25.
+
+@itemize @bullet
+@item
+Opening the details of any To Do item in landscape orientation would
+cause the application to crash.  That was because the application tries
+to show or hide the ``Completed'' date depending on whether an item was
+ever checked, but in landscape mode this field is on the same row as the
+``Due'' date.  In the 2017.07.25 release, the ``Completed'' field is
+always shown even if it has no value.
+
+@item
+After an alarm has already gone off, the alarm would go off again every
+time a change is made to any To Do item.
+@end itemize
+
+The following bugs were in the 2014.04.06 release but have been fixed as
+of 2014.06.02.
+
+@itemize @bullet
+@item
+On Honeycomb (Android 3) and newer devices, after viewing the details of
+a To Do item or going to the application settings and then returning to
+the To Do list, the selected category on the main screen would switch to
+``All''.
+
+@item
+How to access the menu may not be apparent on Honeycomb or newer devices
+which lack a physical menu button.  The application interface has been
+updated so that the menu is now accessible from the title bar.
+@end itemize
+
+In addition to the above bug fixes, a new menu option was added for
+conveniently toggling whether to show or hide completed items without
+having to enter the application settings screen.
+
+The following bugs were in the 2014.03.29 release but have been fixed as
+of 2014.04.06.
+
+@itemize @bullet
+@item
+When exporting a backup file the application included private records
+regardless of whether ``Include Private'' was checked or not.
+
+@item
+Importing a backup file in ``Update'' mode was checking an item's
+creation time rather than its modification time, so a modified item
+would never be updated from the file.
+
+@item
+When an item as checked complete or the due date changed directly from
+the list (as opposed to the item details,) its modification time is not
+changed.  As a result, the change is not carried over if you export the
+list and then import it to another device in ``Update'' mode.
+
+@end itemize
+
+The following bugs were in the 2014.03.23 release but have been fixed as
+of 2014.03.29.
+
+@itemize @bullet
+@item
+If you have not set a password and you try to enter one in the Settings,
+the application will crash.  In the 2014.03.29 release, the password
+field no longer appears when a password has not been set.
+
+@end itemize
+
+@bye

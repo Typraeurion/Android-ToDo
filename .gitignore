@@ -1,0 +1,52 @@
+# Backups
+*~
+filelist.txt
+git
+RCS
+
+# Eclipse & Android SDK generated files
+bin
+.classpath
+gen
+.project
+project.properties
+.settings
+
+# Source bundles
+*.tar.gz
+*.zip
+
+# Test files
+lint.xml
+todo*.xml
+
+# TeX intermediate and log files
+# (It can be very messy)
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.blx.aux
+*.blx.bib
+*.cb
+*.cb2
+*.cp
+*.cps
+*.fls
+*.fmt
+*.fn
+*.fns
+*.fot
+*.ky
+.*.lb
+*.lof
+*.log
+*.lot
+*.out
+*.pg
+*.run.xml
+*.st
+*.sts
+*.toc
+*.tp
+*.vr

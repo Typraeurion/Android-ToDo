@@ -1,0 +1,148 @@
+\input texinfo   @c -*-texinfo-*-
+@setfilename Building_ToDo.info
+@settitle Building the To Do application for Android
+
+@smallbook
+@setchapternewpage on
+
+@titlepage
+@title{Building the To Do application}
+@subtitle{for Android}
+@author{by Trevin Beattie}
+
+@page
+Copyleft @copyright{} 2011–-2017 Trevin Beattie
+
+To Do for Android is distributed under the terms of the Gnu Public
+License, version 3.0.
+
+@quotation [Encryption code]
+Copyright © 2000-2013 The Legion of the Bouncy Castle
+Inc. (@uref{http://www.bouncycastle.org})
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+@end quotation
+
+Some of the images used by the program are reproduced from work created
+and shared by the Android Open Source Project and used according to the
+terms described in the Creative Commons 2.5 Attribution License.
+
+This manual and other images used by the program were created by Trevin
+Beattie and are shared according to the terms described in the Creative
+Commons 3.0 Attribution-ShareAlike License.
+@end titlepage
+
+@contents
+
+@ifinfo
+@node Top, Building from the Source, (dir), (dir)
+@top Menu
+@menu
+* Building from the Source::
+* To Do::
+@end menu
+@end ifinfo
+
+@node Building from the Source, To Do, , Top
+@chapter Building from the Source
+
+When making any changes to the code, you also need to change the release
+date in the ``About@dots{}'' dialog (@file{res/values/strings.xml} /
+@code{InfoPopupText}) as well as the application's internal version
+number (@file{AndroidManafest.xml} / @code{android:versionCode} and
+@code{android:versionName}).
+
+@c To do: move this chapter to a separate README or BUILDING file;
+@c regular users don't need to know about it.
+
+To build the application @file{.apk}, you will need:
+@itemize @bullet
+@item A Java 6 compiler
+
+@item Eclipse integrated development environment (IDE)
+
+@item The Android software development kit (SDK).  I used release 12 for
+the current version.
+@end itemize
+
+See @uref{http://developer.android.com/sdk/index.html} for information
+on how to set up a project using the Android SDK.
+
+@node Generating Icons, Generating Documentation, Building from the Source, Building from the Source
+@section Generating Icons
+
+Some of the application icons are generated from 3-D image description
+files using @uref{http://www.povray.org/,Persistence of Vision}.  The
+image files are included with the source code, but in case you want to
+tweak or change any image you can use @command{povray} to generate new
+ones.
+
+Because some of the icons contain small details that may get lost if
+rendered at a low resolution, it is recommended that you render the
+initial image at a size which is the least common multiple of all icon
+sizes --- @math{288 @times 288} --- and then use a raster graphics
+program such as the @uref{http://www.gimp.org/,GIMP},
+@uref{http://www.imagemagick.org/,@command{convert}}, or
+@uref{http://netpbm.sourceforge.net/,@command{pamscale}}.  For each
+image file @file{foo.png}, you need to create five icons: a @math{16
+@times 16} icon in @file{res/drawable/foo_16.png}, a @math{24 @times 24}
+icon in @file{res/drawable-mdpi/foo.png}, a @math{32 @times 32} icon in
+@file{res/drawable/foo_32.png}, a @math{36 @times 36} icon in
+@file{res/drawable/foo_36.png}, and a @math{48 @times 48} icon in
+@file{res/drawable-hdpi/foo.png}.
+
+The command for generating an image from one of the @file{.pov}
+descriptions is:
+
+@example
+povray +FN +AM3 +A0.3 +UA +W288 +H288 foo.pov
+@end example
+
+The main application icon was drawn by hand in the GIMP, and can be
+found in @file{IconMaster.xcf}.  This is scaled down to @math{48 @times
+48} for @file{res/drawable-mdpi/icon.png}, and to @math{72 @times 72}
+for @file{res/drawable-hdpi/icon.png}.
+
+@node Generating Documentation,  , Generating Icons, Building from the Source
+@section Generating Documentation
+
+Lastly, if you need to generate a new edition of this manual, you will
+need @uref{http://www.gnu.org/software/texinfo/,@command{texinfo}} and
+@uref{http://www.tug.org/applications/pdftex/,@command{pdftex}}.
+
+To generate the manual in PDF, simply run:
+
+@example
+texi2pdf ToDo.texinfo
+@end example
+
+@node To Do, , Building from the Source, Top
+@chapter To Do
+
+@itemize @bullet
+@item Document how the code works
+
+@item Document the data structures
+
+@item Document the encryption algorithms
+
+@end itemize
+
+@bye

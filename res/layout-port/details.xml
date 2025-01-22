@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:background="@color/white"
+  android:layout_height="fill_parent"
+  android:layout_width="fill_parent"
+  android:scrollbars="vertical"
+  android:scrollbarAlwaysDrawVerticalTrack="false">
+  <LinearLayout android:id="@+id/LinearLayout00"
+    android:layout_height="wrap_content"
+    android:layout_width="fill_parent"
+    android:orientation="vertical">
+    <EditText android:text="Description"
+     android:id="@+id/DetailEditTextDescription"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
+     android:inputType="text|textCapSentences">
+    </EditText>
+
+    <TableLayout android:id="@+id/TableLayout01"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content">
+	<TableRow android:id="@+id/TableRow01"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextPriority"
+	     android:id="@+id/DetailTextPriority"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout01"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<EditText android:id="@+id/DetailEditTextPriority"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content"
+		 android:text="8"
+		 android:inputType="number">
+		</EditText>
+	    </LinearLayout>
+	</TableRow>
+
+	<TableRow android:id="@+id/CategoryTableRow"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextCategory"
+	     android:id="@+id/DetailTextCategory"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout02"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<Spinner android:layout_height="wrap_content"
+		 android:layout_width="fill_parent"
+		 android:id="@+id/DetailSpinnerCategory">
+		</Spinner>
+	    </LinearLayout>
+	</TableRow>
+
+	<TableRow android:id="@+id/LastCompletedTableRow"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextCompleted"
+	     android:id="@+id/DetailTextCategory"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout03"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<TextView android:layout_height="wrap_content"
+		 android:layout_width="fill_parent"
+		 android:id="@+id/DetailTextCompletedDate">
+		</TextView>
+	    </LinearLayout>
+	</TableRow>
+
+ 	<TableRow android:id="@+id/DueDateTableRow"
+ 	 android:layout_width="fill_parent"
+ 	 android:layout_height="wrap_content"
+ 	 android:padding="3px"
+ 	 android:clickable="true">
+	    <TextView android:text="@string/DetailTextDueDate"
+	     android:id="@+id/DetailTextDueDate"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout04"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<Button android:id="@+id/DetailButtonDueDate"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		</Button>
+	    </LinearLayout>
+	</TableRow>
+
+	<TableRow android:id="@+id/HideTableRow"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextHideUntil"
+	     android:id="@+id/DetailTextHideUntil"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout05"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<Button android:text="7 days earlier"
+		 android:id="@+id/DetailButtonHideUntil"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		</Button>
+	    </LinearLayout>
+	</TableRow>
+
+	<TableRow android:id="@+id/AlarmTableRow"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextAlarm"
+	     android:id="@+id/DetailTextAlarm"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout05"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<Button android:text="2 days earlier"
+		 android:id="@+id/DetailButtonAlarm"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		</Button>
+	    </LinearLayout>
+	</TableRow>
+
+	<TableRow android:id="@+id/RepeatTableRow"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextRepeat"
+	     android:id="@+id/DetailTextRepeat"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout06"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<Button android:text="None"
+		 android:id="@+id/DetailButtonRepeat"
+		 android:layout_width="fill_parent"
+		 android:layout_height="wrap_content">
+		</Button>
+	    </LinearLayout>
+	</TableRow>
+
+	<TableRow android:id="@+id/PrivateTableRow"
+	 android:layout_width="fill_parent"
+	 android:layout_height="wrap_content"
+ 	 android:padding="3px">
+	    <TextView android:text="@string/DetailTextPrivate"
+	     android:id="@+id/DetailTextPrivate"
+	     android:layout_width="wrap_content"
+	     android:layout_height="fill_parent"
+	     android:gravity="center_vertical"
+	     android:textColor="@color/black">
+	    </TextView>
+
+	    <LinearLayout android:id="@+id/LinearLayout07"
+	     android:layout_height="wrap_content"
+	     android:orientation="horizontal"
+	     android:layout_width="fill_parent">
+		<CheckBox android:id="@+id/DetailCheckBoxPrivate"
+		 android:layout_width="wrap_content"
+		 android:layout_height="wrap_content">
+		</CheckBox>
+	    </LinearLayout>
+	</TableRow>
+    </TableLayout>
+
+    <LinearLayout android:id="@+id/LinearLayout08"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
+     android:orientation="horizontal">
+	<Button android:text="@string/DetailButtonOK"
+	 android:id="@+id/DetailButtonOK"
+	 android:layout_width="wrap_content"
+	 android:layout_height="wrap_content"
+	 android:layout_weight="1">
+	</Button>
+
+	<Button android:text="@string/DetailButtonCancel"
+	 android:id="@+id/DetailButtonCancel"
+	 android:layout_width="wrap_content"
+	 android:layout_height="wrap_content"
+	 android:layout_weight="1">
+	</Button>
+
+	<Button android:text="@string/DetailButtonDelete"
+	 android:id="@+id/DetailButtonDelete"
+	 android:layout_width="wrap_content"
+	 android:layout_height="wrap_content"
+	 android:layout_weight="1">
+	</Button>
+
+	<ImageButton
+	 android:id="@+id/DetailButtonNote"
+	 android:layout_width="wrap_content"
+	 android:layout_height="wrap_content"
+	 android:layout_weight="1"
+	 android:src="@drawable/postit"
+	 android:padding="4dip" android:scaleType="center">
+	</ImageButton>
+    </LinearLayout>
+  </LinearLayout>
+</ScrollView>

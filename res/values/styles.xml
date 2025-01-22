@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="DatePicker.Button" parent="@android:style/Widget.Button.Small">
+	<item name="android:background">@drawable/btn_default_small</item>
+	<item name="android:layout_height">wrap_content</item>
+	<item name="android:layout_width">wrap_content</item>
+	<item name="android:textColor">@color/black</item>
+	<item name="android:textAppearance">@style/TextAppearance.Small</item>
+    </style>
+
+    <style name="DatePicker.Button.Date">
+	<item name="android:layout_weight">1</item>
+	<item name="android:padding">2sp</item>
+    </style>
+
+    <style name="DatePicker.Button.Month">
+	<item name="android:background">@drawable/btn_radio_small</item>
+	<item name="android:button">@color/invisible</item>
+	<item name="android:layout_weight">1</item>
+	<item name="android:padding">4sp</item>
+    </style>
+
+    <style name="DatePicker.Button.Year">
+	<item name="android:width">24sp</item>
+    </style>
+
+    <style name="DatePicker.Text.Weekday" parent="@style/TextAppearance.Small">
+	<item name="android:gravity">center</item>
+	<item name="android:layout_height">wrap_content</item>
+	<item name="android:layout_weight">1</item>
+	<item name="android:layout_width">wrap_content</item>
+	<item name="android:textColor">@color/black</item>
+	<item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="DropDownItem" parent="@android:style/Widget.DropDownItem">
+	<item name="android:ellipsize">marquee</item>
+	<item name="android:layout_height">64dip</item>
+	<item name="android:layout_width">fill_parent</item>
+	<item name="android:singleLine">true</item>
+	<item name="android:textAppearance">@style/TextAppearance.Widget.DropDownItem</item>
+    </style>
+
+    <style name="DropDownItem.Spinner">
+	<item name="android:checkMark">@android:drawable/btn_radio</item>
+    </style>
+
+    <style name="ListCheckbox" parent="@android:style/Widget.CompoundButton">
+	<item name="android:background">@drawable/checkbox_off_background</item>
+	<item name="android:button">@drawable/btn_check</item>
+	<item name="android:layout_height">wrap_content</item>
+	<item name="android:layout_width">wrap_content</item>
+    </style>
+
+    <style name="ListImage">
+	<item name="android:gravity">center</item>
+	<item name="android:layout_height">wrap_content</item>
+	<item name="android:layout_width">wrap_content</item>
+    </style>
+
+    <style name="ListText" parent="@android:style/TextAppearance.Small">
+	<item name="android:textColor">@color/black</item>
+	<item name="android:textSize">10pt</item>
+	<item name="android:textStyle">normal</item>
+    </style>
+    <style name="ListText.Centered">
+	<item name="android:gravity">center</item>
+	<item name="android:layout_height">fill_parent</item>
+	<item name="android:layout_width">wrap_content</item>
+    </style>
+    <style name="ListText.Centered.Bold">
+	<item name="android:textStyle">bold</item>
+    </style>
+    <style name="ListText.Entry">
+	<item name="android:background">@drawable/underline</item>
+	<item name="android:ellipsize">end</item>
+	<item name="android:gravity">left|center_vertical</item>
+	<item name="android:layout_height">wrap_content</item>
+	<item name="android:layout_width">fill_parent</item>
+	<item name="android:maxLines">3</item>
+    </style>
+
+    <style name="MiniDropDownItem" parent="@android:style/Widget.DropDownItem">
+	<item name="android:background">@color/white</item>
+	<item name="android:ellipsize">marquee</item>
+	<item name="android:layout_height">48dip</item>
+	<item name="android:layout_width">fill_parent</item>
+	<item name="android:paddingRight">10sp</item>
+	<item name="android:singleLine">true</item>
+	<item name="android:textAppearance">@style/TextAppearance.Widget.DropDownItem</item>
+    </style>
+
+    <style name="RepeatEditor.Button" parent="@android:style/Widget.Button.Small">
+	<item name="android:background">@drawable/btn_radio_small</item>
+	<item name="android:button">@color/invisible</item>
+	<item name="android:layout_height">wrap_content</item>
+	<item name="android:layout_weight">1</item>
+	<item name="android:layout_width">wrap_content</item>
+	<item name="android:gravity">center</item>
+	<item name="android:textColor">@color/black</item>
+	<item name="android:textAppearance">@style/TextAppearance.Small</item>
+    </style>
+
+    <style name="RepeatEditor.Button.Alternate">
+	<item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="RepeatEditor.Button.Interval">
+	<item name="android:padding">2sp</item>
+	<item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="RepeatEditor.Button.Reset">
+	<item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="RepeatEditor.Button.Weekday">
+	<item name="android:padding">2sp</item>
+	<item name="android:textSize">14sp</item>
+	<item name="android:width">24sp</item>
+    </style>
+
+    <style name="TextAppearance.Small" parent="@android:style/TextAppearance.Small">
+	<item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="TextAppearance.Widget.DropDownItem" parent="@android:style/TextAppearance.Widget">
+	<item name="android:textColor">@color/black</item>
+    </style>
+
+</resources>

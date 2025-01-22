@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent"
+  android:background="@color/white"
+  android:scrollbars="vertical"
+  android:scrollbarAlwaysDrawVerticalTrack="false">
+    <LinearLayout android:id="@+id/LinearLayout00"
+      android:layout_width="fill_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:background="@color/white">
+	<CheckBox android:id="@+id/AlarmCheckBox"
+	 android:layout_height="wrap_content"
+	 android:text="@string/AlarmTextAlarm"
+	 android:layout_width="fill_parent"
+	 android:textColor="@color/black"/>
+
+	<LinearLayout android:id="@+id/LinearLayout01"
+	 android:layout_width="wrap_content"
+	 android:layout_height="wrap_content">
+	    <EditText android:id="@+id/AlarmEditDaysEarlier"
+	     android:layout_width="wrap_content"
+	     android:layout_height="wrap_content"
+	     android:background="@drawable/underline"
+	     android:text="99"
+	     android:inputType="number"
+	     android:ems="2"
+	     android:gravity="right"/>
+	    <TextView android:id="@+id/AlarmTextDaysEarlier"
+	     android:layout_width="wrap_content"
+	     android:layout_height="wrap_content"
+	     android:text="@string/AlarmTextDaysEarlier"
+	     android:textColor="@color/black"
+	     android:padding="4sp"/>
+	</LinearLayout>
+
+	<TimePicker android:id="@+id/AlarmTimePicker"
+	 android:layout_width="wrap_content"
+	 android:layout_height="wrap_content"/>
+
+	<TextView android:id="@+id/AlarmTextTime"
+	 android:layout_height="wrap_content"
+	 android:layout_gravity="center"
+	 android:layout_width="wrap_content"
+	 android:lines="2"
+	 android:text="@string/AlarmTextNextAlarm"
+	 android:textColor="@color/black"/>
+
+	<LinearLayout android:id="@+id/LinearLayout02"
+	 android:layout_height="wrap_content"
+	 android:layout_width="fill_parent">
+	    <Button android:id="@+id/AlarmButtonOK"
+	     android:layout_height="wrap_content"
+	     android:text="@string/AlarmButtonOK"
+	     android:layout_weight="1"
+	     android:layout_width="wrap_content"/>
+	    <Button android:id="@+id/AlarmButtonCancel"
+	     android:layout_width="wrap_content"
+	     android:layout_height="wrap_content"
+	     android:layout_weight="1"
+	     android:text="@string/AlarmButtonCancel"/>
+	</LinearLayout>
+    </LinearLayout>
+</ScrollView>

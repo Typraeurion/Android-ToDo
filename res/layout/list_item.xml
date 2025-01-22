@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:id="@+id/ToDoListItem"
+ xmlns:android="http://schemas.android.com/apk/res/android"
+ android:layout_width="fill_parent"
+ android:layout_height="wrap_content"
+ android:padding="1dip"
+ android:background="@color/white"
+ android:orientation="horizontal">
+   <CheckBox style="@style/ListCheckbox"
+    android:id="@+id/ToDoItemChecked">
+   </CheckBox>
+   <TextView style="@style/ListText.Centered.Bold"
+    android:id="@+id/ToDoTextPriority"
+    android:width="15sp">
+   </TextView>
+   <LinearLayout android:id="@+id/LinearLayoutItem"
+    android:layout_height="fill_parent"
+    android:orientation="horizontal"
+    android:layout_weight="10"
+    android:layout_width="fill_parent">
+      <TextView style="@style/ListText.Entry"
+       android:id="@+id/ToDoEditDescription"
+       android:layout_weight="10"
+       android:width="1000sp">
+      </TextView>
+      <!-- To do: Replace all stock photos with PoV-ray generated images -->
+      <ImageView style="@style/ListImage"
+       android:id="@+id/ToDoNoteImage"
+       android:src="@drawable/postit">
+      </ImageView>
+      <ImageView style="@style/ListImage"
+       android:id="@+id/ToDoAlarmImage"
+       android:src="@drawable/alarm">
+      </ImageView>
+      <ImageView style="@style/ListImage"
+       android:id="@+id/ToDoRepeatImage"
+       android:src="@drawable/repeat">
+      </ImageView>
+   </LinearLayout>
+   <TextView style="@style/ListText.Centered"
+    android:id="@+id/ToDoTextDueDate"
+    android:ems="3">
+   </TextView>
+   <TextView style="@style/ListText.Centered.Bold"
+    android:id="@+id/ToDoTextOverdue"
+    android:width="10sp">
+   </TextView>
+   <TextView style="@style/ListText.Centered"
+    android:id="@+id/ToDoTextCateg"
+    android:bufferType="normal"
+    android:ems="3">
+   </TextView>
+</LinearLayout>
