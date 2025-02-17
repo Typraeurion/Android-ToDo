@@ -11,7 +11,7 @@
 @author{by Trevin Beattie}
 
 @page
-Copyleft @copyright{} 2011–-2017 Trevin Beattie
+Copyleft @copyright{} 2011–-2025 Trevin Beattie
 
 To Do for Android is distributed under the terms of the Gnu Public
 License, version 3.0.
@@ -72,27 +72,55 @@ number (@file{AndroidManafest.xml} / @code{android:versionCode} and
 @c To do: move this chapter to a separate README or BUILDING file;
 @c regular users don't need to know about it.
 
-To build the application @file{.apk}, you will need:
+Building the application @file{.apk} was originally done up until 2014
+using:
 @itemize @bullet
-@item A Java 6 compiler
+
+@item A Java 1.6 compiler
 
 @item Eclipse integrated development environment (IDE)
 
-@item The Android software development kit (SDK).  I used release 12 for
-the current version.
+@item The Android software development kit (SDK) release 12.
+
+@end itemize
+
+To build the old code on a newer system requires a few different
+tools, but not @emph{too} modern.  The following development
+environment was set up and tested in 2025 on Fedora Linux 40 with only
+minor bug fixes to the code:
+@itemize @bullet
+
+@item Java (1.)8 @emph{(Do} @strong{not} @emph{use a newer version, as
+Gradle 3.5 is not compatible with Java 11 or higher.)}
+
+@item Android Studio 2.3.3, downloaded from the
+@url{https://developer.android.com/studio/archive,archive}.
+
+@item Gradle 3.5, installed by setting up the
+Gradle Wrapper for the project and then modifying
+@file{gradle/wrapper/gradle-wrapper.properties} to set
+@code{distributionUrl} to
+@url{https\://services.gradle.org/distributions/gradle-3.5-all.zip}.
+
+@item The Android Gradle Plugin version 2.3.3, which had to be
+downloaded along with most of its dependencies from a 3rd-party mirror
+@url{https://repository.axelor.com/nexus/service/rest/repository/browse/maven-public/}
+as it does not exist in Maven Central nor in Google's Maven repository.
+
 @end itemize
 
 See @uref{http://developer.android.com/sdk/index.html} for information
 on how to set up a project using the Android SDK.
 
-@node Generating Icons, Generating Documentation, Building from the Source, Building from the Source
+@node Generating Icons, Generating the Application Package, Building from the Source, Building from the Source
 @section Generating Icons
 
 Some of the application icons are generated from 3-D image description
 files using @uref{http://www.povray.org/,Persistence of Vision}.  The
-image files are included with the source code, but in case you want to
-tweak or change any image you can use @command{povray} to generate new
-ones.
+image files are included with the source code (in
+@file{app/src/main/res/drawable*/}, but in case you want to tweak or
+change any image you can use @command{povray} to generate new ones.
+The @file{.pov} sources are under @file{app/src/main/graphics/}.
 
 Because some of the icons contain small details that may get lost if
 rendered at a low resolution, it is recommended that you render the
@@ -120,12 +148,20 @@ found in @file{IconMaster.xcf}.  This is scaled down to @math{48 @times
 48} for @file{res/drawable-mdpi/icon.png}, and to @math{72 @times 72}
 for @file{res/drawable-hdpi/icon.png}.
 
-@node Generating Documentation,  , Generating Icons, Building from the Source
+@node Generating the Application Package, Generating Documentation, Generating Icons, Building from the Source
+@section Generating the Application Package (APK)
+
+In Android Studio, click on the Build menu then ``Build APK''.  If
+there were no errors, this should produce @file{app/app-release.apk}.
+You should rename this file to a more descriptive name like
+@file{todo-1.2.0.apk}.
+
+@node Generating Documentation,  , Generating the Application Package, Building from the Source
 @section Generating Documentation
 
 Lastly, if you need to generate a new edition of this manual, you will
 need @uref{http://www.gnu.org/software/texinfo/,@command{texinfo}} and
-@uref{http://www.tug.org/applications/pdftex/,@command{pdftex}}.
+@uref{https://www.gnu.org/software/texinfo/manual/texinfo/html_node/Format-with-texi2dvi-or-texi2pdf.html,@command{texi2pdf}}.
 
 To generate the manual in PDF, simply run:
 

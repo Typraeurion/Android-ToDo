@@ -11,7 +11,7 @@
 @author{by Trevin Beattie}
 
 @page
-Copyleft @copyright{} 2011--2017 Trevin Beattie
+Copyleft @copyright{} 2011--2025 Trevin Beattie
 
 To Do for Android is distributed under the terms of the Gnu Public
 License, version 3.0.
@@ -72,8 +72,8 @@ To Do was designed to be simple and intuitive, so you should be able to
 get started creating lists and exploring many of the application
 features without using this manual.
 
-The application runs on Android 2.1 or later (tested on 2.1 -- 5.0,)
-which should cover 99.9% of Android devices on the market.
+The application runs on Android 2.2 or later (tested on 5.1,) which
+should cover 100% of Android devices on the market.
 
 @ifinfo
 @menu
@@ -631,9 +631,9 @@ wish.)}
 
 The following bugs are known to exist in the 2017.07.25 release of To
 Do.  If you encounter any other bugs, please go to my project page on
-SourceForge to report them:
+GitHub to report them:
 
-@uref{https://sourceforge.net/p/androidtodolist/tickets/}
+@uref{https://github.com/Typraeurion/Android-ToDo/issues}
 
 @itemize @bullet
 @item
@@ -664,6 +664,12 @@ saved when you click ``OK''.)
 @item
 If an end date has been chosen for a repeating task, there is no way to
 change it back to ``no end date.''
+
+@item
+If you have a very large number of items, the application may run out
+of memory and crash when you try to export the data for a backup.
+Attempting to open the application again will fail.  If this happens,
+you will need to close the application and re-start it.
 
 @item
 The number of records that can be imported from a previously exported
