@@ -148,7 +148,105 @@ found in @file{IconMaster.xcf}.  This is scaled down to @math{48 @times
 48} for @file{res/drawable-mdpi/icon.png}, and to @math{72 @times 72}
 for @file{res/drawable-hdpi/icon.png}.
 
-@node Generating the Application Package, Generating Documentation, Generating Icons, Building from the Source
+@node Testing, Generating the Application Package, Generating Icons, Building from the Source
+@section Testing
+
+Currently, there are no automated tests for the source code; testing
+must be done by running the application either on an emulator or real
+Android device which has USB Debugging enabled.
+
+@ifinfo
+@menu
+* Using Virtual Devices::
+* Enabling USB Debugging::
+* Debugging the Application::
+@end menu
+@end ifinfo
+
+@node Using Virtual Devices, Enabling USB Debugging, Testing, Testing
+@subsection Using Virtual Devices
+
+If you want to test the application on different versions of Android
+or different types of devices than you have physical devices for (or
+don't want to use real devices for testing), you will need to
+configure emulators using the Android Virtual Device Manager.
+
+In Android Studio, go to @clicksequence{Tools @click{} Android
+@click{} AVD Manager} to open the Android Virtual Device Manager.
+Click on ``Create Virtual Device'' to add a new emulator.  On the
+first page you will select the type and screen size of the device,
+e.g. small phone or large tablet, along with its pixel resolution.
+
+On the next page choose which version of Android the emulator will
+run.  The ABI determines what type of CPU the system will run on:
+``arm'', ``arm64'', ``x86'', or ``x86_64''.  In order for the emulator
+to run the ABI @strong{must} match (or be compatible with) your
+computer's host CPU; for example, an ``arm'' image @emph{will not
+run} on an ``x86_64'' computer.  (This means that you cannot test on
+Android 2.2 (Froyo) or earlier in emulation, since there are no x86
+builds for those versions of Andriod.)
+
+The system image list shows both the Android version (e.g. 6.0), code
+name (e.g. Marshmallow), and API level (e.g. 23).  You should create
+at least enough emulators to cover the minimum and target SDK versions
+specified in @file{AndroidManifest.xml}, and ideally the latest
+release of Android and a few intermediate versions to make sure the
+app is compatible across a wide range of device ages.
+
+On the last page finalize the details of the virtual device.  Give it
+a descriptive name which will distinguish it from other virtual
+devices; for example, include the type/size of the device and the
+Android version and/or API level.  Under ``Advanced Settings'' you can
+configure the system's CPU and memory usage.
+
+To run the virtual device for testing, click on its play button in the
+device list.  The emulated device should start up in a new window,
+acting as if it were powered on.
+
+@node Enabling USB Debugging, Debugging the Application, Using Virtual Devices, Testing
+@subsection Enabling USB Debugging
+
+@emph{You will need to do this whether you are using a virtual or real
+device.}
+
+First, if your device runs Android 4.2 (Jelly Bean) or higher you will
+need to enable Developer Mode.  To do this, go to the system Settings
+and under ``About phone'' look for the ``Build number''.  (This may be
+nested under ``Software information''.)  Tap on the build number
+@strong{seven times}; you should see the message ``You are now a
+developer!''.
+
+Next find the ``Developer options'' in the system settings and scroll
+down to the ``USB debugging'' switch.  Turn that on whenever you need
+to test the application, and plug the phone into your computer that is
+running Android Studio.  For security you should always turn this
+setting back off when you are finished testing.
+
+@node Debugging the Application, Generating the Application Package, Enabling USB Debugging, Testing
+@subsection Debugging the Application
+
+In Android Studio (with the ToDo project open), ensure you have a
+valid build.  If you will be testing on a virtual device be sure that
+the emulator is running.  @xref{Using Virtual Devices} for how to
+configure and run the virtual device.
+
+Click the debug icon or go to @clicksequence{Run @click{} Debug
+'app'}, then in the ``Select Deployment Target'' window select the
+device under ``Connected Devices''.  If that section shows ``<none>''
+then either the device is not running, not connected (by a USB cable
+if it's a physical device), doesn't have USB debugging enabled, or may
+have some other problem with it.  When you click ``OK'' then Studio
+should install the current app build onto the device and launch it.
+
+The ``Android Monitor'' panel may be used to view any log messages
+from the application or the Android system.  Be sure the correct
+device is selected.  When the application is started in debug mode,
+Android will wait for Android Studio's debugger to connect before the
+application will run so that it can catch any startup errors.  If the
+application crashes, check then panel for an exception error message
+which should show the point in the code where the error occurred.
+
+@node Generating the Application Package, Generating Documentation, Testing, Building from the Source
 @section Generating the Application Package (APK)
 
 In Android Studio, click on the Build menu then ``Build APK''.  If

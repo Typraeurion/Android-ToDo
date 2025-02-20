@@ -190,6 +190,8 @@ public class XMLExporterService extends IntentService
 
     /** Escape a string for XML sequences */
     public static String escapeXML(String raw) {
+	if (raw == null)
+	    raw = "";
 	Matcher m = XML_RESERVED_CHARACTERS.matcher(raw);
 	if (m.find()) {
 	    String step1 = raw.replace("&", "&amp;");
