@@ -1,5 +1,4 @@
 /*
- * $Id: NoSelectionCursorAdapter.java,v 1.2 2014/03/23 21:43:56 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,14 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: NoSelectionCursorAdapter.java,v $
- * Revision 1.2  2014/03/23 21:43:56  trevin
- * Fixed the file format from DOS to unix.
- *
- * Revision 1.1  2011/07/18 00:47:03  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

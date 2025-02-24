@@ -1,5 +1,4 @@
 /*
- * $Id: AlarmService.java,v 1.4 2017/07/25 16:59:20 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,29 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: AlarmService.java,v $
- * Revision 1.4  2017/07/25 16:59:20  trevin
- * Fixed an annoyance where notifications would continually be
- *   re-displayed after every update to To Do items.  The alarmed
- *   item's `last notification time' is now set when the notification
- *   occurs rather than when (or if) it was acknowledged.
- *
- * Revision 1.3  2014/03/22 19:03:51  trevin
- * When an alarm goes off, set the notification time on the item
- *   so that we don’t repeat the alarm for that item until the next day.
- *   (Currently broken.)
- * Make sure we’re holding a StringEncryption before releasing it.
- *
- * Revision 1.2  2011/05/19 05:12:53  trevin
- * Removed the binder; we don't use binding.
- * Implemented gathering alarm data and sending an alarm notification.
- * Don't cancel any notification when destroyed;
- *   destruction happens right after we finish initializing the alarms!
- *
- * Revision 1.1  2010/12/30 01:13:28  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 
@@ -51,8 +27,10 @@ import android.app.*;
 import android.content.*;
 import android.database.*;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.MediaStore.Audio.Media;
 import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 /**
@@ -320,6 +298,7 @@ public class AlarmService extends IntentService {
 	tickerText.append(getString(R.string.NotificationHeader));
 	boolean showPrivate = prefs.getBoolean(TPREF_SHOW_PRIVATE, false);
 	boolean showEncrypted = prefs.getBoolean(TPREF_SHOW_ENCRYPTED, false);
+	boolean doVibrate = prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false);
 	StringEncryption encryptor = showEncrypted
 	    ? StringEncryption.holdGlobalEncryption() : null;
 	int dueItems = 0;
@@ -379,15 +358,47 @@ public class AlarmService extends IntentService {
 	mainIntent.putExtra(EXTRA_NOTIFICATION_DATE, now.getTime());
 	PendingIntent intent = PendingIntent.getService(this, 0, mainIntent,
 		PendingIntent.FLAG_UPDATE_CURRENT);
-	Notification notice = new Notification(R.drawable.stat_todo,
-		tickerText.toString(), firstDue);
-	notice.setLatestEventInfo(this,
-		getResources().getString(R.string.app_name), tickerText, intent);
-	notice.defaults = Notification.DEFAULT_ALL & ~Notification.DEFAULT_SOUND;
 	long soundID = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
-	if (soundID >= 0)
-	    notice.sound = Uri.withAppendedPath(
-		    Media.INTERNAL_CONTENT_URI, Long.toString(soundID));
+	Notification notice;
+	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
+	    NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+			    .setSmallIcon(R.drawable.stat_todo)
+			    .setContentTitle(getResources().getString(R.string.app_name))
+			    .setContentText(tickerText.toString())
+			    .setContentIntent(intent)
+			    .setDefaults(Notification.DEFAULT_ALL &
+					 ~(doVibrate ? Notification.DEFAULT_SOUND :
+					 Notification.DEFAULT_SOUND | Notification.DEFAULT_VIBRATE))
+			    .setTicker(tickerText.toString())
+			    .setWhen(firstDue);
+	    if (soundID >= 0)
+		builder = builder.setSound(Uri.withAppendedPath(
+				Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
+	    notice = builder.build();
+	    // Removed in API 23!!
+	    /*
+	    notice.setLatestEventInfo(this,
+		getResources().getString(R.string.app_name), tickerText, intent);
+	    */
+	} else {
+	    // To Do: This is deprecated as of API 26 (O)
+	    Notification.Builder builder = new Notification.Builder(this)
+			    .setSmallIcon(R.drawable.stat_todo)
+			    .setContentTitle(getResources().getString(R.string.app_name))
+			    .setContentText(tickerText.toString())
+			    .setContentIntent(intent)
+			    // Switch to using NotificationChannel in API 26+.
+			    .setDefaults(Notification.DEFAULT_ALL &
+					 ~(doVibrate ? Notification.DEFAULT_SOUND :
+					 Notification.DEFAULT_SOUND | Notification.DEFAULT_VIBRATE))
+			    .setTicker(tickerText.toString())
+			    .setWhen(firstDue);
+	    if (soundID >= 0)
+		builder = builder.setSound(Uri.withAppendedPath(
+				Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
+	    notice = builder.build();
+	}
+
 	notificationManager.notify(0, notice);
 	return true;
     }
@@ -403,4 +414,5 @@ public class AlarmService extends IntentService {
 	    alarmManager.set(AlarmManager.RTC_WAKEUP,
 		    pendingAlarms.first().alarmDate.getTime(), sender);
     }
+
 }

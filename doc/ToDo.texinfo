@@ -72,17 +72,10 @@ To Do was designed to be simple and intuitive, so you should be able to
 get started creating lists and exploring many of the application
 features without using this manual.
 
-The application runs on Android 2.2 (Froyo) through 13 (Tiramisu)
-which should cover 61.6% of Android devices on the market as of
-January 2025.  (It has been tested on Gingerbread, Lollipop, Oreo, and
-Tiramisu.)  It @emph{cannot} yet be installed on Android 14
-(Upside-down Cake) or higher, though it will run if installed on an
-earlier version of Android that is later upgraded.  Support for newer
-Android devices is planned, but will likely require dropping support
-for older devices.
-
 @ifinfo
 @menu
+* Device Compatibility::
+* Permissions::
 * Adding To Do Items::
 * Changing To Do Items::
 * Completing Items::
@@ -90,7 +83,48 @@ for older devices.
 @end menu
 @end ifinfo
 
-@node Adding To Do Items, Changing To Do Items, The Basics, The Basics
+@node Device Compatibility, Permissions, The Basics, The Basics
+@section Device Compatibility
+
+The application is designed for compatibility with Android 6
+(Marshmallow) but also runs on Android 2.2 (Froyo) through 14
+(Upside-down Cake) which should cover 98.6% of Android devices on the
+market as of February 2025.  (It has been tested on Gingerbread,
+Lollipop, Marshmallow, Oreo, Tiramisu, and Upside-down Cake.)  Support
+for newer Android devices is planned, but will likely require dropping
+support for older devices.
+
+@node Permissions, Adding To Do Items, Device Compatibility, The Basics
+@section Permissions
+
+When installing the ToDo app or when using certain features, Android
+may ask you to grant permission for the app to access some
+system-level functions.  The permissions the app requests include:
+
+@itemize @bullet
+@item Receive the system ``boot completed'' event.
+The app uses this to show notifications for any alarms which may have
+come due prior to your device starting up.
+
+@item Post notifications.
+The app sends notifications if you set an alarm for any To Do items at
+a time you choose on or before the item due date.  Android 12 (Snow
+Cone) or lower does not require permission to send app notifications;
+on Android 13 (Tiramisu) and above, you need to enable notifications
+through the system settings.
+
+@item Vibrating the device.
+The app uses this for a haptic notification of an alarm, in addition
+to any sound selected in the settings.
+
+@item Write files to external storage.
+The app uses this when you export your ToDo data to a file for backup
+or transfer.  In Android 6 (Marshmallow) or later, this is only needed
+if you select a backup file location outside of the app's private
+folder.
+@end itemize
+
+@node Adding To Do Items, Changing To Do Items, Permissions, The Basics
 @section Adding To Do Items
 
 To add an item to the list, press ``New'', then enter a short
@@ -635,7 +669,7 @@ wish.)}
 @node Known Bugs, , Exporting and Importing, Top
 @chapter Known Bugs
 
-The following bugs are known to exist in the 2025.02.20 release of To
+The following bugs are known to exist in the 2025.02.24 release of To
 Do.  If you encounter any other bugs, please go to my project page on
 GitHub to report them:
 
@@ -681,6 +715,20 @@ import them separately.
 
 @item
 When importing a backup file, the progress bar may not update properly.
+@end itemize
+
+The following bugs were in the 2025.02.20 release but have been fixed
+as of 2025.02.24.
+
+@itemize @bullet
+@item
+Exporting any item with a due date that is hidden until some number of
+days in advance would result in an invalid XML file which could not be
+imported back.  The workaround is to manually edit the XML file and
+look for ``@samp{<hide days-earlier="}'' with a line break before the
+number; remove the line break (e.g. ``@samp{<hide
+days-earlier="3"/>}'').  @emph{This bug was introduced in 2025.02.20
+so does not impact earlier versions.}
 
 @item
 It is not possible to restore the preferences from a previously exported

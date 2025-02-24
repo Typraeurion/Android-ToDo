@@ -191,7 +191,28 @@ name (e.g. Marshmallow), and API level (e.g. 23).  You should create
 at least enough emulators to cover the minimum and target SDK versions
 specified in @file{AndroidManifest.xml}, and ideally the latest
 release of Android and a few intermediate versions to make sure the
-app is compatible across a wide range of device ages.
+app is compatible across a wide range of device ages.  It is
+@emph{highly recommended} to test against the following API's, since
+the code has branches that follow different paths for each of these
+versions:
+
+@itemize @bullet
+@item Froyo (Android 2.2, API 8), which is the current minimum version
+@item Gingerbread (Android 2.3, API 9--10)
+@item Honeycomb (Android 3.0, API 11) through Jelly Bean (Android 4.3, API 18)
+@item KitKat (Android 4.4, API 19) through Lollipop (Android 5.1, API 22)
+@item Marshmallow (Android 6, API 23), which is the current target version
+@end itemize
+
+Testing the following API's is suggested to ensure compatibility with
+new devices:
+
+@itemize @bullet
+@item Nougat (Android 7, API 24--25)
+@item Oreo (Android 8, API 26) through Snow Cone (Android 12, API 32)
+@item Tiramisu (Android 12, API 33)
+@item Upside-down Case (Android 14, API 34) and up
+@end itemize
 
 On the last page finalize the details of the virtual device.  Give it
 a descriptive name which will distinguish it from other virtual

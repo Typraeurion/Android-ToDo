@@ -1,5 +1,4 @@
 /*
- * $Id: StringEncryption.java,v 1.3 2014/03/22 20:08:08 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,37 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: StringEncryption.java,v $
- * Revision 1.3  2014/03/22 20:08:08  trevin
- * Added the copyright notice.
- * Created a local cryptography library (as a subset of BouncyCastle)
- *   to replace Android’s built-in cryptography, which does not
- *   generate encryption keys consistently across Android versions.
- * Added a no-parameter releaseGlobalEncryption() for use by Services.
- * Added local parameters for the salt length, key length, and key
- *   iteration count.  Store these along with the hashed password key
- *   so that these can be changed without invalidating previously
- *   stored password hashes.
- * Make METADATA_PASSWORD_HASH available to XMLImporterService.
- * Before forgetting a password and key, fill them with 0’s for security.
- * Changed the password data type from a String to char[] array
- *   to prevent Java from caching the password.
- * Use SecureRandom instead of plain Random to generate salt.
- * Changed the stored password hash from a simple SHA digest of the salt
- *   + password to a SHA256 digest of the salt + encryption key.
- * Added encrypt(byte[]) and decryptBytes(byte[]).
- *
- * Revision 1.2  2011/05/10 03:44:32  trevin
- * Allow any context wrapper to be passed.
- * Use a regular query rather than a managed query.
- * Don't automatically set a new password in checkPassword;
- *   use a separate method for that.
- * Added a method to remove an existing password.
- *
- * Revision 1.1  2011/01/19 00:19:28  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

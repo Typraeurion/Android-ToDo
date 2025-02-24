@@ -1,5 +1,4 @@
 /*
- * $Id: CategoryFilterCursorAdapter.java,v 1.3 2014/05/24 21:30:22 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,18 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: CategoryFilterCursorAdapter.java,v $
- * Revision 1.3  2014/05/24 21:30:22  trevin
- * Added a no-cursor constructor for SDK ≥ 11.
- * Re-enabled the debug logger for bindView (for debugging.)
- *
- * Revision 1.2  2011/07/18 00:47:12  trevin
- * Added the copyright notice
- *
- * Revision 1.1  2010/11/20 15:46:43  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

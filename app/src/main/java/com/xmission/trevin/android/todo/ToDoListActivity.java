@@ -1,5 +1,4 @@
 /*
- * $Id: ToDoListActivity.java,v 1.6 2014/06/03 02:33:18 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,36 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: ToDoListActivity.java,v $
- * Revision 1.6  2014/06/03 02:33:18  trevin
- * Fixes for compatibility with SDK ≥ 11 (Honeycomb):
- * • Use a CursorLoader (via LoaderManager) instead of a managedQuery.
- * • Added overrides for onRestart(), onStart(), onResume(),
- *   onPause(), and onStop().
- * • Added a new menu item, and show it on the action bar when possible.
- * Fixed the class cast for the password dialog root element.
- *
- * Revision 1.5  2014/04/06 15:11:34  trevin
- * Update an item’s modification time when its due date changes.
- *
- * Revision 1.4  2014/03/22 19:03:53  trevin
- * Added the copyright notice.
- * Moved the import function from the menu handler to ImportActivity.
- * Implemented ExportActivity.
- * Replaced the text in the About dialog with its own resource string.
- *
- * Revision 1.3  2011/05/18 05:04:51  trevin
- * Added a preferences item for the alarm sound.
- * Added a content change observer to tell the alarm service to refresh.
- * Run the alarm service on creation, it case it wasn't done at boot.
- *
- * Revision 1.2  2011/05/11 05:19:02  trevin
- * Added a password change dialog and progress dialog.
- *
- * Revision 1.1  2011/02/14 03:44:03  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 
@@ -156,6 +125,9 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     /** Label for the preferences option "Show categories" */
     public static final String TPREF_SHOW_CATEGORY = "ShowCategory";
+
+    /** Label for the preferences option "Alarm vibrate" */
+    public static final String TPREF_NOTIFICATION_VIBRATE = "NotificationVibrate";
 
     /** Label for the preferred notification sound */
     public static final String TPREF_NOTIFICATION_SOUND = "NotificationSound";
@@ -564,43 +536,52 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	categoryList.setSelection(0);
     }
 
-    /** Called when the settings dialog stores a new user setting */
+    /**
+     * Called when the settings dialog stores a new user setting
+     * <i>or</i> when settings are imported from a backup file.
+     */
     @Override
     public void onSharedPreferenceChanged(
-	    SharedPreferences prefs, String key) {
+	    final SharedPreferences prefs, final String key) {
         Log.d(TAG, ".onSharedPreferenceChanged(\"" + key + "\")");
-	if (key.equals(TPREF_SHOW_CHECKED) || key.equals(TPREF_SHOW_PRIVATE) ||
-		key.equals(TPREF_SELECTED_CATEGORY) ||
-		key.equals(TPREF_SORT_ORDER)) {
-	    String whereClause = generateWhereClause();
+        // In case this was called from the importer service,
+        // make sure we're running on the UI thread instead.
+        runOnUiThread(new Runnable() {
+            public void run() {
+                if (key.equals(TPREF_SHOW_CHECKED) || key.equals(TPREF_SHOW_PRIVATE) ||
+                        key.equals(TPREF_SELECTED_CATEGORY) ||
+                        key.equals(TPREF_SORT_ORDER)) {
+                    String whereClause = generateWhereClause();
 
-	    int selectedSortOrder = prefs.getInt(TPREF_SORT_ORDER, 0);
-	    if ((selectedSortOrder < 0) ||
-		    (selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length))
-		selectedSortOrder = 0;
+                    int selectedSortOrder = prefs.getInt(TPREF_SORT_ORDER, 0);
+                    if ((selectedSortOrder < 0) ||
+                            (selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length))
+                        selectedSortOrder = 0;
 
-	    Log.d(TAG, ".onSharedPreferenceChanged: requerying the data where "
-		    + whereClause);
-	    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-		Cursor itemCursor = managedQuery(todoUri,
-			ITEM_PROJECTION, whereClause, null,
-			ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-		// Change the cursor used by this list
-		itemAdapter.changeCursor(itemCursor);
-	    } else {
-		getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-			null, (LoaderManager.LoaderCallbacks<Cursor>) itemLoaderCallbacks);
-	    }
-	}
-	else if (key.equals(TPREF_SHOW_CATEGORY) ||
-		key.equals(TPREF_SHOW_DUE_DATE) ||
-		key.equals(TPREF_SHOW_PRIORITY)) {
-	    // To do: is there another way to do this?
-	    // The data has not actually changed, just the widget visibility.
-	    Log.d(TAG, ".onSharedPreferenceChanged: signaling a data change");
-	    itemAdapter.notifyDataSetChanged();
-	}
-	// To do: etc...
+                    Log.d(TAG, ".onSharedPreferenceChanged: requerying the data where "
+                            + whereClause);
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
+                        Cursor itemCursor = managedQuery(todoUri,
+                                ITEM_PROJECTION, whereClause, null,
+                                ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
+                        // Change the cursor used by this list
+                        itemAdapter.changeCursor(itemCursor);
+                    } else {
+                        getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+                                null, (LoaderManager.LoaderCallbacks<Cursor>)
+                                        itemLoaderCallbacks);
+                    }
+                } else if (key.equals(TPREF_SHOW_CATEGORY) ||
+                        key.equals(TPREF_SHOW_DUE_DATE) ||
+                        key.equals(TPREF_SHOW_PRIORITY)) {
+                    // To do: is there another way to do this?
+                    // The data has not actually changed, just the widget visibility.
+                    Log.d(TAG, ".onSharedPreferenceChanged: signaling a data change");
+                    itemAdapter.notifyDataSetChanged();
+                }
+                // To do: etc...
+            }
+        });
     }
 
     /** Called when the user presses the Menu button. */

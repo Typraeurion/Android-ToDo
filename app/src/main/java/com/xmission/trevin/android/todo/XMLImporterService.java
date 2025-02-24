@@ -1,5 +1,4 @@
 /*
- * $Id: XMLImporterService.java,v 1.4 2014/04/06 21:59:39 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,32 +13,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: XMLImporterService.java,v $
- * Revision 1.4  2014/04/06 21:59:39  trevin
- * When reverting, only overwrite if the item creation time is the same;
- *   otherwise consider it to be a different item.
- * When updating, only overwrite if the item creating time is the same
- *   and the modification time is newer; otherwise consider it to be
- *   a different item.
- * When merging, only overwrite if the item creation time is the same
- *   (in addition to the update checks); otherwise write a new item.
- *
- * Revision 1.3  2014/04/03 01:06:07  trevin
- * Bug fix: update/merge was comparing the item creation time
- *   rather than the last modification time.
- *
- * Revision 1.2  2014/03/23 21:43:56  trevin
- * Fixed the file format from DOS to unix.
- *
- * Revision 1.1  2014/03/22 19:03:53  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 
 import static com.xmission.trevin.android.todo.ToDoListActivity.*;
 import static com.xmission.trevin.android.todo.XMLExporterService.*;
+import static com.xmission.trevin.android.todo.XMLExporterService.LOG_TAG;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -63,6 +42,7 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Binder;
@@ -321,8 +301,12 @@ public class XMLImporterService extends IntentService implements
 	    // To do: Disable the DB content change listener until after importing
 	    // Start parsing
 	    currentMode = OpMode.PARSING;
+            // To do: rewrite this code to stream the XML
+            // data instead of parsing the whole thing at
+            // once, so we can handle very large files.
 	    DocumentBuilder builder =
 		DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            Log.d(LOG_TAG, "Parsing " + dataFile.getPath());
 	    Document document = builder.parse(dataFile);
 	    Element docRoot = document.getDocumentElement();
 	    if (!docRoot.getTagName().equals(DOCUMENT_TAG))
@@ -371,13 +355,15 @@ public class XMLImporterService extends IntentService implements
 			    // Check the old password
 			    if (!oldCrypt.checkPassword(oldHash)) {
 				Toast.makeText(this, getResources().getString(
-					R.string.ToastBadPassword), Toast.LENGTH_LONG).show();
+					R.string.ToastBadPassword),
+                                        Toast.LENGTH_LONG).show();
 				Log.d(LOG_TAG, "Password does not match hash in the XML file");
 				return;
 			    }
 			} else {
 			    Toast.makeText(this, getResources().getString(
-				    R.string.ToastPasswordProtected), Toast.LENGTH_LONG).show();
+				    R.string.ToastPasswordProtected),
+                                    Toast.LENGTH_LONG).show();
 			    Log.d(LOG_TAG, "XML file is password protected");
 			    return;
 			}
@@ -408,7 +394,9 @@ public class XMLImporterService extends IntentService implements
 		     * manipulate the views, which results in a
 		     * CalledFromWrongThreadException!
 		     */
-		    //setPreferences(prefs);
+		    setPreferences(prefs);
+                    //if (!prefs.isEmpty())
+                    //    Log.w(LOG_TAG, "Ignoring imported preferences!");
 		    break;
 
 		default:
@@ -590,7 +578,8 @@ public class XMLImporterService extends IntentService implements
 	if (prefsMap.containsKey(TPREF_SORT_ORDER)) {
 	    try {
 		prefsEditor.putInt(TPREF_SORT_ORDER,
-			Integer.parseInt(getText(prefsMap.get(TPREF_SORT_ORDER))));
+			Integer.parseInt(getText(prefsMap.get(
+			        TPREF_SORT_ORDER))));
 	    } catch (NumberFormatException x) {
 		Log.e(LOG_TAG, "Invalid sort order index: "
 			+ getText(prefsMap.get(TPREF_SORT_ORDER)), x);
@@ -599,16 +588,24 @@ public class XMLImporterService extends IntentService implements
 	}
 	if (prefsMap.containsKey(TPREF_SHOW_CHECKED))
 	    prefsEditor.putBoolean(TPREF_SHOW_CHECKED,
-		    Boolean.parseBoolean(getText(prefsMap.get(TPREF_SHOW_CHECKED))));
+		    Boolean.parseBoolean(getText(prefsMap.get(
+		            TPREF_SHOW_CHECKED))));
 	if (prefsMap.containsKey(TPREF_SHOW_DUE_DATE))
 	    prefsEditor.putBoolean(TPREF_SHOW_DUE_DATE,
-		    Boolean.parseBoolean(getText(prefsMap.get(TPREF_SHOW_DUE_DATE))));
+		    Boolean.parseBoolean(getText(prefsMap.get(
+		            TPREF_SHOW_DUE_DATE))));
 	if (prefsMap.containsKey(TPREF_SHOW_PRIORITY))
 	    prefsEditor.putBoolean(TPREF_SHOW_PRIORITY,
-		    Boolean.parseBoolean(getText(prefsMap.get(TPREF_SHOW_PRIORITY))));
+		    Boolean.parseBoolean(getText(prefsMap.get(
+		            TPREF_SHOW_PRIORITY))));
 	if (prefsMap.containsKey(TPREF_SHOW_CATEGORY))
 	    prefsEditor.putBoolean(TPREF_SHOW_CATEGORY,
-		    Boolean.parseBoolean(getText(prefsMap.get(TPREF_SHOW_CATEGORY))));
+		    Boolean.parseBoolean(getText(prefsMap.get(
+		            TPREF_SHOW_CATEGORY))));
+        if (prefsMap.containsKey(TPREF_NOTIFICATION_VIBRATE))
+            prefsEditor.putBoolean(TPREF_NOTIFICATION_VIBRATE,
+                    Boolean.parseBoolean(getText(prefsMap.get(
+                            TPREF_NOTIFICATION_VIBRATE))));
 	/*
 	 * Note that we are not changing whether private/encrypted records
 	 * are shown.  If the user wanted encrypted records, he should have
@@ -618,7 +615,8 @@ public class XMLImporterService extends IntentService implements
 	if (prefsMap.containsKey(TPREF_NOTIFICATION_SOUND)) {
 	    try {
 		prefsEditor.putLong(TPREF_NOTIFICATION_SOUND,
-			Long.parseLong(getText(prefsMap.get(TPREF_NOTIFICATION_SOUND))));
+			Long.parseLong(getText(prefsMap.get(
+			        TPREF_NOTIFICATION_SOUND))));
 	    } catch (NumberFormatException x) {
 		Log.e(LOG_TAG, "Invalid notificationt sound index: "
 			+ getText(prefsMap.get(TPREF_NOTIFICATION_SOUND)), x);
@@ -628,7 +626,8 @@ public class XMLImporterService extends IntentService implements
 	if (prefsMap.containsKey(TPREF_SELECTED_CATEGORY)) {
 	    try {
 		prefsEditor.putLong(TPREF_SELECTED_CATEGORY,
-			Long.parseLong(getText(prefsMap.get(TPREF_SELECTED_CATEGORY))));
+			Long.parseLong(getText(prefsMap.get(
+			        TPREF_SELECTED_CATEGORY))));
 	    } catch (NumberFormatException x) {
 		Log.e(LOG_TAG, "Invalid category index: "
 			+ getText(prefsMap.get(TPREF_SELECTED_CATEGORY)), x);
@@ -983,7 +982,8 @@ public class XMLImporterService extends IntentService implements
 			existingRecord.put(ToDoItem.PRIVATE, oldPrivacy);
 			if (oldPrivacy < 2) {
 			    existingRecord.put(ToDoItem.DESCRIPTION,
-				    c.getString(c.getColumnIndex(ToDoItem.DESCRIPTION)));
+				    c.getString(c.getColumnIndex(
+				            ToDoItem.DESCRIPTION)));
 			} else {
 			    if (newCrypt == null)
 				newCrypt = StringEncryption.holdGlobalEncryption();

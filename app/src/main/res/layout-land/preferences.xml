@@ -61,12 +61,12 @@
 	     android:layout_height="wrap_content"
 	     android:text="@string/PrefTextShowPrivate"/>
 	</TableRow>
-    </TableLayout>
+    <!-- /TableLayout>
 
     <TableLayout android:id="@+id/TableLayout02"
      android:orientation="horizontal"
      android:layout_width="fill_parent"
-     android:layout_height="wrap_content">
+     android:layout_height="wrap_content" -->
 	<TableRow android:id="@+id/TableRowPassword"
 	 android:layout_height="wrap_content"
 	 android:layout_width="fill_parent"
@@ -96,15 +96,22 @@
 	<TableRow android:id="@+id/TableRow04"
 	 android:layout_height="wrap_content"
 	 android:layout_width="fill_parent">
-	    <TextView android:id="@+id/PrefsTextAlarmSound"
-	     android:text="@string/PrefTextAlarmSound"
-	     android:gravity="center_vertical"
-	     android:layout_height="fill_parent"
-	     android:layout_width="wrap_content"/>
-	    <Spinner android:id="@+id/PrefsSpinnerAlarmSound"
-	     android:layout_height="wrap_content"
+	    <CheckBox android:text="@string/PrefTextAlarmVibrate"
+	     android:id="@+id/PrefsCheckBoxAlarmVibrate"
 	     android:layout_width="fill_parent"
-	     android:layout_weight="1"/>
+	     android:layout_height="wrap_content"/>
+
+	    <LinearLayout android:id="@+id/LinearLayout04">
+		<TextView android:id="@+id/PrefsTextAlarmSound"
+		 android:text="@string/PrefTextSound"
+		 android:gravity="center_vertical"
+		 android:layout_height="fill_parent"
+		 android:layout_width="wrap_content"/>
+		<Spinner android:id="@+id/PrefsSpinnerAlarmSound"
+		 android:layout_height="wrap_content"
+		 android:layout_width="fill_parent"
+		 android:layout_weight="1"/>
+	    </LinearLayout>
 	</TableRow>
     </TableLayout>
   </LinearLayout>

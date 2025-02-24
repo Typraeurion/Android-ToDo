@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-beta version 2025.02.20\n
+beta version 2025.02.24\n
 by Trevin Beattie\n
 \n
 This program is distributed under the terms of the Gnu Public License,
@@ -120,11 +120,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ErrorCategoryID">The category is invalid.</string>
     <string name="ErrorExportCantMkdirs">Cannot create directory %s</string>
     <string name="ErrorExportFailed">Export failed</string>
+    <string name="ErrorExportPermissionDenied">Permission to write to %s has not been granted.  Please allow access or change the folder then try again.</string>
     <string name="ErrorFailedToAddRecords">Failed to add records</string>
     <string name="ErrorFileNotFound">File not found</string>
     <string name="ErrorImportCantRead">Cannot read file %s</string>
     <string name="ErrorImportFailed">Import failed</string>
     <string name="ErrorImportNotFound">Import file %s not found</string>
+    <string name="ErrorImportPermissionDenied">Permission to read %s has not been granted.  Please allow access or move the file to another folder then try again.</string>
     <string name="ErrorNoRecordsImported">No records were imported</string>
     <string name="ErrorNotImplemented">Not yet implemented</string>
     <string name="ErrorPasswordMismatch">New passwords do not match.</string>
@@ -274,7 +276,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="PrefSortByCategoryDueDate">Category, Due Date</string>
     <string name="PrefSortByAlpha">Alphabetically</string>
     <string name="PrefSortByDueDateAlpha">Due Date, Alphabetically</string>
-    <string name="PrefTextAlarmSound">Alarm sound:</string>
+    <string name="PrefTextAlarmSound">Alarm Sound:</string>
+    <string name="PrefTextAlarmVibrate">Alarm vibrate</string>
     <string name="PrefTextNoSound">No sound</string>
     <string name="PrefTextPassword">Password:</string>
     <string name="PrefTextShowChecked">Show completed and hidden tasks</string>
@@ -284,6 +287,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="PrefTextShowPriority">Show priorities</string>
     <string name="PrefTextShowPrivate">Show private records</string>
     <string name="PrefTextShowCategory">Show categories</string>
+    <string name="PrefTextSound">Sound:</string>
     <string name="ProgressMessageDecrypting">Decrypting records with the old password&#8230;</string>
     <string name="ProgressMessageEncrypting">Encrypting records with the new password&#8230;</string>
     <string name="ProgressMessageExportCategories">Exporting categories&#8230;</string>
@@ -409,6 +413,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="RepeatYearlyDots">Yearly&#8230;</string>
     <string name="ToastBadPassword">The password you entered is incorrect.</string>
     <string name="ToastPasswordProtected">A password is required to decrypt private entries.</string>
+    <string name="ToastVibrateNotPermitted">Permission to vibrate for alarms has not been granted.</string>
     <string-array name="WeekdayList">
 	<item>@string/WeekdaySunday</item>
 	<item>@string/WeekdayMonday</item>

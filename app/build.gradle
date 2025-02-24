@@ -8,7 +8,7 @@ android {
      * features included in this API level and lower.
      */
 
-    compileSdkVersion 22
+    compileSdkVersion 23
 
     buildToolsVersion "25.0.3"
 
@@ -29,13 +29,13 @@ android {
         minSdkVersion 8
 
         // Specifies the API level used to test the app.
-        targetSdkVersion 22
+        targetSdkVersion 23
 
         // Defines the version number of your app.
-        versionCode 4
+        versionCode 5
 
         // Defines a user-friendly version name for your app.
-        versionName "1.2.0"
+        versionName "1.2.1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -55,7 +55,7 @@ dependencies {
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:22.2.1'
+    compile 'com.android.support:appcompat-v7:23.4.0'
     //compile 'com.android.support.constraint:constraint-layout:1.0.2'
     //compile 'com.android.support:design:22.2.1'
     testCompile 'junit:junit:4.12'

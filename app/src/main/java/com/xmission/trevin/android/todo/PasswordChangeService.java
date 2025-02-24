@@ -1,5 +1,4 @@
 /*
- * $Id: PasswordChangeService.java,v 1.2 2014/03/22 19:03:52 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,22 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: PasswordChangeService.java,v $
- * Revision 1.2  2014/03/22 19:03:52  trevin
- * Added the copyright notice.
- * Changed the password intents from String to char[]
- *   to prevent Java from caching the values.
- * Pop up a bad password message if the old password is incorrect.
- * Before updating an entry with encrypted values, make sure the
- *   ContentValues object actually contains byte arrays.
- *   (During debugging, these were mysteriously changed to char arrays.)
- * Fixed a bug in holding and releasing global encryption;
- *   references to self are not valid for a service.
- *
- * Revision 1.1  2011/05/12 05:17:07  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

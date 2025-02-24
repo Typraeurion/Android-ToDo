@@ -1,5 +1,4 @@
 /*
- * $Id: ImportActivity.java,v 1.1 2014/03/22 19:46:28 trevin Exp trevin $
  * Copyright © 2013 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,20 +13,20 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: ImportActivity.java,v $
- * Revision 1.1  2014/03/22 19:46:28  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 
 
+import android.Manifest;
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.os.*;
+import android.support.annotation.NonNull;
 import android.text.*;
 import android.util.Log;
 import android.view.View;
@@ -97,6 +96,9 @@ public class ImportActivity extends Activity {
 
     StringEncryption encryptor;
 
+    /** The error dialog, if we need to show one */
+    AlertDialog errorDialog;
+
     /**
      * Map of entries in the Import Type spinner
      * to import types used by the XMLImporterService
@@ -165,9 +167,7 @@ public class ImportActivity extends Activity {
 		ToDoListActivity.TODO_PREFERENCES, MODE_PRIVATE);
 
 	// Set default values
-	String fileName = Environment.getExternalStorageDirectory()
-		    + "/Android/Data/"
-		    + ToDoListActivity.class.getPackage().getName()
+	String fileName = FileUtils.getDefaultStorageDirectory(this)
 		    + "/todo.xml";
 	fileName = prefs.getString(TPREF_IMPORT_FILE, fileName);
 	importFileName.setText(fileName);
@@ -291,11 +291,12 @@ public class ImportActivity extends Activity {
 	importProgressMessage.setVisibility(enable ? View.GONE : View.VISIBLE);
     }
 
-    private static final DialogInterface.OnClickListener dismissListener =
+    private final DialogInterface.OnClickListener dismissListener =
 	new DialogInterface.OnClickListener() {
 	    @Override
 	    public void onClick(DialogInterface dialog, int item) {
 		dialog.dismiss();
+                errorDialog = null;
 	    }
 	};
 
@@ -307,36 +308,44 @@ public class ImportActivity extends Activity {
 	    importProgressMessage.setText("...");
 	    xableFormElements(false);
 	    File importFile = new File(importFileName.getText().toString());
-	    // Check whether the file is in external storage,
-	    if (importFile.getParent().startsWith(
-		    Environment.getExternalStorageDirectory().getPath())) {
-		// and if so whether the external storage is available.
-		String storageState = Environment.getExternalStorageState();
-		if (!Environment.MEDIA_MOUNTED.equals(storageState) &&
-			!Environment.MEDIA_MOUNTED_READ_ONLY.equals(storageState)) {
-		    xableFormElements(true);
-		    new AlertDialog.Builder(ImportActivity.this)
-		    .setIcon(android.R.drawable.ic_dialog_alert)
-		    .setTitle(getResources().getString(R.string.ErrorSDNotFound))
-		    .setMessage(getResources().getString(
-			    R.string.PromptMountStorage))
-		    .setNeutralButton(getResources().getString(
-			    R.string.ConfirmationButtonOK), dismissListener)
-		    .create().show();
-		    return;
-		}
-	    }
+            try {
+                // Check whether the file is in external storage,
+                // and if so whether the external storage is available.
+                if (!FileUtils.isStorageAvailable(importFile, false)) {
+                    xableFormElements(true);
+                    showAlertDialog(R.string.ErrorSDNotFound,
+                            getResources().getString(
+                                    R.string.PromptMountStorage));
+                    return;
+                }
+                // Check whether we have access to the file's directory.
+                if (!FileUtils.checkOrRequestWriteExternalStorage(
+                        ImportActivity.this, importFile, false)) {
+                    xableFormElements(true);
+                    showAlertDialog(R.string.ErrorImportFailed,
+                            getResources().getString(
+                                    R.string.ErrorImportPermissionDenied,
+                                    importFile.getPath()));
+                    // If we're running on Marshmallow or later, request permission
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                        requestPermissions(new String[] {
+                                        Manifest.permission.READ_EXTERNAL_STORAGE },
+                                R.id.ImportEditTextFile);
+                    return;
+                }
+            } catch (IOException iox) {
+                Log.e(TAG, "Failed to verify storage location "
+                        + importFile.getPath(), iox);
+                xableFormElements(true);
+                showAlertDialog(R.string.ErrorImportFailed, iox.getMessage());
+                return;
+            }
 	    // Check whether the file itself is available.
 	    if (!importFile.exists()) {
 		xableFormElements(true);
-		new AlertDialog.Builder(ImportActivity.this)
-		.setIcon(android.R.drawable.ic_dialog_alert)
-		.setTitle(getResources().getString(R.string.ErrorFileNotFound))
-		.setMessage(String.format(getResources().getString(
-			R.string.ErrorCannotFind), importFile.getPath()))
-		.setNeutralButton(getResources().getString(
-			R.string.ConfirmationButtonCancel), dismissListener)
-		.create().show();
+		showAlertDialog(R.string.ErrorFileNotFound,
+                        String.format(getResources().getString(
+                                R.string.ErrorCannotFind), importFile.getPath()));
 		return;
 	    }
 
@@ -405,6 +414,82 @@ public class ImportActivity extends Activity {
 	    Log.d(TAG, "ImportButtonOK.onClick: binding to the import service");
 	    bindService(intent, serviceConnection, 0);
 	}
+    }
+
+    /** Called when the user grants or denies permission */
+    @Override
+    public void onRequestPermissionsResult(
+            int code, @NonNull String[] permissions, int[] results) {
+
+        // This part is all just for debug logging.
+        String[] resultNames = new String[results.length];
+        for (int i = 0; i < results.length; i++) {
+            String name;
+            switch (results[i]) {
+                case PackageManager.PERMISSION_DENIED:
+                    name = "Denied";
+                    break;
+                case PackageManager.PERMISSION_GRANTED:
+                    name = "Granted";
+                    break;
+                default:
+                    name = Integer.toString(results[i]);
+            }
+        }
+        Log.d(TAG, String.format(".onRequestPermissionsResult(%d, %s, %s)",
+                code, Arrays.toString(permissions),
+                Arrays.toString(resultNames)));
+
+        if (code != R.id.ImportEditTextFile) {
+            Log.e(TAG, "Unexpected code from request permissions; ignoring!");
+            return;
+        }
+
+        if (permissions.length != results.length) {
+            Log.e(TAG, String.format("Number of request permissions (%d"
+                            + ") does not match number of results (%d); ignoring!",
+                    permissions.length, results.length));
+            return;
+        }
+
+        for (int i = 0; i < results.length; i++) {
+            if (Manifest.permission.READ_EXTERNAL_STORAGE.equals(permissions[i]) ||
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE.equals(permissions[i])) {
+                if (results[i] == PackageManager.PERMISSION_GRANTED) {
+                    Log.i(TAG, "Read external storage permission granted");
+                    if (errorDialog != null) {
+                        errorDialog.dismiss();
+                        errorDialog = null;
+                        // Retry the import
+                        importButton.performClick();
+                    }
+                }
+                else if (results[i] == PackageManager.PERMISSION_DENIED) {
+                    Log.i(TAG, "Write external storage permission denied!");
+                }
+            } else {
+                Log.w(TAG, "Ignoring unknown permission " + permissions[i]);
+            }
+        }
+
+    }
+
+    /**
+     * Show an error dialog.
+     *
+     * @param titleId ID of the string resource providing
+     *                the title of the dialog
+     * @param message the error message
+     */
+    private void showAlertDialog(int titleId, String message) {
+        errorDialog = new AlertDialog.Builder(this)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setTitle(getResources().getString(titleId))
+                .setMessage(message)
+                .setNeutralButton(getResources().getString(
+                        R.string.ConfirmationButtonOK), dismissListener)
+                .create();
+        errorDialog.show();
     }
 
     class PalmImportServiceConnection implements ServiceConnection {

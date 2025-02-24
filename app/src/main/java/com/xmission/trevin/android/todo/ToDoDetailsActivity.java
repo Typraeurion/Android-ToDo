@@ -1,5 +1,4 @@
 /*
- * $Id: ToDoDetailsActivity.java,v 1.3 2017/07/25 17:52:27 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,19 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: ToDoDetailsActivity.java,v $
- * Revision 1.3  2017/07/25 17:52:27  trevin
- * Fixed a bug that caused the application to crash when attempting
- *   to open an item's details in landscape orientation.
- *
- * Revision 1.2  2014/03/22 19:03:53  trevin
- * Added the copyright notice.
- * Implemented restoring the activity from saved data.  (Not yet tested.)
- *
- * Revision 1.1  2011/01/19 00:35:59  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

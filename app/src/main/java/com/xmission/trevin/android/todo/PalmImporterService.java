@@ -1,5 +1,4 @@
 /*
- * $Id: PalmImporterService.java,v 1.2 2014/03/22 19:03:52 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,16 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: PalmImporterService.java,v $
- * Revision 1.2  2014/03/22 19:03:52  trevin
- * Added the copyright notice.
- * Changed from running as part of the main application to a service.
- * Added test import mode.
- *
- * Revision 1.1  2010/11/20 21:58:18  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

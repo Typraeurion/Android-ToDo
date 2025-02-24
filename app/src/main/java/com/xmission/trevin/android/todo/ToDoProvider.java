@@ -1,5 +1,4 @@
 /*
- * $Id: ToDoProvider.java,v 1.3 2014/06/03 01:31:27 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,18 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: ToDoProvider.java,v $
- * Revision 1.3  2014/06/03 01:31:27  trevin
- * Re-enabled debug log messages.
- *
- * Revision 1.2  2014/02/17 22:25:55  trevin
- * Added the copyright notice.
- * Added a last notification time to to-do items.
- *
- * Revision 1.1  2011/01/14 06:06:19  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 

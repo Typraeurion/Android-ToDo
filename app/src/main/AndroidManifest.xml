@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.xmission.trevin.android.todo"
     android:installLocation="auto"
-    android:versionCode="4"
-    android:versionName="1.2.0">
+    android:versionCode="5"
+    android:versionName="1.2.1">
     <!-- Add for API level 29:
     android:targetSandboxVersion="1"
       -->
@@ -19,15 +19,22 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
+    <!-- Dangerous(??) permission: as of SDK 33, this is not granted at
+         install time but must be requested at runtime — ideally the
+          *first* time the user tries to set an alarm.  See:
+          https://developer.android.com/develop/ui/views/notifications/notification-permission -->
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <!-- Minimum = Froyo (Android 2.2).
          Target WAS Ice Cream [15] (Android 4.03);
-         currently tracking Lollipop [22] (Android 5.1).
-         Next SDK [23] requires programmatic handling of permissions.
+         currently tracking Marshmallow [23] (Android 6.0).
+         Requires programmatic handling of permissions.
          SDK [26] requires change in Toast handling.
          No other changes are anticipated through SDK [35]. -->
 
     <uses-sdk android:minSdkVersion="8"
-              android:targetSdkVersion="22"/>
+              android:targetSdkVersion="23"/>
 
     <!-- For data extraction rules, see: https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore -->
     <!-- For full backup content, see: https://developer.android.com/identity/data/autobackup#Files -->
@@ -37,7 +44,7 @@
         android:icon="@drawable/icon"
         android:label="@string/app_name"
         android:theme="@style/Theme.Light.WithActionBar"
-        tools:targetApi="22">
+        tools:targetApi="23">
         <!-- Add for API level 26:
         android:appCategory="productivity"
           -->

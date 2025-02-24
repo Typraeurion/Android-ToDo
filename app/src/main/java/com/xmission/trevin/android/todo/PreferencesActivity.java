@@ -1,5 +1,4 @@
 /*
- * $Id: PreferencesActivity.java,v 1.5 2014/03/29 18:10:15 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,28 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: PreferencesActivity.java,v $
- * Revision 1.5  2014/03/29 18:10:15  trevin
- * Hide the password field if a password has not been set.
- * Check whether a password has been set before
- *   atempting to verify the password the user may have entered.
- *
- * Revision 1.4  2014/03/22 19:03:52  trevin
- * Added the copyright notice.
- * Encryptor’s password is now returned as a char[] rather than a String.
- * Set our volume control stream for alarm notifications.
- *
- * Revision 1.3  2011/05/19 05:13:34  trevin
- * Implemented the alarm sound selection list.
- *
- * Revision 1.2  2011/05/11 05:16:49  trevin
- * Replaced the password dialog with a password field.
- * Don't use the password field to set or change the password.
- *
- * Revision 1.1  2011/01/18 21:40:13  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 
@@ -45,15 +22,20 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
+import android.Manifest;
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore.Audio.AudioColumns;
 import android.provider.MediaStore.Audio.Media;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.PermissionChecker;
 import android.text.InputType;
 import android.util.Log;
 import android.view.*;
@@ -206,6 +188,24 @@ public class PreferencesActivity extends Activity {
 	    }
 	});
 
+	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxAlarmVibrate);
+        checkBox.setChecked(prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false));
+	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+	    @Override
+	    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+		Log.d(LOG_TAG, "prefsCheckBoxAlarmVibrate.onCheckChanged("
+			+ isChecked + ")");
+		if (!checkVibratePermission()) {
+		    // Warn the user that vibration is not granted
+		    Toast.makeText(PreferencesActivity.this,
+			R.string.ToastVibrateNotPermitted, Toast.LENGTH_LONG).show();
+		    buttonView.setChecked(false);
+		    return;
+		}
+		prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, isChecked).apply();
+	    }
+	});
+
 	player = new MediaPlayer();
 	setVolumeControlStream(AudioManager.STREAM_NOTIFICATION);
 
@@ -250,6 +250,87 @@ public class PreferencesActivity extends Activity {
 	    @Override
 	    public void onNothingSelected(AdapterView<?> parent) {}
 	});
+    }
+
+    /**
+     * Check whether the user has granted us permission to vibrate.
+     * If not, request the permission if possible (Marshmallow API 23
+     * or higher).
+     *
+     * @return true if we are allowed to vibrate the device
+     */
+    private boolean checkVibratePermission() {
+
+	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+	    // In Lollipop and earlier, permissions are granted at install time.
+	    return PermissionChecker.checkSelfPermission(this,
+			    Manifest.permission.VIBRATE) == PackageManager.PERMISSION_GRANTED;
+
+	if (ContextCompat.checkSelfPermission(this, Manifest.permission.VIBRATE)
+	    == PackageManager.PERMISSION_GRANTED)
+	    return true;
+
+	// To Do: Request the vibrate permission
+	requestPermissions(new String[] { Manifest.permission.VIBRATE },
+			R.id.PrefsCheckBoxAlarmVibrate);
+
+	return false;
+
+    }
+
+    /** Called when the user grants or denies permission */
+    @Override
+    public void onRequestPermissionsResult(
+            int code, String[] permissions, int[] results) {
+
+        // This part is all just for debug logging.
+        String[] resultNames = new String[results.length];
+        for (int i = 0; i < results.length; i++) {
+            String name;
+            switch (results[i]) {
+                case PackageManager.PERMISSION_DENIED:
+                    name = "Denied";
+                    break;
+                case PackageManager.PERMISSION_GRANTED:
+                    name = "Granted";
+                    break;
+                default:
+                    name = Integer.toString(results[i]);
+            }
+        }
+        Log.d(LOG_TAG, String.format(".onRequestPermissionsResult(%d, %s, %s)",
+                code, Arrays.toString(permissions),
+                Arrays.toString(resultNames)));
+
+        if (code != R.id.PrefsCheckBoxAlarmVibrate) {
+            Log.e(LOG_TAG, "Unexpected code from request permissions; ignoring!");
+            return;
+        }
+
+        if (permissions.length != results.length) {
+            Log.e(LOG_TAG, String.format("Number of request permissions (%d"
+                    + ") does not match number of results (%d); ignoring!",
+                    permissions.length, results.length));
+            return;
+        }
+
+        for (int i = 0; i < results.length; i++) {
+            if (Manifest.permission.VIBRATE.equals(permissions[i])) {
+                if (results[i] == PackageManager.PERMISSION_GRANTED) {
+                    Log.i(LOG_TAG, "Vibrate permission granted, enabling vibrating alarm");
+                    prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, true).apply();
+                    CheckBox checkBox = (CheckBox)
+                            findViewById(R.id.PrefsCheckBoxAlarmVibrate);
+                    checkBox.setChecked(true);
+                }
+                else if (results[i] == PackageManager.PERMISSION_DENIED) {
+                    Log.i(LOG_TAG, "Vibrate permission denied!");
+                }
+            } else {
+                Log.w(LOG_TAG, "Ignoring unknown permission " + permissions[i]);
+            }
+        }
+
     }
 
     /** Called when the user presses the Back button */

@@ -1,5 +1,4 @@
 /*
- * $Id: XMLExporterService.java,v 1.3 2014/03/29 19:49:14 trevin Exp trevin $
  * Copyright © 2011 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,18 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * $Log: XMLExporterService.java,v $
- * Revision 1.3  2014/03/29 19:49:14  trevin
- * Don’t export the password or private records when the
- *   “export private” option is un-checked.
- *
- * Revision 1.2  2014/03/23 21:43:56  trevin
- * Fixed the file format from DOS to unix.
- *
- * Revision 1.1  2014/03/02 22:21:57  trevin
- * Initial revision
- *
  */
 package com.xmission.trevin.android.todo;
 
@@ -216,6 +203,8 @@ public class XMLExporterService extends IntentService
 		    key, escapeXML(prefMap.get(key).toString()), key));
 	}
 	out.println("    </" + PREFERENCES_TAG + ">");
+        Log.d(LOG_TAG, String.format("Wrote %d preference settings",
+                prefMap.size()));
     }
 
     /** RFC 3548 sec. 4 */
@@ -264,6 +253,7 @@ public class XMLExporterService extends IntentService
 		PROJECTION, null, null, ToDoMetadata.NAME);
 	try {
 	    out.println("    <" + METADATA_TAG + ">");
+            int count = 0;
 	    while (c.moveToNext()) {
 		String name = c.getString(c.getColumnIndex(ToDoMetadata.NAME));
 		// Skip the password if we are not exporting private records
@@ -283,8 +273,10 @@ public class XMLExporterService extends IntentService
 		    out.print(encodeBase64(c.getBlob(ival)));
 		    out.println("</item>");
 		}
+		count++;
 	    }
 	    out.println("    </" + METADATA_TAG + ">");
+            Log.d(LOG_TAG, String.format("Wrote %d metadata items", count));
 	} finally {
 	    c.close();
 	}
@@ -312,6 +304,7 @@ public class XMLExporterService extends IntentService
 		exportCount++;
 	    }
 	    out.println("    </" + CATEGORIES_TAG + ">");
+            Log.i(LOG_TAG, String.format("Wrote %d categories", exportCount));
 	} finally {
 	    c.close();
 	}
@@ -470,9 +463,9 @@ public class XMLExporterService extends IntentService
 
 		    i = c.getColumnIndex(ToDoItem.HIDE_DAYS_EARLIER);
 		    if (!c.isNull(i)) {
-			out.println("\t\t<hide days-earlier=\"");
+			out.print("\t\t<hide days-earlier=\"");
 			out.print(c.getInt(i));
-			out.print("\"/>");
+			out.println("\"/>");
 		    }
 
 		    i = c.getColumnIndex(ToDoItem.NOTIFICATION_TIME);
@@ -501,6 +494,7 @@ public class XMLExporterService extends IntentService
 		exportCount++;
 	    }
 	    out.println("    </" + ITEMS_TAG + ">");
+            Log.i(LOG_TAG, String.format("Wrote %d ToDo items", exportCount));
 	} finally {
 	    c.close();
 	}
