@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.xmission.trevin.android.todo.ToDoListActivity">
+    tools:context="com.xmission.trevin.android.todo.ui.ToDoListActivity">
     <item android:id="@+id/menuShowCompleted"
      android:icon="@drawable/ic_menu_mark"
      android:title="@string/MenuShowCompleted"/>

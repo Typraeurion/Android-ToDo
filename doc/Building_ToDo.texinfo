@@ -55,12 +55,212 @@ Commons 3.0 Attribution-ShareAlike License.
 @node Top, Building from the Source, (dir), (dir)
 @top Menu
 @menu
+* Code Organization::
 * Building from the Source::
 * To Do::
 @end menu
 @end ifinfo
 
-@node Building from the Source, To Do, , Top
+@node Code Organization, Building from the Source, , Top
+@chapter Code Organization
+
+As with all Android projects, the @file{AndroidManifest.xml} file
+under @file{app/src/main/} describes the main components of the
+application --- its activities, provider, services, and intent
+receiver.
+
+There are two major packages for the code in
+@file{app/src/main/java/}: the cryptography code and the main
+application.
+
+Resources used by the application (UI layout, language-dependent
+strings, icons, etc.) are under @file{app/src/main/res/}.
+@xref{Generating Icons} for details on how the icons are rendered.
+
+@ifinfo
+@menu
+* Encryption Code::
+* Data Model::
+* User Interface::
+* Services::
+* Receiver::
+* Provider::
+* Utilities::
+* Unit Tests::
+* Android Tests::
+@end menu
+@end ifinfo
+
+@node Encryption Code, Data Model, Code Organization, Code Organization
+@section Encryption Code
+
+When the user sets a password for private To Do items, the application
+turns the password into an encryption key using a Password-Based Key
+Derivation Function
+(@url{https://en.wikipedia.org/wiki/PBKDF2,PBKDF}).  Android 4.4
+(KitKat) introduced a @strong{breaking change} to the SecretKeyFactory
+resulting in a different key being generated for the same password
+compared to the key generated in Android 4.3 (Jellybean) and earlier
+(see
+``@url{https://android-developers.googleblog.com/2013/12/changes-to-secretkeyfactory-api-in.html,Changes to the SecretKeyFactory API in Android 4.4}'').
+In addition, Android 2.2 (Froyo) had no support for the
+@code{PBKDF2WithHmacSHA1} algorithm.  To allow the password to work
+for both local data and backup files across all supported Android
+versions, the app uses a copy of parts of BouncyCastle's encryption
+library in the @code{com.xmission.trevin.android.crypto} package.
+This code @strong{must} remain unchanged in all versions of the To Do
+app.
+
+@node Data Model, User Interface, Encryption Code, Code Organization
+@section Data Model
+
+@emph{To Do @dots}
+
+@node User Interface, Services, Data Model, Code Organization
+@section User Interface
+
+The Android Activities and other UI-related classes are in the
+@code{com.xmission.trevin.android.todo.ui} package.  These include:
+
+@itemize @bullet
+@item @code{ToDoListActivity}
+--- the main entry point of the application, which shows the list of
+To Do items.
+
+@item @code{ToDoDetailsActivity}
+--- The screen which shows the general details of a single item from
+the list.
+
+@item @code{ToDoNoteActivity}
+--- The screen that lets you add a longer note to a To Do item.
+
+@item @code{CalendarDatePicker}
+--- A custom calendar-like view for selecting a due date.
+
+@item @code{CalendarDatePickerDialog}
+--- A dialog wrapper around @code{CalendarDatePicker}
+
+@item @code{RepeatEditor}
+--- The screen that lets you customize when a repeating task needs to
+be done again once it has been marked complete.
+
+@item @code{RepeatDialog}
+--- A dialog wrapper around @code{RepeatEditor}
+
+@item @code{CategoryListActivity}
+--- The screen that lets you edit categories for grouping items.
+
+@item @code{PreferencesActivity}
+--- The ``Settings'' screen of the application.
+
+@item @code{ExportActivity}
+--- The screen from which you can save the app's data to a backup file.
+
+@item @code{ImportActivity}
+--- The screen from which you can load app date from a backup file.
+@end itemize
+
+@node Services, Receiver, User Interface, Code Organization
+@section Services
+
+Background services are in the
+@code{com.xmission.trevin.android.todo.service} package.  These are:
+
+@itemize @bullet
+@item @code{AlarmService}
+--- Keeps track of which To Do items have an upcoming alarm, and posts
+notifications when the next one(s) are due.
+
+@item @code{PasswordChangeService}
+--- When you change your password for private records, it changes
+their encryption key so all records need to be decrypted with the old
+password and re-encrypted with the new one.  This service is
+responsible for updating the stored data.  The changes occur in the
+following sequence:
+
+@enumerate
+@item If there was an old password, all private records are decrypted.
+@item The hash of the old password (if any) is removed from the database.
+@item The hash of the new password (if any) is written to the database.
+@item If there is a new password, all private records are encrypted.
+@end enumerate
+
+This ensures that if the process fails at any point, you will never
+have data encrypted by two different keys.
+
+@item @code{PalmImporterService}
+--- This service is used when importing a @file{.dat} file, which the
+app assumes was created by
+@url{https://palmdb.net/app/palm-desktop,Palm Desktop} as a backup of
+a To Do list from a @url{https://en.wikipedia.org/wiki/PalmPilot,Palm
+Pilot} or @url{https://en.wikipedia.org/wiki/Palm_Tungsten,Palm
+Tungsten} PDA.
+
+@item @code{XMLExporterService}
+--- This service is used when exporting your To Do list(s) to a backup
+file.
+
+@item @code{XMLImporterService}
+--- This service is used when importing To Do items from an XML file.
+(The app currently assumes any file not ending in @file{.dat} is XML
+data.)
+
+@end itemize
+
+@node Receiver, Provider, Services, Code Organization
+@section Receiver
+
+In the @code{com.xmission.trevin.android.todo.receiver} package, the
+@code{AlarmInitReceiver} is called when Android starts up so that it
+can start the @code{AlarmService} which will let you know of any To Do
+items which came due while the device was off.
+
+@node Provider, Utilities, Receiver, Code Organization
+@section Provider
+
+In the @code{com.xmission.trevin.android.todo.provider} package,
+@code{ToDoProvider} provides access to the SQLite database containing
+the To Do items and list of categories.
+
+@node Utilities, Unit Tests, Provider, Code Organization
+@section Utilities
+
+The following utility classes are in the
+@code{com.xmission.trevin.android.todo.util} package.
+
+@itemize @bullet
+@item @code{StringEncryption}
+--- This class is used to encrypt and decrypt private records, and is
+also the in-memory store for the password when it is entered on the
+Settings screen (@emph{if} the password's hash matches the hash stored
+in the database.)  The code takes care to ensure the plain-text
+password is not cached, nor is it ever written to persistent storage.
+
+@code{StringEncryption}
+@item @code{FileUtils}
+--- This class is used to determine the default location where backup
+files will be written or read, and to check whether an SD card is
+mounted and whether the app has permission to write to or read from
+the requested folder.
+@end itemize
+
+@node Unit Tests, Android Tests, Utilities, Code Organization
+@section Unit Tests
+
+The unit tests are found in @file{app/src/test/java/} and is comprised of
+tests that can run on a standard Java platform rather than the Android
+platform.  In some cases, parts of the Android library (e.g. the
+@code{android.util.Log} facility) have mock substitutes.
+
+@node Android Tests, Building from the Source, Unit Tests, Code Organization
+@section Android Tests
+
+The tests in @file{app/src/androidTest/java/} @emph{require} an
+Android platform to run on, typically an emulator.  These should be
+repeated on emulators running different Android versions to check
+compatibility.
+
+@node Building from the Source, To Do, Code Organization, Top
 @chapter Building from the Source
 
 When making any changes to the code, you also need to change the release

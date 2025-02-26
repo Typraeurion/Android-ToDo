@@ -57,7 +57,7 @@
           -->
 
         <activity
-            android:name=".ToDoListActivity"
+            android:name=".ui.ToDoListActivity"
             android:label="@string/app_name"
             android:exported="true"
             android:launchMode="singleTop">
@@ -71,11 +71,11 @@
             </intent-filter>
         </activity>
 
-        <provider android:name="ToDoProvider"
-                  android:authorities="com.xmission.trevin.android.todo.ToDo">
+        <provider android:name=".provider.ToDoProvider"
+                  android:authorities="com.xmission.trevin.android.todo.data.ToDo">
         </provider>
 
-        <activity android:name="CategoryListActivity"
+        <activity android:name=".ui.CategoryListActivity"
                   android:exported="false"
                   android:launchMode="standard">
             <intent-filter>
@@ -84,7 +84,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="ExportActivity"
+        <activity android:name=".ui.ExportActivity"
                   android:exported="false"
                   android:launchMode="standard">
             <intent-filter>
@@ -92,7 +92,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="ImportActivity"
+        <activity android:name=".ui.ImportActivity"
                   android:exported="false"
                   android:launchMode="standard">
             <intent-filter>
@@ -100,14 +100,14 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="PreferencesActivity"
+        <activity android:name=".ui.PreferencesActivity"
                   android:exported="false">
             <intent-filter>
                 <action android:name="android.settings.APPLICATION_SETTINGS"/>
             </intent-filter>
         </activity>
 
-        <activity android:name="ToDoDetailsActivity"
+        <activity android:name=".ui.ToDoDetailsActivity"
                   android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.EDIT"/>
@@ -115,7 +115,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="ToDoNoteActivity"
+        <activity android:name=".ui.ToDoNoteActivity"
                   android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.EDIT"/>
@@ -125,30 +125,30 @@
 
         <service android:exported="false"
                  android:label="@string/service_name_password_change"
-                 android:name=".PasswordChangeService">
+                 android:name=".service.PasswordChangeService">
         </service>
 
         <service android:exported="false"
                  android:label="@string/service_name_alarm"
-                 android:name=".AlarmService">
+                 android:name=".service.AlarmService">
         </service>
 
         <service android:exported="false"
                  android:label="@string/service_name_import_palm"
-                 android:name=".PalmImporterService">
+                 android:name=".service.PalmImporterService">
         </service>
 
         <service android:exported="false"
                  android:label="@string/service_name_import_xml"
-                 android:name=".XMLImporterService">
+                 android:name=".service.XMLImporterService">
         </service>
 
         <service android:exported="false"
                  android:label="@string/service_name_export"
-                 android:name=".XMLExporterService">
+                 android:name=".service.XMLExporterService">
         </service>
 
-        <receiver android:name=".AlarmInitReceiver"
+        <receiver android:name=".receiver.AlarmInitReceiver"
                   android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
