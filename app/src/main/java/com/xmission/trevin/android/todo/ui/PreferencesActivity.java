@@ -193,67 +193,79 @@ public class PreferencesActivity extends Activity {
 	});
 
 	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxAlarmVibrate);
-        checkBox.setChecked(prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false));
-	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxAlarmVibrate.onCheckChanged("
-			+ isChecked + ")");
-		if (!checkVibratePermission()) {
-		    // Warn the user that vibration is not granted
-		    Toast.makeText(PreferencesActivity.this,
-			R.string.ToastVibrateNotPermitted, Toast.LENGTH_LONG).show();
-		    buttonView.setChecked(false);
-		    return;
-		}
-		prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, isChecked).apply();
-	    }
-	});
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            checkBox.setChecked(prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false));
+            checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    Log.d(LOG_TAG, "prefsCheckBoxAlarmVibrate.onCheckChanged("
+                            + isChecked + ")");
+                    if (!checkVibratePermission()) {
+                        // Warn the user that vibration is not granted
+                        Toast.makeText(PreferencesActivity.this,
+                                R.string.ToastVibrateNotPermitted, Toast.LENGTH_LONG).show();
+                        buttonView.setChecked(false);
+                        return;
+                    }
+                    prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, isChecked).apply();
+                }
+            });
 
-	player = new MediaPlayer();
-	setVolumeControlStream(AudioManager.STREAM_NOTIFICATION);
+            player = new MediaPlayer();
+            setVolumeControlStream(AudioManager.STREAM_NOTIFICATION);
 
-	StringBuilder where = new StringBuilder();
-	where.append(AudioColumns.IS_NOTIFICATION)
-		.append(" OR ").append(AudioColumns.IS_ALARM);
-	// where.append(" OR ").append(AudioColumns.IS_RINGTONE);
-	Cursor audioCursor = managedQuery(
-		Media.INTERNAL_CONTENT_URI, SOUND_PROJECTION,
-		where.toString(), null, AudioColumns.TITLE);
-	NoSelectionCursorAdapter soundAdapter =
-	    new NoSelectionCursorAdapter(this, audioCursor, AudioColumns.TITLE,
-		    getString(R.string.PrefTextNoSound));
-	spinner = (Spinner) findViewById(R.id.PrefsSpinnerAlarmSound);
-	spinner.setAdapter(soundAdapter);
-	final long initialSound = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
-	setSpinnerByID(spinner, initialSound);
-	spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-	    long lastSound = initialSound;
-	    @Override
-	    public void onItemSelected(AdapterView<?> parent, View child,
-		    int position, long id) {
-		// Play a sample of the sound for the user
-		if ((id >= 0) && (id != lastSound)) {
-		    try {
-			player.reset();
-			player.setDataSource(PreferencesActivity.this,
-				Uri.withAppendedPath(Media.INTERNAL_CONTENT_URI,
-					Long.toString(id)));
-			player.prepare();
-			player.start();
-			lastSound = id;
-		    } catch (IOException iox) {
-			// Silence.  Oh, well.
-		    } catch (Exception anyx) {
-			Toast.makeText(PreferencesActivity.this,
-				anyx.getMessage(), Toast.LENGTH_LONG).show();
-		    }
-		}
-		prefs.edit().putLong(TPREF_NOTIFICATION_SOUND, id).apply();
-	    }
-	    @Override
-	    public void onNothingSelected(AdapterView<?> parent) {}
-	});
+            StringBuilder where = new StringBuilder();
+            where.append(AudioColumns.IS_NOTIFICATION)
+                    .append(" OR ").append(AudioColumns.IS_ALARM);
+            // where.append(" OR ").append(AudioColumns.IS_RINGTONE);
+            Cursor audioCursor = managedQuery(
+                    Media.INTERNAL_CONTENT_URI, SOUND_PROJECTION,
+                    where.toString(), null, AudioColumns.TITLE);
+            NoSelectionCursorAdapter soundAdapter =
+                    new NoSelectionCursorAdapter(this, audioCursor, AudioColumns.TITLE,
+                            getString(R.string.PrefTextNoSound));
+            spinner = (Spinner) findViewById(R.id.PrefsSpinnerAlarmSound);
+            spinner.setAdapter(soundAdapter);
+            final long initialSound = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
+            setSpinnerByID(spinner, initialSound);
+            spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+                long lastSound = initialSound;
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View child,
+                                           int position, long id) {
+                    // Play a sample of the sound for the user
+                    if ((id >= 0) && (id != lastSound)) {
+                        try {
+                            player.reset();
+                            player.setDataSource(PreferencesActivity.this,
+                                    Uri.withAppendedPath(Media.INTERNAL_CONTENT_URI,
+                                            Long.toString(id)));
+                            player.prepare();
+                            player.start();
+                            lastSound = id;
+                        } catch (IOException iox) {
+                            // Silence.  Oh, well.
+                        } catch (Exception anyx) {
+                            Toast.makeText(PreferencesActivity.this,
+                                    anyx.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                    prefs.edit().putLong(TPREF_NOTIFICATION_SOUND, id).apply();
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            });
+        } else {
+            // As of Oreo, we don't control vibration or sound through
+            // our own preferences; the user has to set these in the
+            // system settings.  Hide the options instead.
+            checkBox.setVisibility(View.GONE);
+            ViewParent soundParent = findViewById(
+                    R.id.PrefsSpinnerAlarmSound).getParent();
+            if (soundParent instanceof View) {
+                ((View) soundParent).setVisibility(View.GONE);
+            }
+        }
     }
 
     /**
@@ -268,10 +280,12 @@ public class PreferencesActivity extends Activity {
 	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
 	    // In Lollipop and earlier, permissions are granted at install time.
 	    return PermissionChecker.checkSelfPermission(this,
-                    Manifest.permission.VIBRATE) == PackageManager.PERMISSION_GRANTED;
+                    Manifest.permission.VIBRATE) ==
+                PackageManager.PERMISSION_GRANTED;
 
-	if (ContextCompat.checkSelfPermission(this, Manifest.permission.VIBRATE)
-	    == PackageManager.PERMISSION_GRANTED)
+	if (ContextCompat.checkSelfPermission(this,
+            Manifest.permission.VIBRATE)
+            == PackageManager.PERMISSION_GRANTED)
 	    return true;
 
 	// To Do: Request the vibrate permission
@@ -378,7 +392,8 @@ public class PreferencesActivity extends Activity {
     public void onDestroy() {
 	Log.d(LOG_TAG, ".onDestroy()");
 	StringEncryption.releaseGlobalEncryption(this);
-	player.release();
+        if (player != null)
+            player.release();
 	super.onDestroy();
     }
 

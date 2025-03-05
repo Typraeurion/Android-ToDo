@@ -17,6 +17,7 @@
 package com.xmission.trevin.android.todo.receiver;
 
 import android.content.*;
+import android.os.Build;
 import android.util.Log;
 
 import com.xmission.trevin.android.todo.service.AlarmService;
@@ -37,6 +38,19 @@ public class AlarmInitReceiver extends BroadcastReceiver {
 		+ ", data=" + intent.getDataString() + ")");
 	Intent alarmIntent = new Intent(context, AlarmService.class);
 	alarmIntent.setAction(intent.getAction());
-	context.startService(alarmIntent);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            context.startService(alarmIntent);
+        } else {
+            /*
+             * Since API 26, Android does not permit starting a service
+             * in the background. (#*&@!!)  Instead we have to start
+             * the service in the foreground, AND the service has to
+             * provide a foreground notification!!
+             *
+             * On top of that, as of API 31 apps are not allowed to
+             * start foreground services either. >:^(
+             */
+            context.startForegroundService(alarmIntent);
+        }
     }
 }

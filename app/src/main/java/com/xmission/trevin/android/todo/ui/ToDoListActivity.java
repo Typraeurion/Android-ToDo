@@ -16,6 +16,9 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
+import static com.xmission.trevin.android.todo.service.AlarmService.EXTRA_ITEM_CATEGORY_ID;
+import static com.xmission.trevin.android.todo.service.AlarmService.EXTRA_ITEM_ID;
+
 import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -42,7 +45,6 @@ import android.database.DataSetObserver;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -230,10 +232,15 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	// as a MAIN activity), then use our default content provider.
 	Intent intent = getIntent();
 	if (intent.getData() == null) {
+            Log.d(TAG, String.format("No intent data; defaulting to %s",
+                    ToDoItem.CONTENT_URI.toString()));
 	    intent.setData(ToDoItem.CONTENT_URI);
 	    todoUri = ToDoItem.CONTENT_URI;
 	    categoryUri = ToDoCategory.CONTENT_URI;
 	} else {
+            Log.d(TAG, String.format("intent data = %s: %s",
+                    intent.getAction(), intent.getDataString()));
+            // Fix Me: what are the other actions that could lead here?
 	    todoUri = intent.getData();
 	    categoryUri = todoUri.buildUpon().encodedPath("/categories").build();
 	}
@@ -251,51 +258,30 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	}
 
 	/*
-	 * Perform two managed queries. The Activity will handle closing and
-	 * requerying the cursor when needed ... on Android 2.x.
-	 *
+	 * Perform two managed queries.
 	 * On API level ≥ 11, you need to find a way to re-initialize
 	 * the cursor when the activity is restarted!
 	 */
 	Cursor categoryCursor = null;
-	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-	    Log.d(TAG, ".onCreate: selecting categories");
-	    categoryCursor = managedQuery(categoryUri,
-		    CATEGORY_PROJECTION, null, null,
-		    ToDoCategory.DEFAULT_SORT_ORDER);
-	    categoryAdapter = new CategoryFilterCursorAdapter(this, categoryCursor);
-	} else {
-	    categoryAdapter = new CategoryFilterCursorAdapter(this, 0);
-	    Log.d(TAG, ".onCreate: initializing a category loader manager");
-	    if (Log.isLoggable(TAG, Log.DEBUG))
-		    LoaderManager.enableDebugLogging(true);
-	    categoryLoaderCallbacks = new CategoryLoaderCallbacks(this,
-			    prefs, categoryAdapter, categoryUri);
-	    getLoaderManager().initLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
-		    null, (LoaderManager.LoaderCallbacks<Cursor>) categoryLoaderCallbacks);
-	}
+        categoryAdapter = new CategoryFilterCursorAdapter(this, 0);
+        Log.d(TAG, ".onCreate: initializing a category loader manager");
+        if (Log.isLoggable(TAG, Log.DEBUG))
+            LoaderManager.enableDebugLogging(true);
+        categoryLoaderCallbacks = new CategoryLoaderCallbacks(this,
+                prefs, categoryAdapter, categoryUri);
+        getLoaderManager().initLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
+                null, (LoaderManager.LoaderCallbacks<Cursor>) categoryLoaderCallbacks);
 
         Cursor itemCursor = null;
-	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-	    Log.d(TAG, ".onCreate: selecting To Do items where "
-		    + whereClause + " ordered by "
-		    + ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-	    itemCursor = managedQuery(todoUri,
-		    ITEM_PROJECTION, whereClause, null,
-		    ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-	    itemAdapter = new ToDoCursorAdapter(
-		    this, R.layout.list_item, itemCursor,
-		    getContentResolver(), todoUri, this, encryptor);
-	} else {
-	    itemAdapter = new ToDoCursorAdapter(
-		    this, R.layout.list_item, null,
-		    getContentResolver(), todoUri, this, encryptor);
-	    Log.d(TAG, ".onCreate: initializing a To Do item loader manager");
-	    itemLoaderCallbacks = new ItemLoaderCallbacks(this,
-			    prefs, itemAdapter, todoUri);
-	    getLoaderManager().initLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-		    null, (LoaderManager.LoaderCallbacks<Cursor>) itemLoaderCallbacks);
-	}
+        itemAdapter = new ToDoCursorAdapter(
+                this, R.layout.list_item, null,
+                getContentResolver(), todoUri, this, encryptor,
+                (NotificationManager) getSystemService(NOTIFICATION_SERVICE));
+        Log.d(TAG, ".onCreate: initializing a To Do item loader manager");
+        itemLoaderCallbacks = new ItemLoaderCallbacks(this,
+                prefs, itemAdapter, todoUri);
+        getLoaderManager().initLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+                null, (LoaderManager.LoaderCallbacks<Cursor>) itemLoaderCallbacks);
 
         // Inflate our view so we can find our lists
 	setContentView(R.layout.list);
@@ -304,8 +290,6 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
         	R.layout.simple_spinner_dropdown_item);
         categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
         categoryList.setAdapter(categoryAdapter);
-	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB)
-	    setCategorySpinnerByID(prefs.getLong(TPREF_SELECTED_CATEGORY, -1));
 
 	itemAdapter.setViewResource(R.layout.list_item);
 	ListView listView = getListView();
@@ -349,8 +333,6 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 			prefs.getLong(TPREF_SELECTED_CATEGORY, -1);
 		if (categoryList.getSelectedItemId() != selectedCategory) {
 		    Log.w(TAG, "The category ID at the selected position has changed!");
-		    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB)
-			ToDoListActivity.this.setCategorySpinnerByID(selectedCategory);
 		}
 	    }
 	    @Override
@@ -378,8 +360,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     @Override
     public void onRestart() {
 	Log.d(TAG, ".onRestart");
-	if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) &&
-		(categoryLoaderCallbacks instanceof LoaderManager.LoaderCallbacks)) {
+	if (categoryLoaderCallbacks instanceof LoaderManager.LoaderCallbacks) {
 	    getLoaderManager().restartLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
 		    null, (LoaderManager.LoaderCallbacks<Cursor>) categoryLoaderCallbacks);
 	    getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
@@ -393,6 +374,74 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     public void onStart() {
 	Log.d(TAG, ".onStart");
 	super.onStart();
+
+        // Check whether we were called with a specific item,
+        // e.g. by the user clicking on an alarm notification.
+        showItemFromIntent(getIntent());
+    }
+
+    /**
+     * Called when the activity is already active but is being called
+     * again with another {@link Intent}.  This may be due to starting
+     * it from an alarm notification, in which case we need to update
+     * the activity&rsquo;s Intent; otherwise {@link #getIntent()}
+     * will still return the original Intent instead of using the new
+     * one.
+     * <p>
+     * See also:
+     * <a href="https://stackoverflow.com/a/34086257/13442812">Android
+     * intent extra data is lost</a> on StackOverflow.
+     * </p>
+     */
+    @Override
+    protected void onNewIntent(Intent newIntent) {
+        Log.d(TAG, String.format(".onNewIntent(%s, extras=%s)",
+                newIntent.getAction(), newIntent.getExtras()));
+        super.onNewIntent(newIntent);
+        setIntent(newIntent);
+        showItemFromIntent(newIntent);
+    }
+
+    /**
+     * Update the view if necessary to ensure a particular To Do item is shown,
+     * if the given {@link Intent} includes a category and item ID.
+     *
+     * @param intent the {link Intent} by which this activity was called
+     */
+    private void showItemFromIntent(Intent intent) {
+        if (intent.hasExtra(AlarmService.EXTRA_ITEM_ID)) {
+            long categoryId = intent.getLongExtra(EXTRA_ITEM_CATEGORY_ID, -1);
+            long itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+            if ((categoryId >= 0) && (itemId >= 0))
+                showItemIfNeeded(categoryId, itemId);
+        }
+    }
+
+    /**
+     * Update the view if necessary to ensure a particular To Do item is shown.
+     *
+     * @param categoryId the ID of the category which should be shown.  If
+     *        the current category is &ldquo;All&rdquo; or this category,
+     *        we do nothing; otherwise change the category to this value.
+     * @param itemId the ID of the To Do item which should be visible.
+     *        <i>(Currently does nothing; Fix Me)</i>
+     */
+    private void showItemIfNeeded(long categoryId, long itemId) {
+        long selectedCategory = prefs.getLong(TPREF_SELECTED_CATEGORY, -1);
+        if ((selectedCategory >= 0) && (categoryId != selectedCategory)) {
+            Log.d(TAG, String.format("Changing the selected category from %d to %d",
+                    selectedCategory, categoryId));
+            // Switch to the category this item is in
+            setCategorySpinnerByID(categoryId);
+            prefs.edit().putLong(TPREF_SELECTED_CATEGORY, categoryId).apply();
+        }
+
+        //ListView listView = getListView();
+        Log.d(TAG, String.format("Target item for display is %d", itemId));
+        // Fix Me: We ought to scroll to the item that was in the
+        // notification, but we have to make sure the cursor's WHERE
+        // clause is update first.
+        //listView.smoothScrollToPosition(?);
     }
 
     /** Called when the activity is ready for user interaction */
@@ -567,17 +616,9 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 
                     Log.d(TAG, ".onSharedPreferenceChanged: requerying the data where "
                             + whereClause);
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-                        Cursor itemCursor = managedQuery(todoUri,
-                                ITEM_PROJECTION, whereClause, null,
-                                ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-                        // Change the cursor used by this list
-                        itemAdapter.changeCursor(itemCursor);
-                    } else {
-                        getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-                                null, (LoaderManager.LoaderCallbacks<Cursor>)
-                                        itemLoaderCallbacks);
-                    }
+                    getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+                            null, (LoaderManager.LoaderCallbacks<Cursor>)
+                                    itemLoaderCallbacks);
                 } else if (key.equals(TPREF_SHOW_CATEGORY) ||
                         key.equals(TPREF_SHOW_DUE_DATE) ||
                         key.equals(TPREF_SHOW_PRIORITY)) {
@@ -599,44 +640,47 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	getMenuInflater().inflate(R.menu.menu_main, menu);
 	menu.findItem(R.id.menuSettings).setIntent(
 		new Intent(this, PreferencesActivity.class));
-	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-	    menu.findItem(R.id.menuShowCompleted).setShowAsAction(
-		    MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        menu.findItem(R.id.menuShowCompleted).setShowAsAction(
+                MenuItem.SHOW_AS_ACTION_IF_ROOM);
         return true;
     }
 
     /** Called when the user selects a menu item. */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-	switch (item.getItemId()) {
-	default:
-	    Log.w(TAG, "onOptionsItemSelected(" + item.getItemId()
-		    + "): Not handled");
-	    return false;
-
-	case R.id.menuShowCompleted:
+	if (item.getItemId() == R.id.menuShowCompleted) {
 	    prefs.edit().putBoolean(TPREF_SHOW_CHECKED,
 		    !prefs.getBoolean(TPREF_SHOW_CHECKED, false)).apply();
 	    return true;
+        }
 
-	case R.id.menuInfo:
+        else if (item.getItemId() == R.id.menuInfo) {
 	    showDialog(ABOUT_DIALOG_ID);
 	    return true;
+        }
 
-	case R.id.menuExport:
+        else if (item.getItemId() == R.id.menuExport) {
 	    Intent intent = new Intent(this, ExportActivity.class);
 	    startActivity(intent);
 	    return true;
+        }
 
-	case R.id.menuImport:
-	    intent = new Intent(this, ImportActivity.class);
+        else if (item.getItemId() == R.id.menuImport) {
+	    Intent intent = new Intent(this, ImportActivity.class);
 	    startActivity(intent);
 	    return true;
+        }
 
-	case R.id.menuPassword:
+        else if (item.getItemId() == R.id.menuPassword) {
 	    showDialog(PASSWORD_DIALOG_ID);
 	    return true;
-	}
+        }
+
+        else {
+            Log.w(TAG, "onOptionsItemSelected(" + item.getItemId()
+                    + "): Not handled");
+            return false;
+        }
     }
 
     /** Called when opening a dialog for the first time */

@@ -71,7 +71,10 @@ receiver.
 
 There are two major packages for the code in
 @file{app/src/main/java/}: the cryptography code and the main
-application.
+application.  All code is under the top-level package
+@code{com.xmission.trevin.android}, with the cryptography code in the
+@code{crypto} subpackage and the rest of the application in
+@code{todo}.
 
 Resources used by the application (UI layout, language-dependent
 strings, icons, etc.) are under @file{app/src/main/res/}.
@@ -107,9 +110,8 @@ In addition, Android 2.2 (Froyo) had no support for the
 @code{PBKDF2WithHmacSHA1} algorithm.  To allow the password to work
 for both local data and backup files across all supported Android
 versions, the app uses a copy of parts of BouncyCastle's encryption
-library in the @code{com.xmission.trevin.android.crypto} package.
-This code @strong{must} remain unchanged in all versions of the To Do
-app.
+library.  This code @strong{must} remain unchanged in all versions of
+the To Do app.
 
 @node Data Model, User Interface, Encryption Code, Code Organization
 @section Data Model
@@ -120,7 +122,7 @@ app.
 @section User Interface
 
 The Android Activities and other UI-related classes are in the
-@code{com.xmission.trevin.android.todo.ui} package.  These include:
+@code{ui} subpackage.  These include:
 
 @itemize @bullet
 @item @code{ToDoListActivity}
@@ -163,8 +165,7 @@ be done again once it has been marked complete.
 @node Services, Receiver, User Interface, Code Organization
 @section Services
 
-Background services are in the
-@code{com.xmission.trevin.android.todo.service} package.  These are:
+Background services are in the @code{service} subpackage.  These are:
 
 @itemize @bullet
 @item @code{AlarmService}
@@ -210,23 +211,22 @@ data.)
 @node Receiver, Provider, Services, Code Organization
 @section Receiver
 
-In the @code{com.xmission.trevin.android.todo.receiver} package, the
-@code{AlarmInitReceiver} is called when Android starts up so that it
-can start the @code{AlarmService} which will let you know of any To Do
-items which came due while the device was off.
+In the @code{receiver} subpackage, the @code{AlarmInitReceiver} is
+called when Android starts up so that it can start the
+@code{AlarmService} which will let you know of any To Do items which
+came due while the device was off.
 
 @node Provider, Utilities, Receiver, Code Organization
 @section Provider
 
-In the @code{com.xmission.trevin.android.todo.provider} package,
-@code{ToDoProvider} provides access to the SQLite database containing
-the To Do items and list of categories.
+In the @code{provider} subpackage, @code{ToDoProvider} provides access
+to the SQLite database containing the To Do items and list of
+categories.
 
 @node Utilities, Unit Tests, Provider, Code Organization
 @section Utilities
 
-The following utility classes are in the
-@code{com.xmission.trevin.android.todo.util} package.
+The following utility classes are in the @code{util} subpackage.
 
 @itemize @bullet
 @item @code{StringEncryption}
@@ -284,10 +284,11 @@ using:
 
 @end itemize
 
-To build the old code on a newer system requires a few different
-tools, but not @emph{too} modern.  The following development
+To build the old code (version 1.2.x) on a newer system requires a few
+different tools, but not @emph{too} modern.  The following development
 environment was set up and tested in 2025 on Fedora Linux 40 with only
 minor bug fixes to the code:
+
 @itemize @bullet
 
 @item Java (1.)8 @emph{(Do} @strong{not} @emph{use a newer version, as
@@ -309,6 +310,19 @@ as it does not exist in Maven Central nor in Google's Maven repository.
 
 @end itemize
 
+Building the more recent code (version 1.3+) @emph{should} work on the
+latest release of Android Studio; the following environment was used
+to build version 1.3.0:
+
+@itemize @bullet
+@item Java 21
+
+@item Android Studio 2024.2.2 (``Ladybug'')
+
+@item Gradle 8.12.1
+
+@end itemize
+
 See @uref{http://developer.android.com/sdk/index.html} for information
 on how to set up a project using the Android SDK.
 
@@ -322,19 +336,22 @@ image files are included with the source code (in
 change any image you can use @command{povray} to generate new ones.
 The @file{.pov} sources are under @file{app/src/main/graphics/}.
 
-Because some of the icons contain small details that may get lost if
-rendered at a low resolution, it is recommended that you render the
-initial image at a size which is the least common multiple of all icon
-sizes --- @math{288 @times 288} --- and then use a raster graphics
-program such as the @uref{http://www.gimp.org/,GIMP},
+Because some of the raster icons contain small details that may get
+lost if rendered at a low resolution, it is recommended that you
+render the initial image at a size which is the least common multiple
+of all icon sizes --- @math{288 @times 288} --- and then use a raster
+graphics program such as the @uref{http://www.gimp.org/,GIMP},
 @uref{http://www.imagemagick.org/,@command{convert}}, or
 @uref{http://netpbm.sourceforge.net/,@command{pamscale}}.  For each
-image file @file{foo.png}, you need to create five icons: a @math{16
-@times 16} icon in @file{res/drawable/foo_16.png}, a @math{24 @times 24}
-icon in @file{res/drawable-mdpi/foo.png}, a @math{32 @times 32} icon in
-@file{res/drawable/foo_32.png}, a @math{36 @times 36} icon in
-@file{res/drawable/foo_36.png}, and a @math{48 @times 48} icon in
-@file{res/drawable-hdpi/foo.png}.
+image file @file{foo.png}, you need to create several icons, aiming
+for a size of about @math{1 @over 5} inch on the screen: for example,
+a @math{16 @times 16} icon in @file{res/drawable/foo_16.png},
+a @math{32 @times 32} icon in @file{res/drawable/foo_32.png},
+a @math{36 @times 36} icon in @file{res/drawable/foo_36.png},
+a @math{24 @times 24} icon in @file{res/drawable-ldpi/foo.png},
+a @math{32 @times 32} icon in @file{res/drawable-mdpi/foo.png},
+a @math{48 @times 48} icon in @file{res/drawable-hdpi/foo.png},
+and a @math{64 @times 64} icon in @file{res/drawable-xhdpi/foo.png}.
 
 The command for generating an image from one of the @file{.pov}
 descriptions is:
@@ -344,9 +361,24 @@ povray +FN +AM3 +A0.3 +UA +W288 +H288 foo.pov
 @end example
 
 The main application icon was drawn by hand in the GIMP, and can be
-found in @file{IconMaster.xcf}.  This is scaled down to @math{48 @times
-48} for @file{res/drawable-mdpi/icon.png}, and to @math{72 @times 72}
-for @file{res/drawable-hdpi/icon.png}.
+found in @file{IconMaster.xcf}.  @emph{For Android Nougat and
+earlier,} this raster image is scaled down from @math{384 @times 384}
+to about @math{1 @over 2} inch on screen: a @math{60 @times 60} icon in
+@file{res/drawable-ldpi/icon.png}, @math{80 @times 80} in
+@file{res/drawable-mdpi/icon.png}, @math{120 @times 120} in
+@file{res/drawable-hdpi/icon.png}, and @math{160 @times 160} in
+@file{res/drawable-xhdpi/icon.png}.
+
+Android Oreo introduced ``adaptive icons'', so the usual icon ---
+which has the natural rectangular shape of a piece of paper --- had to
+be squeezed down to fit into a mask that can be anything from a
+rounded squircle to a circle.  To generate the various sizes of this
+icon, the canvas has to be enlarged to @math{558 @times 588} and then
+scaled back down to @math{80 @times 80}, @math{120 @times 120},
+@math{160 @times 160}, and @math{240 @times 240} for the various pixel
+densities in @file{res/drawable-*dpi/icon_foreground.png}.  In
+addition, a background image has to be provided in
+@file{res/drawable-*dpi/icon_background.png}.
 
 @node Testing, Generating the Application Package, Generating Icons, Building from the Source
 @section Testing
@@ -371,11 +403,13 @@ or different types of devices than you have physical devices for (or
 don't want to use real devices for testing), you will need to
 configure emulators using the Android Virtual Device Manager.
 
-In Android Studio, go to @clicksequence{Tools @click{} Android
-@click{} AVD Manager} to open the Android Virtual Device Manager.
-Click on ``Create Virtual Device'' to add a new emulator.  On the
-first page you will select the type and screen size of the device,
-e.g. small phone or large tablet, along with its pixel resolution.
+In Android Studio 2.3, go to @clicksequence{Tools @click{} Android
+@click{} AVD Manager} to open the Android Virtual Device Manager.  In
+Android Studio 2024, this is at @clicksequence{Tools @click{} Device
+Manager}.  Click on ``Create Virtual Device'' (or the `+' icon) to add
+a new emulator.  On the first page you will select the type and screen
+size of the device, e.g. small phone or large tablet, along with its
+pixel resolution.
 
 On the next page choose which version of Android the emulator will
 run.  The ABI determines what type of CPU the system will run on:
@@ -397,21 +431,22 @@ the code has branches that follow different paths for each of these
 versions:
 
 @itemize @bullet
-@item Froyo (Android 2.2, API 8), which is the current minimum version
-@item Gingerbread (Android 2.3, API 9--10)
-@item Honeycomb (Android 3.0, API 11) through Jelly Bean (Android 4.3, API 18)
+@item Ice Cream Sandwich (Android 4.0, API 14--15),
+which is the current minimum version
 @item KitKat (Android 4.4, API 19) through Lollipop (Android 5.1, API 22)
 @item Marshmallow (Android 6, API 23), which is the current target version
+@item Nougat (Android 7, API 24--25)
+@item Oreo (Android 8, API 26--27)
 @end itemize
 
 Testing the following API's is suggested to ensure compatibility with
 new devices:
 
 @itemize @bullet
-@item Nougat (Android 7, API 24--25)
-@item Oreo (Android 8, API 26) through Snow Cone (Android 12, API 32)
-@item Tiramisu (Android 12, API 33)
-@item Upside-down Case (Android 14, API 34) and up
+@item Pie (Android 9, API 28) through Red Velvet Cake (Android 11, API 30)
+@item Snow Cone (Android 12, API 31--32)
+@item Tiramisu (Android 13, API 33) through Upside-down Cake (Android 14, API 34)
+@item Vanilla Ice Cream (Android 15, API 35) and up
 @end itemize
 
 On the last page finalize the details of the virtual device.  Give it
@@ -471,9 +506,10 @@ which should show the point in the code where the error occurred.
 @section Generating the Application Package (APK)
 
 In Android Studio, click on the Build menu then ``Build APK''.  If
-there were no errors, this should produce @file{app/app-release.apk}.
-You should rename this file to a more descriptive name like
-@file{todo-1.2.0.apk}.
+there were no errors, this should produce @file{app/app-release.apk}
+(in Android Studio 2.3) or @file{app/release/app-release.apk} (in
+Android Studio 2024).  You should rename this file to a more
+descriptive name like @file{todo-1.2.0.apk}.
 
 @node Generating Documentation,  , Generating the Application Package, Building from the Source
 @section Generating Documentation

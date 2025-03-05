@@ -352,8 +352,8 @@ public class ImportActivity extends Activity {
 	    if (!importFile.exists()) {
 		xableFormElements(true);
 		showAlertDialog(R.string.ErrorFileNotFound,
-                        String.format(getResources().getString(
-                                R.string.ErrorCannotFind), importFile.getPath()));
+                        getResources().getString(
+                                R.string.ErrorCannotFind, importFile.getPath()));
 		return;
 	    }
 
@@ -492,10 +492,9 @@ public class ImportActivity extends Activity {
     private void showAlertDialog(int titleId, String message) {
         errorDialog = new AlertDialog.Builder(this)
                 .setIcon(android.R.drawable.ic_dialog_alert)
-                .setTitle(getResources().getString(titleId))
+                .setTitle(titleId)
                 .setMessage(message)
-                .setNeutralButton(getResources().getString(
-                        R.string.ConfirmationButtonOK), dismissListener)
+                .setNeutralButton(R.string.ConfirmationButtonOK, dismissListener)
                 .create();
         errorDialog.show();
     }

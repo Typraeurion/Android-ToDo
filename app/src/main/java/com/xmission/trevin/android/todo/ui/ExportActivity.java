@@ -370,10 +370,9 @@ public class ExportActivity extends Activity {
     private void showAlertDialog(int titleId, String message) {
         errorDialog = new AlertDialog.Builder(this)
                 .setIcon(android.R.drawable.ic_dialog_alert)
-                .setTitle(getResources().getString(titleId))
+                .setTitle(titleId)
                 .setMessage(message)
-                .setNeutralButton(getResources().getString(
-                        R.string.ConfirmationButtonOK), dismissListener)
+                .setNeutralButton(R.string.ConfirmationButtonOK, dismissListener)
                 .create();
         errorDialog.show();
     }

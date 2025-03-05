@@ -636,71 +636,72 @@ public class RepeatEditor extends FrameLayout
 
     /** This callback handles switching the basic interval type. */
     class RepeatRadioChangeListener implements RadioGroup.OnCheckedChangeListener {
-	/** Called when the radio button has changed. */
-	@Override
-	public void onCheckedChanged(RadioGroup rg, int id) {
-	    if (isUpdating)
-		return;
-	    switch (id) {
-	    case -1:	// This shouldn't happen
-		Log.e(LOG_TAG, "No radio button selected in repeat group!");
-		return;
+        /** Called when the radio button has changed. */
+        @Override
+        public void onCheckedChanged(RadioGroup rg, int id) {
+            if (isUpdating)
+                return;
+            if (id == R.id.RepeatRadioButtonNone) {
+                repeatSettings.setIntervalType(IntervalType.NONE);
+            }
 
-	    default:	// This shouldn't happen either
-		Log.e(LOG_TAG, "Unknown radio button selected in repeat group!");
-		return;
+            else if (id == R.id.RepeatRadioButtonDaily) {
+                repeatSettings.setIntervalType(
+                        (resetGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonAfterCompleted)
+                                ? IntervalType.DAY_AFTER : IntervalType.DAILY);
+            }
 
-	    case R.id.RepeatRadioButtonNone:
-		repeatSettings.setIntervalType(IntervalType.NONE);
-		break;
+            else if (id == R.id.RepeatRadioButtonWeekly) {
+                repeatSettings.setIntervalType(
+                        (resetGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonAfterCompleted)
+                                ? IntervalType.WEEK_AFTER : IntervalType.WEEKLY);
+            }
 
-	    case R.id.RepeatRadioButtonDaily:
-		repeatSettings.setIntervalType(
-			(resetGroup.getCheckedRadioButtonId() ==
-			    R.id.RepeatRadioButtonAfterCompleted)
-			    ? IntervalType.DAY_AFTER : IntervalType.DAILY);
-		break;
+            else if (id == R.id.RepeatRadioButtonSemiMonthly) {
+                repeatSettings.setIntervalType(
+                        (dayOrDateGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonByDate)
+                                ? IntervalType.SEMI_MONTHLY_ON_DATES
+                                : IntervalType.SEMI_MONTHLY_ON_DAYS);
+            }
 
-	    case R.id.RepeatRadioButtonWeekly:
-		repeatSettings.setIntervalType(
-			(resetGroup.getCheckedRadioButtonId() ==
-			    R.id.RepeatRadioButtonAfterCompleted)
-			    ? IntervalType.WEEK_AFTER : IntervalType.WEEKLY);
-		break;
+            else if (id == R.id.RepeatRadioButtonMonthly) {
+                repeatSettings.setIntervalType(
+                        (resetGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonAfterCompleted)
+                                ? IntervalType.MONTH_AFTER
+                                : (dayOrDateGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonByDate)
+                                ? IntervalType.MONTHLY_ON_DATE
+                                : IntervalType.MONTHLY_ON_DAY);
+            }
 
-	    case R.id.RepeatRadioButtonSemiMonthly:
-		repeatSettings.setIntervalType(
-			(dayOrDateGroup.getCheckedRadioButtonId() ==
-			    R.id.RepeatRadioButtonByDate)
-			    ? IntervalType.SEMI_MONTHLY_ON_DATES
-			    : IntervalType.SEMI_MONTHLY_ON_DAYS);
-		break;
+            else if (id == R.id.RepeatRadioButtonYearly) {
+                repeatSettings.setIntervalType(
+                        (resetGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonAfterCompleted)
+                                ? IntervalType.YEAR_AFTER
+                                : (dayOrDateGroup.getCheckedRadioButtonId() ==
+                                R.id.RepeatRadioButtonByDate)
+                                ? IntervalType.YEARLY_ON_DATE
+                                : IntervalType.YEARLY_ON_DAY);
+            }
 
-	    case R.id.RepeatRadioButtonMonthly:
-		repeatSettings.setIntervalType(
-			(resetGroup.getCheckedRadioButtonId() ==
-			    R.id.RepeatRadioButtonAfterCompleted)
-			    ? IntervalType.MONTH_AFTER
-			    : (dayOrDateGroup.getCheckedRadioButtonId() ==
-				R.id.RepeatRadioButtonByDate)
-				? IntervalType.MONTHLY_ON_DATE
-				: IntervalType.MONTHLY_ON_DAY);
-		break;
+            else if (id == -1) {	// This shouldn't happen
+                Log.e(LOG_TAG, "No radio button selected in repeat group!");
+                return;
+            }
 
-	    case R.id.RepeatRadioButtonYearly:
-		repeatSettings.setIntervalType(
-			(resetGroup.getCheckedRadioButtonId() ==
-			    R.id.RepeatRadioButtonAfterCompleted)
-			    ? IntervalType.YEAR_AFTER
-			    : (dayOrDateGroup.getCheckedRadioButtonId() ==
-				R.id.RepeatRadioButtonByDate)
-				? IntervalType.YEARLY_ON_DATE
-				: IntervalType.YEARLY_ON_DAY);
-		break;
-	    }
-	    updateRepeatInterval();
-	    updateRepeatDescription();
-	}
+            else {	// This shouldn't happen either
+                Log.e(LOG_TAG, "Unknown radio button selected in repeat group!");
+                return;
+            }
+
+            updateRepeatInterval();
+            updateRepeatDescription();
+        }
     }
 
     /** This callback handles switching the reset type. */
@@ -924,22 +925,20 @@ public class RepeatEditor extends FrameLayout
 	    setWeekdayDirection(nearestToggle.isChecked(), id);
 	}
 
-	/** Use the combined settings to choose the direction */
-	private void setWeekdayDirection(boolean nearest, int directionID) {
-	    switch (directionID) {
-	    case R.id.RepeatRadioButtonNext:
-		repeatSettings.setWeekdayDirection(nearest
-			? RepeatSettings.WeekdayDirection.CLOSEST_OR_NEXT
-			: RepeatSettings.WeekdayDirection.NEXT);
-		break;
+        /** Use the combined settings to choose the direction */
+        private void setWeekdayDirection(boolean nearest, int directionID) {
+            if (directionID == R.id.RepeatRadioButtonNext) {
+                repeatSettings.setWeekdayDirection(nearest
+                        ? RepeatSettings.WeekdayDirection.CLOSEST_OR_NEXT
+                        : RepeatSettings.WeekdayDirection.NEXT);
+            }
 
-	    case R.id.RepeatRadioButtonPrevious:
-		repeatSettings.setWeekdayDirection(nearest
-			? RepeatSettings.WeekdayDirection.CLOSEST_OR_PREVIOUS
-			: RepeatSettings.WeekdayDirection.PREVIOUS);
-		break;
-	    }
-	}
+            else if (directionID == R.id.RepeatRadioButtonPrevious) {
+                repeatSettings.setWeekdayDirection(nearest
+                        ? RepeatSettings.WeekdayDirection.CLOSEST_OR_PREVIOUS
+                        : RepeatSettings.WeekdayDirection.PREVIOUS);
+            }
+        }
     }
 
     /** This callback handles switching between by day or by date. */

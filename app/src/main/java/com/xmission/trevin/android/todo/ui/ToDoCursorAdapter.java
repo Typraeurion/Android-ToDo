@@ -28,6 +28,7 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
 
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.*;
 import android.database.Cursor;
 //import android.database.CursorIndexOutOfBoundsException;
@@ -56,6 +57,9 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     /** Encryption in case we're showing private records */
     private final StringEncryption encryptor;
 
+    /** The notification manager for clearing notifications of completed items */
+    private NotificationManager notificationManager;
+
     /**
      * Keep track of which rows are assigned to which views.
      * Binding occurs over and over again for the same rows,
@@ -70,14 +74,16 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
      * Constructor
      */
     public ToDoCursorAdapter(Context context, int layout, Cursor cursor,
-	    ContentResolver cr, Uri uri, Activity activity,
-	    StringEncryption encryption) {
-	super(context, layout, cursor);
-	callingActivity = activity;
-	prefs = context.getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
- 	contentResolver = cr;
- 	listUri = uri;
- 	encryptor = encryption;
+            ContentResolver cr, Uri uri, Activity activity,
+            StringEncryption encryption,
+            NotificationManager notificationManager) {
+        super(context, layout, cursor);
+        callingActivity = activity;
+        prefs = context.getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
+        contentResolver = cr;
+        listUri = uri;
+        encryptor = encryption;
+        this.notificationManager = notificationManager;
     }
 
     /**
@@ -164,8 +170,9 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	    editDescription.requestFocus(); */
 	noteImage.setVisibility(cursor.isNull(cursor.getColumnIndex(
 		ToDoItem.NOTE)) ? View.GONE : View.VISIBLE);
-	alarmImage.setVisibility(cursor.isNull(cursor.getColumnIndex(
-		ToDoItem.ALARM_DAYS_EARLIER)) ? View.GONE : View.VISIBLE);
+        boolean hasAlarm = !cursor.isNull(cursor.getColumnIndex(
+                ToDoItem.ALARM_DAYS_EARLIER));
+	alarmImage.setVisibility(hasAlarm ? View.VISIBLE : View.GONE);
 	repeatImage.setVisibility(cursor.getInt(cursor.getColumnIndex(
 		ToDoItem.REPEAT_INTERVAL)) == ToDoItem.REPEAT_NONE
 		? View.GONE : View.VISIBLE);
@@ -191,7 +198,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 
 	// Set callbacks for the widgets
 	Uri itemUri = ContentUris.withAppendedId(listUri, itemID);
-	installListeners(view, itemUri, repeat);
+	installListeners(view, itemID, itemUri, hasAlarm, repeat);
     }
 
     /**
@@ -223,10 +230,11 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
      * Install listeners onto a view.
      * This must be done after binding.
      */
-    void installListeners(View view, Uri itemUri, RepeatSettings repeat) {
+    void installListeners(View view, long itemId, Uri itemUri,
+                          boolean hasAlarm, RepeatSettings repeat) {
 	CheckBox checkBox = (CheckBox) view.findViewById(R.id.ToDoItemChecked);
 	checkBox.setOnCheckedChangeListener(
-		new OnCheckedChangeListener(itemUri, repeat));
+		new OnCheckedChangeListener(itemId, itemUri, hasAlarm, repeat));
 
 	// Set a long-click listener to bring up the details dialog
 	OnDetailsClickListener detailsClickListener =
@@ -260,12 +268,17 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     /** Listener for events on the "item completed" checkbox */
     class OnCheckedChangeListener
     implements CompoundButton.OnCheckedChangeListener {
+        private final long itemId;
 	private final Uri itemUri;
+        private final boolean hasAlarm;
 	private final RepeatSettings repeat;
 
 	/** Create a new change listener for a specific To-Do item's checkbox */
-	public OnCheckedChangeListener(Uri itemUri, RepeatSettings repeat) {
-	    this.itemUri = itemUri;
+	public OnCheckedChangeListener(long itemId, Uri itemUri,
+                                       boolean hasAlarm, RepeatSettings repeat) {
+	    this.itemId = itemId;
+            this.itemUri = itemUri;
+            this.hasAlarm = hasAlarm;
 	    this.repeat = repeat;
 	}
 
@@ -291,6 +304,11 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 			values.put(ToDoItem.CHECKED, 0);
 		    }
 		}
+                if (hasAlarm) {
+                    // Clear any related notification
+                    Log.d(TAG, "Clearing any notification for item " + itemId);
+                    notificationManager.cancel((int) itemId);
+                }
 	    }
 	    contentResolver.update(itemUri, values, null, null);
 	}

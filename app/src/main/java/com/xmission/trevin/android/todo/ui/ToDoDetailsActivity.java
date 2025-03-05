@@ -27,14 +27,18 @@ import com.xmission.trevin.android.todo.data.RepeatSettings.IntervalType;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.data.ToDo.*;
 
+import android.Manifest;
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -106,6 +110,9 @@ public class ToDoDetailsActivity extends Activity {
 
     /** The corresponding URI for the categories */
     private Uri categoryUri = ToDoCategory.CONTENT_URI;
+
+    /** Used to check whether we can post notifications */
+    NotificationManager notificationManager;
 
     /** The To Do item text */
     EditText toDoDescription = null;
@@ -202,6 +209,7 @@ public class ToDoDetailsActivity extends Activity {
     RepeatEditorDialog repeatDialog = null;
 
     /** Container for dialog form data when saving the instance state */
+    // To Do: Move this to the data package
     private class FormData {
 	String description;
 	String priority;
@@ -245,6 +253,9 @@ public class ToDoDetailsActivity extends Activity {
             throw new NullPointerException("No data provided with the intent");
         todoUri = intent.getData();
         categoryUri = todoUri.buildUpon().encodedPath("/categories").build();
+
+        notificationManager = (NotificationManager)
+                getSystemService(NOTIFICATION_SERVICE);
 
         // Inflate our view so we can find our fields
         setContentView(R.layout.details);
@@ -815,6 +826,7 @@ public class ToDoDetailsActivity extends Activity {
 		@Override
 		public void onClick(View v) {
 		    if (alarmCheckBox.isChecked()) {
+                        checkNotifyPermission();
 			alarmDaysInAdvance =
 			    Integer.parseInt(alarmEditDays.getText().toString());
 			alarmTime = (alarmTimePicker.getCurrentHour() * 60
@@ -984,6 +996,44 @@ public class ToDoDetailsActivity extends Activity {
 	    Log.d(TAG, "DetailButtonAlarm.onClick");
 	    showDialog(ALARM_DIALOG_ID);
 	}
+    }
+
+    /**
+     * Check whether the user has granted us permission to show notifications.
+     * If not, request the permission if possible.
+     *
+     * @return true if we are allowed to post notifications
+     */
+    private boolean checkNotifyPermission() {
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M)
+            // In Marshmallow and earlier, permission
+            // to post notifications is assumed.
+            return true;
+
+        if (notificationManager.areNotificationsEnabled())
+            return true;
+
+        Log.d(TAG, "Notifications are not enabled;"
+                + " requesting permission from the user");
+        // Fix Me: Android does not provide any way to programatically
+        // request notification permission until SDK 33 (Tiramisu)!!
+        final DialogInterface.OnClickListener dismissListener =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int item) {
+                        dialog.dismiss();
+                    }
+                };
+        new AlertDialog.Builder(this)
+                .setIcon(android.R.drawable.ic_dialog_info)
+                .setTitle(R.string.PermissionRequiredTitle)
+                .setMessage(R.string.PermissionToPostNotificationRationale)
+                .setNeutralButton(R.string.ConfirmationButtonOK, dismissListener)
+                .create().show();
+
+        return false;
+
     }
 
     /** Called when the user clicks the repeat button */

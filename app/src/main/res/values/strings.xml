@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-beta version 2025.02.24\n
+version 1.3.0 (2025.03.04)\n
 by Trevin Beattie\n
 \n
 This program is distributed under the terms of the Gnu Public License,
@@ -46,6 +46,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="service_name_password_change">Change Password Service</string>
     <string name="AlarmButtonCancel">Cancel</string>
     <string name="AlarmButtonOK">OK</string>
+    <string name="AlarmServiceBackgroundMessage">Checking the To Do list for alarms&#8230;</string>
     <string name="AlarmTextAlarm">Alarm</string>
     <string name="AlarmTextDaysEarlier">days earlier</string>
     <string name="AlarmTextTime">Alarm Time:</string>
@@ -221,10 +222,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="MonthSeptember">September</string>
     <string name="NoteButtonDelete">Delete&#8230;</string>
     <string name="NoteButtonOK">Done</string>
-    <string name="NotificationHeader">To do:</string>
-    <string name="NotificationFormatItem"> %s.</string>
-    <string name="NotificationFormatPrivate"> [Private]</string>
-    <string name="NotificationFormatEncrypted"> [Locked]</string>
+    <string name="NotificationChannelDueName">Items Due</string>
+    <string name="NotificationChannelDueDescription">Notifications for items which are due today or which have advance alarms</string>
+    <string name="NotificationChannelOverdueName">Items Overdue</string>
+    <string name="NotificationChannelOverdueDescription">Notifications for items which are past due</string>
+    <string name="NotificationChannelSilentName">Updating Alarms</string>
+    <string name="NotificationChannelSilentDescription">Temporary notification when the app is setting or waking up to an alarm</string>
+    <string name="NotificationFormatPrivate">[Private]</string>
+    <string name="NotificationFormatEncrypted">[Locked]</string>
     <string-array name="OrdinalList">
 	<item>@string/Ordinal1</item>
 	<item>@string/Ordinal2</item>
@@ -261,6 +266,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
 	<item>@string/OrdinalOther</item>
     </string-array>
     <string name="PasswordProtected">[Locked]</string>
+    <string name="PermissionRequiredTitle">Permission Required</string>
+    <string name="PermissionToPostNotificationRationale">The app needs your permission to post a notification when it’s time to show the alarm.  Please enable notifications for this app in the Android settings.</string>
     <string name="PrefTextSortBy">Sort by:</string>
     <string-array name="PrefSortByList">
 	<item>@string/PrefSortByPriorityDueDate</item>

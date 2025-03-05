@@ -19,13 +19,15 @@ package com.xmission.trevin.android.todo.service;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.*;
 
 import java.security.GeneralSecurityException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
-import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.util.StringEncryption;
+import com.xmission.trevin.android.todo.data.AlarmItemInfo;
 import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 import com.xmission.trevin.android.todo.ui.ToDoListActivity;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.app.*;
 import android.content.*;
@@ -33,7 +35,6 @@ import android.database.*;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore.Audio.Media;
-import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
@@ -48,22 +49,69 @@ public class AlarmService extends IntentService {
 
     /** The name of the Intent action for acknowledging a notification */
     public static final String ACTION_NOTIFICATION_ACK =
-	"com.xmission.trevin.android.todo.AlarmSnooze";
+            "com.xmission.trevin.android.todo.AlarmSnooze";
     /** The name of the Intent extra data that holds the notification date */
     public static final String EXTRA_NOTIFICATION_DATE =
-	"com.xmission.trevin.android.todo.AlarmTime";
+            "com.xmission.trevin.android.todo.AlarmTime";
+    /** The name of the Intent extra data that holds the item category ID */
+    public static final String EXTRA_ITEM_CATEGORY_ID =
+            "com.xmission.trevin.android.todo.CategoryId";
+    /** The name of the Intent extra data that holds the item ID */
+    public static final String EXTRA_ITEM_ID =
+            "com.xmission.trevin.android.todo.ItemId";
+
+    public static final String ALMOST_DUE_CHANNEL_ID =
+            "due_notification_channel";
+    public static final String OVERDUE_CHANNEL_ID =
+            "overdue_notification_channel";
+
+    public static final String SILENT_CHANNEL_ID =
+            "silent_notification_channel";
+
+    /**
+     * Template for notification groups.  This needs to be a unique string
+     * (the documentation isn&rsquo;t clear whether that means unique within
+     * or across applications) so we can&rsquo;t rely on user-defined
+     * category names; we&rsquo;ll use the category ID instead.
+     */
+    private static final String NOTIFICATION_GROUP_FORMAT =
+            "com.xmission.trevin.android.todo.category.%04d";
+
+    /**
+     * Notification ID to use when running this service in the foreground
+     * (Oreo or later).  This <b>must not</b> conflict with the ID of
+     * any alarm notification, which are based on To Do item ID&rsquo;s.
+     */
+    private static final int FG_NOTIFICATION_ID = -379110754;
 
     private AlarmManager alarmManager;
     private NotificationManager notificationManager;
 
+    /** Notification channel to use for upcoming items (API 26+) */
+    private NotificationChannel almostDueChannel;
+
+    /** Notification channel to use for past-due items (API 26+) */
+    private NotificationChannel overdueChannel;
+
+    /**
+     * &ldquo;Notification&rdquo; channel to use when the service is
+     * raising or updating alarms (Oreo and up)
+     */
+    private NotificationChannel silentChannel;
+
     /** Shared preferences */
     private SharedPreferences prefs;
+
+    /** The name of the app; used for the title of notifications */
+    private String appName;
 
     /**
      * The columns we are interested in from the item table
      */
     private static final String[] ITEM_PROJECTION = new String[] {
             ToDoItem._ID,
+            ToDoItem.CATEGORY_ID,
+            ToDoItem.CATEGORY_NAME,
             ToDoItem.DESCRIPTION,
             ToDoItem.MOD_TIME,
             ToDoItem.CHECKED,
@@ -74,110 +122,8 @@ public class AlarmService extends IntentService {
             ToDoItem.NOTIFICATION_TIME,
     };
 
-    /**
-     * Keep track of notifications we have already sent since the service
-     * was activated.  For each item with an alarm we need to know its
-     * ID, the time it was last modified when we looked at it, the
-     * time its next alarm should go off, and when it will be overdue.
-     * If an item is later modified, any previous alarm notification
-     * is forgotten.
-     */
-    static class ItemInfo implements Comparable<ItemInfo> {
-	final long id;
-	final long lastModified;
-	final int privacy;
-	final String description;
-	final byte[] encryptedDescription;
-	final long dueDate;
-	final long alarmTime;
-	final int daysEarlier;
-	final long notificationTime;
-	Date alarmDate;
-
-	public ItemInfo(Cursor c) {
-	    id = c.getLong(c.getColumnIndex(ToDoItem._ID));
-	    lastModified = c.getLong(c.getColumnIndex(ToDoItem.MOD_TIME));
-	    privacy = c.getInt(c.getColumnIndex(ToDoItem.PRIVATE));
-	    if (privacy <= 1) {
-		description =
-		    c.getString(c.getColumnIndex(ToDoItem.DESCRIPTION));
-		encryptedDescription = null;
-	    } else {
-		description = null;
-		encryptedDescription =
-		    c.getBlob(c.getColumnIndex(ToDoItem.DESCRIPTION));
-	    }
-	    dueDate = c.getLong(c.getColumnIndex(ToDoItem.DUE_TIME));
-	    alarmTime = c.getLong(c.getColumnIndex(ToDoItem.ALARM_TIME));
-	    daysEarlier =
-		c.getInt(c.getColumnIndex(ToDoItem.ALARM_DAYS_EARLIER));
-	    notificationTime =
-		c.getLong(c.getColumnIndex(ToDoItem.NOTIFICATION_TIME));
-
-	    // Set the date of the next alarm.
-	    Calendar cal = Calendar.getInstance();
-	    cal.setTimeInMillis(dueDate);
-	    cal.add(Calendar.DATE, -daysEarlier);
-	    cal.set(Calendar.HOUR_OF_DAY, (int) (alarmTime / 3600000L));
-	    cal.set(Calendar.MINUTE, (int) (alarmTime / 60000L) % 60);
-	    cal.set(Calendar.SECOND, (int) (alarmTime / 1000L) % 60);
-	    cal.set(Calendar.MILLISECOND, (int) (alarmTime % 1000));
-	    while (cal.getTimeInMillis() < notificationTime)
-		cal.add(Calendar.DATE, 1);
-	    alarmDate = cal.getTime();
-	}
-
-	/**
-	 * Compare this item's info with that of another item.
-	 * Sorts the items by the alarm time or, if both items
-	 * have the same alarm time, their descriptions.
-	 */
-	@Override
-	public int compareTo(@NonNull ItemInfo i2) {
-	    if (alarmDate.before(i2.alarmDate))
-		return -1;
-	    else if (alarmDate.after(i2.alarmDate))
-		return 1;
-	    if (description == null)
-		return (i2.description == null) ? 0 : -1;
-	    else
-		return (i2.description == null) ? 1
-			: description.compareTo(i2.description);
-	}
-
-	/** Advance the alarm to the next day past the given day */
-	public void advanceToNextDay(long afterTime) {
-	    Calendar cal = Calendar.getInstance();
-	    cal.setTime(alarmDate);
-	    if (afterTime > cal.getTimeInMillis())
-		cal.add(Calendar.DATE, (int)
-			((afterTime + 86399000L - cal.getTimeInMillis())
-				/ 86400000L));
-	    cal.add(Calendar.DATE, 1);
-	    alarmDate = cal.getTime();
-	}
-
-	/** Item hashes are based on ID and modification time. */
-	@Override
-	public int hashCode() {
-	    int hash = Long.valueOf(id).hashCode();
-	    hash *= 31;
-	    hash += Long.valueOf(lastModified).hashCode();
-	    return hash;
-	}
-
-	/** Items are equal if they have the same ID and modification time. */
-	@Override
-	public boolean equals(Object o) {
-	    if (!(o instanceof ItemInfo))
-		return false;
-	    ItemInfo i2 = (ItemInfo) o;
-	    return (i2.id == id) && (i2.lastModified == lastModified);
-	}
-    }
-
     /** Our pending alarms in sorted order */
-    private SortedSet<ItemInfo> pendingAlarms = new TreeSet<>();
+    private final SortedSet<AlarmItemInfo> pendingAlarms = new TreeSet<>();
 
     /** Create the importer service with a named worker thread */
     public AlarmService() {
@@ -194,10 +140,49 @@ public class AlarmService extends IntentService {
     public void onCreate() {
         Log.d(TAG, ".onCreate");
         super.onCreate();
+        appName = getString(R.string.app_name);
 	notificationManager = (NotificationManager)
 		getSystemService(NOTIFICATION_SERVICE);
 	alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 	prefs = getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Oreo and up must use channels to send notifications
+            almostDueChannel = new NotificationChannel(ALMOST_DUE_CHANNEL_ID,
+                    getString(R.string.NotificationChannelDueName),
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            almostDueChannel.setDescription(getString(
+                    R.string.NotificationChannelDueDescription));
+            overdueChannel = new NotificationChannel(OVERDUE_CHANNEL_ID,
+                    getString(R.string.NotificationChannelOverdueName),
+                    NotificationManager.IMPORTANCE_HIGH);
+            overdueChannel.setDescription(getString(
+                    R.string.NotificationChannelOverdueDescription));
+            silentChannel = new NotificationChannel(SILENT_CHANNEL_ID,
+                    getString(R.string.NotificationChannelSilentName),
+                    NotificationManager.IMPORTANCE_NONE);
+            silentChannel.setDescription(getString(
+                    R.string.NotificationChannelSilentDescription));
+            notificationManager.createNotificationChannel(almostDueChannel);
+            notificationManager.createNotificationChannel(overdueChannel);
+            notificationManager.createNotificationChannel(silentChannel);
+
+            Notification busyNotification =
+                    new Notification.Builder(this, SILENT_CHANNEL_ID)
+                            .setSmallIcon(R.drawable.stat_todo)
+                            .setContentTitle(getString(R.string.app_name))
+                            .setContentText(getString(
+                                    R.string.AlarmServiceBackgroundMessage))
+                            .build();
+            // To Do: In API 29+, call the version of this method
+            // which includes a third parameter for
+            // ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
+            // **unless** we're acknowledging a notification click;
+            // "short" services are not allowed to start a foreground service.
+            //if (!ACTION_NOTIFICATION_ACK.equals(intent.getAction())) {
+                startForeground(FG_NOTIFICATION_ID, busyNotification);
+            //}
+        }
     }
 
     /**
@@ -210,9 +195,13 @@ public class AlarmService extends IntentService {
 	Log.d(TAG, ".onHandleIntent(" + intent.getAction() + ")");
 	refreshAlarms();
 	if (ACTION_NOTIFICATION_ACK.equals(intent.getAction())) {
-	    snooze(intent.getLongExtra(EXTRA_NOTIFICATION_DATE,
-		    System.currentTimeMillis()));
-	    notificationManager.cancel(0);
+            long categoryId = intent.getLongExtra(EXTRA_ITEM_CATEGORY_ID, -1);
+            long itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+            long notificationDate = intent.getLongExtra(EXTRA_NOTIFICATION_DATE,
+                    System.currentTimeMillis());
+	    snooze(notificationDate, categoryId, itemId);
+	    // Fix Me: instead of calling notificationManager.cancel((int) itemId);
+            // change
 	}
 	else if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction()) ||
 		Intent.ACTION_MAIN.equals(intent.getAction())) {
@@ -224,9 +213,13 @@ public class AlarmService extends IntentService {
 	else if (Intent.ACTION_EDIT.equals(intent.getAction())) {
 	    // Called by the To Do list activity when the data changes
 	}
-	if (!showNotification())
-	    resetAlarm();
+	showPendingNotifications();
+        resetAlarm();
 	pendingAlarms.clear();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        }
     }
 
     /** Called when the service is about to be destroyed. */
@@ -262,9 +255,9 @@ public class AlarmService extends IntentService {
 		ITEM_PROJECTION, where.toString(), null, null);
 	try {
 	    while (c.moveToNext()) {
-		ItemInfo item = new ItemInfo(c);
-		Log.d(TAG, ".refreshAlarms(): Adding alarm for item " + item.id
-			+ " at " + item.alarmDate.toString());
+                AlarmItemInfo item = new AlarmItemInfo(c);
+		Log.d(TAG, ".refreshAlarms(): Adding alarm for item " + item.getId()
+			+ " at " + item.getAlarmDate().toString());
 		pendingAlarms.add(item);
 	    }
 	} finally {
@@ -276,16 +269,27 @@ public class AlarmService extends IntentService {
      * Called when the user acknowledges a notification.
      * We need to push forward all past-due alarms by one day,
      * then start up the To Do List activity.
+     *
+     * @param alarmTime the time that the notification was posted
+     *        (or when it was acknowledged if the notification time
+     *         is not available)
+     * @param categoryId the ID of the category that the item
+     *        belongs to
+     * @param itemId the ID of the item whose notification
+     *        the user acknowledged
      */
-    private void snooze(long alarmTime) {
-	for (ItemInfo item : pendingAlarms) {
-	    if (item.alarmDate.getTime() <= alarmTime)
+    private void snooze(long alarmTime, long categoryId, long itemId) {
+	for (AlarmItemInfo item : pendingAlarms) {
+	    if (item.getAlarmDate().getTime() <= alarmTime)
 		item.advanceToNextDay(alarmTime);
 	}
 
 	Intent intent = new Intent(this, ToDoListActivity.class);
 	intent.setAction(Intent.ACTION_MAIN);
-	intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setData(ToDoItem.CONTENT_URI);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtra(EXTRA_ITEM_CATEGORY_ID, categoryId);
+        intent.putExtra(EXTRA_ITEM_ID, itemId);
 	startActivity(intent);
     }
 
@@ -294,129 +298,226 @@ public class AlarmService extends IntentService {
      * 
      * @return whether a notification has been displayed.
      */
-    private boolean showNotification() {
-	if (pendingAlarms.isEmpty())
-	    return false;
+    private boolean showPendingNotifications() {
+        if (pendingAlarms.isEmpty())
+            return false;
 
-	StringBuilder tickerText = new StringBuilder();
-	tickerText.append(getString(R.string.NotificationHeader));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (!notificationManager.areNotificationsEnabled())
+                // The user has disabled notifications; don't show any alarm
+                return false;
+        }
+
 	boolean showPrivate = prefs.getBoolean(TPREF_SHOW_PRIVATE, false);
 	boolean showEncrypted = prefs.getBoolean(TPREF_SHOW_ENCRYPTED, false);
 	boolean doVibrate = prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false);
+        long soundID = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
 	StringEncryption encryptor = showEncrypted
 	    ? StringEncryption.holdGlobalEncryption() : null;
 	int dueItems = 0;
 	Date now = new Date();
-	long firstDue = pendingAlarms.last().dueDate;
 	ContentValues notificationTimeValues = new ContentValues();
 	notificationTimeValues.put(ToDoItem.NOTIFICATION_TIME, now.getTime());
-	for (ItemInfo item : pendingAlarms) {
-	    if (item.alarmDate.before(now)) {
-		// This item's alarm is due.  Add it to the ticker.
+	for (AlarmItemInfo item : pendingAlarms) {
+	    if (item.getAlarmDate().before(now)) {
+		// This item's alarm is due.
 		dueItems++;
-
-		String descr;
-		if (item.privacy <= 1) {
-			if ((item.privacy == 1) && !showPrivate)
-				descr = getString(R.string.NotificationFormatPrivate);
-			else
-				descr = getString(R.string.NotificationFormatItem,
-						item.description);
-		} else { // (item.privacy > 1)
-		    if (showPrivate) {
-			if (showEncrypted) {
-			    try {
-				descr = getString(R.string.NotificationFormatItem,
-						encryptor.decrypt(item.encryptedDescription));
-			    } catch (GeneralSecurityException gsx) {
-				descr = getString(R.string.NotificationFormatEncrypted);
-			    }
-			} else {
-			    descr = getString(R.string.NotificationFormatEncrypted);
-			}
-		    } else {
-			descr = getString(R.string.NotificationFormatPrivate);
-		    }
-		}
-		tickerText.append(descr);
+                postNotification(item, now, doVibrate, soundID,
+                        showPrivate, showEncrypted, encryptor);
 
 		Uri todoUri = Uri.withAppendedPath(ToDoItem.CONTENT_URI,
-			Long.toString(item.id));
+			Long.toString(item.getId()));
 		getContentResolver().update(todoUri,
 			notificationTimeValues, null, null);
-
-		// Keep track of the first due item
-		if (firstDue > item.dueDate)
-		    firstDue = item.dueDate;
 	    }
 	}
 	if (encryptor != null)
 	    StringEncryption.releaseGlobalEncryption(this);
 
-	if (dueItems == 0)
-	    // No alarms had actually gone off yet.
-	    return false;
+	return (dueItems > 0);
 
-	Intent mainIntent = new Intent(this, AlarmService.class);
-	mainIntent.setAction(ACTION_NOTIFICATION_ACK);
-	mainIntent.putExtra(EXTRA_NOTIFICATION_DATE, now.getTime());
-	PendingIntent intent = PendingIntent.getService(this, 0, mainIntent,
-		PendingIntent.FLAG_UPDATE_CURRENT);
-	long soundID = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
-	Notification notice;
-	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-	    NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
-			    .setSmallIcon(R.drawable.stat_todo)
-			    .setContentTitle(getResources().getString(R.string.app_name))
-			    .setContentText(tickerText.toString())
-			    .setContentIntent(intent)
-			    .setDefaults(Notification.DEFAULT_ALL &
-					 ~(doVibrate ? Notification.DEFAULT_SOUND :
-					 Notification.DEFAULT_SOUND | Notification.DEFAULT_VIBRATE))
-			    .setTicker(tickerText.toString())
-			    .setWhen(firstDue);
-	    if (soundID >= 0)
-		builder = builder.setSound(Uri.withAppendedPath(
-				Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
-	    notice = builder.build();
-	    // Removed in API 23!!
-	    /*
-	    notice.setLatestEventInfo(this,
-		getResources().getString(R.string.app_name), tickerText, intent);
-	    */
-	} else {
-	    // To Do: This is deprecated as of API 26 (O)
-	    Notification.Builder builder = new Notification.Builder(this)
-			    .setSmallIcon(R.drawable.stat_todo)
-			    .setContentTitle(getResources().getString(R.string.app_name))
-			    .setContentText(tickerText.toString())
-			    .setContentIntent(intent)
-			    // Switch to using NotificationChannel in API 26+.
-			    .setDefaults(Notification.DEFAULT_ALL &
-					 ~(doVibrate ? Notification.DEFAULT_SOUND :
-					 Notification.DEFAULT_SOUND | Notification.DEFAULT_VIBRATE))
-			    .setTicker(tickerText.toString())
-			    .setWhen(firstDue);
-	    if (soundID >= 0)
-		builder = builder.setSound(Uri.withAppendedPath(
-				Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
-	    notice = builder.build();
-	}
-
-	notificationManager.notify(0, notice);
-	return true;
     }
+
+    /** Date format to use for debug log messages */
+    static final SimpleDateFormat LOG_DATE_FORMAT =
+            new SimpleDateFormat("yyyy-MM-dd");
+
+    /**
+     * Create and post a notification for a given due item.
+     * This handles differences between API levels.
+     *
+     * @param item the alarm item
+     * @param now the current time, as of when we started
+     *        looping through the notifications
+     * @param doVibrate whether to vibrate when posting the notification
+     *        (Nougat and earlier)
+     * @param soundID the ID of the notification sound to play
+     *        (Nougat and earlier)
+     * @param showPrivate whether private records are shown.  If not,
+     *        the notification will show &ldquo;[Private]&rdquo; instead
+     *        of the item&rsquo;s description.
+     * @param showEncrypted whether encrypted records are shown.  If not,
+     *        the notification will show &ldquo;[Locked]&rdquo; (if
+     *        @code{showPrivate} is @code{true}) instead of the
+     *        item&rsquo;s description.  The notification may still show
+     *        &ldquo;[Locked]&rdquo; if we are unable to decrypt the item.
+     * @param encryptor the {@link StringEncryption} service we use to
+     *        decrypt encrypted records.
+     */
+    private void postNotification(
+            AlarmItemInfo item, Date now,
+            boolean doVibrate, long soundID,
+            boolean showPrivate, boolean showEncrypted,
+            StringEncryption encryptor) {
+
+        String category = item.getCategory();
+        String title;
+        if (category == null)
+            title = appName;
+        else
+            title = String.format("%s (%s)", appName, category);
+
+        String descr;
+        if (item.getPrivacy() <= 1) {
+            if ((item.getPrivacy() == 1) && !showPrivate)
+                descr = getString(R.string.NotificationFormatPrivate);
+            else
+                descr = item.getDescription();
+        } else { // (item.privacy > 1)
+            if (showPrivate) {
+                if (showEncrypted) {
+                    try {
+                        descr = encryptor.decrypt(item.getEncryptedDescription());
+                    } catch (GeneralSecurityException gsx) {
+                        descr = getString(R.string.NotificationFormatEncrypted);
+                    }
+                } else {
+                    descr = getString(R.string.NotificationFormatEncrypted);
+                }
+            } else {
+                descr = getString(R.string.NotificationFormatPrivate);
+            }
+        }
+
+        Intent mainIntent = new Intent(this, AlarmService.class);
+       	mainIntent.setAction(ACTION_NOTIFICATION_ACK);
+       	mainIntent.putExtra(EXTRA_NOTIFICATION_DATE, now.getTime());
+        mainIntent.putExtra(EXTRA_ITEM_CATEGORY_ID, item.getCategoryId());
+        mainIntent.putExtra(EXTRA_ITEM_ID, item.getId());
+
+        int defaultFlags = Notification.DEFAULT_LIGHTS;
+        if (doVibrate) defaultFlags |= Notification.DEFAULT_VIBRATE;
+        boolean isOverdue = item.getDueDate() < now.getTime() ;
+
+        /*
+         * IMPORTANT!  Each PendingIntent must have a unique requestCode
+         * corresponding to the main Intent that it holds; otherwise
+         * the extra data for later notifications (i.e. the item it
+         * belongs to) will overwrite the extra for earlier ones.
+         * We still use FLAG_UPDATE_CURRENT in case we do raise an alarm
+         * for an item where the user hasn't cleared the previous notice.
+         */
+        PendingIntent intent = PendingIntent.getService(this,
+                (int) item.getId(), mainIntent,
+       		PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification notice;
+
+        Log.d(TAG, String.format(".postNotification(\"%s\" (%d), \"%s\" (%d), \"%s\", %s)",
+                title, item.getCategoryId(), descr, item.getId(),
+                LOG_DATE_FORMAT.format(item.getDueDate()),
+                isOverdue ? "overdue" : "normal"));
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+                    .setSmallIcon(R.drawable.stat_todo)
+                    .setContentTitle(title)
+                    .setContentText(descr)
+                    .setContentIntent(intent)
+                    .setDefaults(defaultFlags)
+                    .setOnlyAlertOnce(true)
+                    .setTicker(descr)
+                    .setWhen(item.getDueDate());
+            if (soundID >= 0)
+                builder = builder.setSound(Uri.withAppendedPath(
+                        Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
+            notice = builder.build();
+        }
+        else {
+            Notification.Builder builder;
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) { // KitKat through Nougat
+                builder = new Notification.Builder(this)
+                        .setDefaults(defaultFlags)
+                        .setPriority(isOverdue ? Notification.PRIORITY_HIGH
+                                : Notification.PRIORITY_DEFAULT);
+                if (soundID >= 0)
+                    builder = builder.setSound(Uri.withAppendedPath(
+                            Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
+            } else { // Oreo and up
+                builder = new Notification.Builder(this,
+                        isOverdue ? OVERDUE_CHANNEL_ID : ALMOST_DUE_CHANNEL_ID);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                builder = builder.setShowWhen(true);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+                builder = builder.setGroup(String.format(
+                        NOTIFICATION_GROUP_FORMAT, item.getCategoryId()));
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                if (isOverdue) {
+                    builder = builder.setCategory(Notification.CATEGORY_ALARM);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    builder = builder.setCategory(Notification.CATEGORY_REMINDER);
+                } else {
+                    // Substitute category for upcoming due items on Lollipop
+                    builder = builder.setCategory(Notification.CATEGORY_EVENT);
+                }
+                if (item.getPrivacy() <= 0) {
+                    builder = builder.setVisibility(Notification.VISIBILITY_PUBLIC);
+                } else if (item.getPrivacy() == 1) {
+                    builder = builder.setVisibility(Notification.VISIBILITY_PRIVATE);
+                } else {
+                    builder = builder.setVisibility(Notification.VISIBILITY_SECRET);
+                }
+            }
+            builder = builder.setSmallIcon(R.drawable.stat_todo)
+                    .setContentTitle(title)
+                    .setContentText(descr)
+                    .setContentIntent(intent)
+                    .setOnlyAlertOnce(true)
+                    .setTicker(descr)
+                    .setWhen(item.getDueDate());
+            notice = builder.build();
+        }
+
+        // We have to narrow the item ID to fit a notification ID;
+        // hope we don't have any collisions.  (Shouldn't happen
+        // on a reasonably-sized database of items.)
+        notificationManager.notify((int) item.getId(), notice);
+
+    }
+
+    /** Date+time format to use for debug log messages */
+    static final SimpleDateFormat LOG_DATIME_FORMAT =
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss z");
 
     /** Schedule an alarm for the next item due to come up. */
     private void resetAlarm() {
 	Intent intent = new Intent(this, AlarmInitReceiver.class);
 	PendingIntent sender = PendingIntent.getBroadcast(
 		this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-	if (pendingAlarms.isEmpty())
+	if (pendingAlarms.isEmpty()) {
+            Log.d(TAG, "No To Do alarms are pending;"
+                    + " cancelling any intended alarm");
 	    alarmManager.cancel(sender);
-	else
+        } else {
+            Log.d(TAG, String.format("%d To Do alarms are pending;"
+                    + " scheduling an alarm for the next item at %s",
+                    pendingAlarms.size(), LOG_DATIME_FORMAT.format(
+                            pendingAlarms.first().getAlarmDate())));
 	    alarmManager.set(AlarmManager.RTC_WAKEUP,
-		    pendingAlarms.first().alarmDate.getTime(), sender);
+		    pendingAlarms.first().getAlarmDate().getTime(), sender);
+        }
     }
 
 }
