@@ -89,10 +89,10 @@ features without using this manual.
 The application is designed for compatibility with Android 6
 (Marshmallow) but also runs on Android 2.2 (Froyo) through 14
 (Upside-down Cake) which should cover 98.6% of Android devices on the
-market as of February 2025.  (It has been tested on Gingerbread,
-Lollipop, Marshmallow, Oreo, Tiramisu, and Upside-down Cake.)  Support
-for newer Android devices is planned, but will likely require dropping
-support for older devices.
+market as of February 2025.  (It has been tested on Gingerbread, Ice
+Cream Sandwich, Lollipop, Marshmallow, Oreo, Tiramisu, and Upside-down
+Cake.)  Support for newer Android devices is planned, but will
+require dropping support for older devices.
 
 @node Permissions, Adding To Do Items, Device Compatibility, The Basics
 @section Permissions
@@ -669,9 +669,9 @@ wish.)}
 @node Known Bugs, , Exporting and Importing, Top
 @chapter Known Bugs
 
-The following bugs are known to exist in the 2025.02.24 release of To
-Do.  If you encounter any other bugs, please go to my project page on
-GitHub to report them:
+The following bugs are known to exist in the 1.2.2 (2025.03.06)
+release of To Do.  If you encounter any other bugs, please go to my
+project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}
 
@@ -715,6 +715,20 @@ import them separately.
 
 @item
 When importing a backup file, the progress bar may not update properly.
+@end itemize
+
+The following bugs were in the 2025.02.24 release but have been fixed
+as of 2025.03.06.
+
+@itemize @bullet
+@item
+Notifications may have been broken for Ice Cream Sandwich.  @emph{This
+bug was introduced in 2025.02.20 so does not impact earlier versions.}
+
+@item
+Updating the app settings or the export/import file name may have been
+broken for Froyo.  @emph{This bug was introduced in 2025.02.20 so does
+not impact earlier versions.}
 @end itemize
 
 The following bugs were in the 2025.02.20 release but have been fixed

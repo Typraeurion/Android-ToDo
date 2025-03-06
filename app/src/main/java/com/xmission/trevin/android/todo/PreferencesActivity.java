@@ -94,10 +94,16 @@ public class PreferencesActivity extends Activity {
 		    int position, long id) {
 		Log.d(LOG_TAG, "spinnerSortBy.onItemSelected("
 			+ position + "," + id + ")");
-		if (position >= ToDoItem.USER_SORT_ORDERS.length)
-		    Log.e(LOG_TAG, "Unknown sort order selected");
-		else
-		    prefs.edit().putInt(TPREF_SORT_ORDER, position).apply();
+		if (position >= ToDoItem.USER_SORT_ORDERS.length) {
+                    Log.e(LOG_TAG, "Unknown sort order selected");
+                } else {
+                    SharedPreferences.Editor editor = prefs.edit()
+                            .putInt(TPREF_SORT_ORDER, position);
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                        editor.commit();
+                    else
+                        editor.apply();
+                }
 	    }
 	});
 
@@ -108,7 +114,12 @@ public class PreferencesActivity extends Activity {
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowCompleted.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_CHECKED, isChecked).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putBoolean(TPREF_SHOW_CHECKED, isChecked);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	});
 
@@ -119,7 +130,12 @@ public class PreferencesActivity extends Activity {
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowDueDate.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_DUE_DATE, isChecked).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putBoolean(TPREF_SHOW_DUE_DATE, isChecked);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	});
 
@@ -130,7 +146,12 @@ public class PreferencesActivity extends Activity {
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowPriority.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_PRIORITY, isChecked).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putBoolean(TPREF_SHOW_PRIORITY, isChecked);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	});
 
@@ -141,7 +162,12 @@ public class PreferencesActivity extends Activity {
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowCategory.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_CATEGORY, isChecked).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putBoolean(TPREF_SHOW_CATEGORY, isChecked);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	});
 
@@ -167,7 +193,12 @@ public class PreferencesActivity extends Activity {
 		passwordRow.setVisibility((isChecked &&
 			encryptor.hasPassword(getContentResolver()))
 			? View.VISIBLE : View.GONE);
-		prefs.edit().putBoolean(TPREF_SHOW_PRIVATE, isChecked).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putBoolean(TPREF_SHOW_PRIVATE, isChecked);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	});
 
@@ -202,7 +233,12 @@ public class PreferencesActivity extends Activity {
 		    buttonView.setChecked(false);
 		    return;
 		}
-		prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, isChecked).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putBoolean(TPREF_NOTIFICATION_VIBRATE, isChecked);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	});
 
@@ -245,7 +281,12 @@ public class PreferencesActivity extends Activity {
 				anyx.getMessage(), Toast.LENGTH_LONG).show();
 		    }
 		}
-		prefs.edit().putLong(TPREF_NOTIFICATION_SOUND, id).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putLong(TPREF_NOTIFICATION_SOUND, id);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	    @Override
 	    public void onNothingSelected(AdapterView<?> parent) {}
@@ -318,7 +359,12 @@ public class PreferencesActivity extends Activity {
             if (Manifest.permission.VIBRATE.equals(permissions[i])) {
                 if (results[i] == PackageManager.PERMISSION_GRANTED) {
                     Log.i(LOG_TAG, "Vibrate permission granted, enabling vibrating alarm");
-                    prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, true).apply();
+                    SharedPreferences.Editor editor = prefs.edit()
+                            .putBoolean(TPREF_NOTIFICATION_VIBRATE, true);
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                        editor.commit();
+                    else
+                        editor.apply();
                     CheckBox checkBox = (CheckBox)
                             findViewById(R.id.PrefsCheckBoxAlarmVibrate);
                     checkBox.setChecked(true);
@@ -350,7 +396,12 @@ public class PreferencesActivity extends Activity {
 		Arrays.fill(newPassword, (char) 0);
 		try {
 		    if (encryptor.checkPassword(getContentResolver())) {
-			prefs.edit().putBoolean(TPREF_SHOW_ENCRYPTED, true).apply();
+                        SharedPreferences.Editor editor = prefs.edit()
+                                .putBoolean(TPREF_SHOW_ENCRYPTED, true);
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                            editor.commit();
+                        else
+                            editor.apply();
 			super.onBackPressed();
 			return;
 		    } else {
@@ -365,7 +416,12 @@ public class PreferencesActivity extends Activity {
 	    }
 	}
 	encryptor.forgetPassword();
-	prefs.edit().putBoolean(TPREF_SHOW_ENCRYPTED, false).apply();
+        SharedPreferences.Editor editor = prefs.edit()
+                .putBoolean(TPREF_SHOW_ENCRYPTED, false);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+            editor.commit();
+        else
+            editor.apply();
 	super.onBackPressed();
     }
 

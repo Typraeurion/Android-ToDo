@@ -396,7 +396,10 @@ public class AlarmService extends IntentService {
 	    if (soundID >= 0)
 		builder = builder.setSound(Uri.withAppendedPath(
 				Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
-	    notice = builder.build();
+	    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
+	        notice = builder.getNotification();
+	    else
+                notice = builder.build();
 	}
 
 	notificationManager.notify(0, notice);

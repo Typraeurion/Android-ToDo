@@ -109,6 +109,21 @@ as it does not exist in Maven Central nor in Google's Maven repository.
 
 @end itemize
 
+The following development environment was also tested:
+@itemize @bullet
+@item Java (1.)8 @emph{(Do} @strong{not} @emph{use a newer version, as
+Gradle 4.1 is not compatible with Java 11 or higher.)}
+
+@item Android Studio 3.0, downloaded from the
+@url{https://developer.android.com/studio/archive,archive}.
+
+@item Gradle 4.1, installed by running
+@code{./gradlew  wrapper --gradle-version=4.1}.
+
+@item The Android Gradle Plugin version 3.0.0, available in Maven Central.
+
+@end itemize
+
 See @uref{http://developer.android.com/sdk/index.html} for information
 on how to set up a project using the Android SDK.
 

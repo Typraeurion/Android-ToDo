@@ -10,7 +10,7 @@ android {
 
     compileSdkVersion 23
 
-    buildToolsVersion "25.0.3"
+    buildToolsVersion "26.0.2"
 
     /**
      * The defaultConfig block encapsulates default settings and entries
@@ -32,10 +32,10 @@ android {
         targetSdkVersion 23
 
         // Defines the version number of your app.
-        versionCode 5
+        versionCode 6
 
         // Defines a user-friendly version name for your app.
-        versionName "1.2.1"
+        versionName "1.2.2"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -46,6 +46,10 @@ android {
 	    // obfuscating class names, and rewriting code.
             //minifyEnabled false
         }
+    }
+
+    lintOptions {
+        abortOnError false
     }
 
 }

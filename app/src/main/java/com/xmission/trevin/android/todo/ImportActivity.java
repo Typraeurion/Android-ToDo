@@ -196,7 +196,12 @@ public class ImportActivity extends Activity {
 	importFileName.addTextChangedListener(new TextWatcher () {
 	    @Override
 	    public void afterTextChanged(Editable s) {
-		prefs.edit().putString(TPREF_IMPORT_FILE, s.toString()).apply();
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putString(TPREF_IMPORT_FILE, s.toString());
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	    @Override
 	    public void beforeTextChanged(CharSequence s,
@@ -216,7 +221,12 @@ public class ImportActivity extends Activity {
 		    public void onItemSelected(AdapterView<?> parent, View child,
 			    int position, long id) {
 			Log.d(TAG, "importTypeList.onItemSelected(" + position + ")");
-			prefs.edit().putInt(TPREF_IMPORT_TYPE, position).apply();
+                        SharedPreferences.Editor editor = prefs.edit()
+                                .putInt(TPREF_IMPORT_TYPE, position);
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                            editor.commit();
+                        else
+                            editor.apply();
 		    }
 		});
 
@@ -224,8 +234,12 @@ public class ImportActivity extends Activity {
 		new CompoundButton.OnCheckedChangeListener() {
 		    public void onCheckedChanged(
 			    CompoundButton b, boolean checked) {
-			prefs.edit().putBoolean(
-				TPREF_IMPORT_PRIVATE, checked).apply();
+                        SharedPreferences.Editor editor = prefs.edit()
+                                .putBoolean(TPREF_IMPORT_PRIVATE, checked);
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                            editor.commit();
+                        else
+                            editor.apply();
 			passwordFieldRows[0].setVisibility(checked &&
 				(encryptor.getPassword() == null)
 				? View.VISIBLE : View.GONE);

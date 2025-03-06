@@ -31,6 +31,7 @@ import com.xmission.trevin.android.todo.ToDo.ToDoMetadata;
 
 import android.content.*;
 import android.database.Cursor;
+import android.os.Build;
 import android.util.Log;
 
 /**
@@ -85,10 +86,15 @@ public class StringEncryption {
 			+ ") released encryption without holding it!");
 	    if (globalEncryption != null) {
 		globalEncryption.forgetPassword();
-		context.getSharedPreferences(ToDoListActivity.TODO_PREFERENCES,
-			Context.MODE_PRIVATE).edit().putBoolean(
-				ToDoListActivity.TPREF_SHOW_ENCRYPTED,
-				false).apply();
+                SharedPreferences.Editor editor = context.getSharedPreferences(
+                        ToDoListActivity.TODO_PREFERENCES, Context.MODE_PRIVATE)
+                        .edit().putBoolean(
+                                ToDoListActivity.TPREF_SHOW_ENCRYPTED,
+                                false);
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                    editor.commit();
+                else
+                    editor.apply();
 	    }
 	    globalEncryption = null;
 	}

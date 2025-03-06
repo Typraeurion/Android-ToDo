@@ -125,7 +125,12 @@ public class ExportActivity extends Activity {
 	exportFileName.addTextChangedListener(new TextWatcher () {
 	    @Override
 	    public void afterTextChanged(Editable s) {
-		prefs.edit().putString(TPREF_EXPORT_FILE, s.toString()).apply();
+		SharedPreferences.Editor editor = prefs.edit()
+                        .putString(TPREF_EXPORT_FILE, s.toString());
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+		    editor.commit();
+		else
+                    editor.apply();
 	    }
 	    @Override
 	    public void beforeTextChanged(CharSequence s,
@@ -139,8 +144,12 @@ public class ExportActivity extends Activity {
 		new CompoundButton.OnCheckedChangeListener() {
 		    public void onCheckedChanged(
 			    CompoundButton b, boolean checked) {
-			prefs.edit().putBoolean(
-				TPREF_EXPORT_PRIVATE, checked).apply();
+                        SharedPreferences.Editor editor = prefs.edit()
+                                .putBoolean(TPREF_EXPORT_PRIVATE, checked);
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+                            editor.commit();
+                        else
+                            editor.apply();
 		    }
 		});
 

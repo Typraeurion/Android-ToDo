@@ -46,6 +46,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import android.util.LongSparseArray;
@@ -158,8 +159,8 @@ public class XMLImporterService extends IntentService implements
     }
 
     /** Categories from the XML file, mapped by the XML id */
-    protected LongSparseArray<CategoryEntry> categoriesByID =
-	new LongSparseArray<>();
+    protected Map<Long,CategoryEntry> categoriesByID =
+	new HashMap<>();
 
     /** Next free record ID (counting both the Palm and Android databases) */
     private long nextFreeRecordID = 1;
@@ -634,7 +635,10 @@ public class XMLImporterService extends IntentService implements
 		// Ignore this change
 	    }
 	}
-	prefsEditor.apply();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.GINGERBREAD)
+            prefsEditor.commit();
+        else
+            prefsEditor.apply();
     }
 
     /**
