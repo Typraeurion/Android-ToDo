@@ -38,17 +38,31 @@ android {
         versionName "1.2.2"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        // This is needed to prevent generating PNG resources from
+	// vector drawables which results in a non-reproducible
+	// build.  These may be coming from the appcompat library.
+	vectorDrawables.generatedDensities = []
     }
 
     buildTypes {
         release {
             // Minifying entails removing unused code and resources,
-	    // obfuscating class names, and rewriting code.
-            //minifyEnabled false
+            // obfuscating class names, and rewriting code.
+            minifyEnabled false
         }
     }
 
+    aaptOptions {
+        // This is needed to work around a reproducibility issue
+	// where PNG optimization does not provide deterministic output.
+        cruncherEnabled = false
+    }
+
     lintOptions {
+        // This is needed because linting shows two false
+        // positives on "calling new methods on older versions"
+        // where the code does check for the correct SDK level.
         abortOnError false
     }
 
