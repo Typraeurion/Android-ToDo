@@ -1,0 +1,6 @@
+Version 1.1.1
+* Fixes for compatibility with SDK >= 11 (Honeycomb)
+* Fixed a bug that caused the application to crash when attempting
+  to open an item's details in landscape orientation.
+* Fixed an annoyance where notifications would continually be
+  re-displayed after every update to To Do items.
