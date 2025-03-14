@@ -1,0 +1,5 @@
+Version 1.2.2
+* Updated the build to work with Android Studio 3.0 and Gradle 4.1.
+* Fixed some issues with the code using newer API calls than it was
+  checking the platform for (which would have caused problems on Froyo
+  and Ice Cream Sandwich).

@@ -1,0 +1,3 @@
+Version 1.2.0
+* Updated the build to work with Android Studio 2.3.3 and Gradle 3.5.
+* Bumped the target SDK version to 22 (Lollipop).

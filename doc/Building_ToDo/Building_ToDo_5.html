@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created on March 14, 2025 by texi2html 5.0
+texi2html was written by: 
+            Lionel Cons <Lionel.Cons@cern.ch> (original author)
+            Karl Berry  <karl@freefriends.org>
+            Olaf Bachmann <obachman@mathematik.uni-kl.de>
+            and many others.
+Maintained by: Many creative people.
+Send bugs and suggestions to <texi2html-bug@nongnu.org>
+-->
+<head>
+<title>Building the To Do application for Android: 1.4 Services</title>
+
+<meta name="description" content="Building the To Do application for Android: 1.4 Services">
+<meta name="keywords" content="Building the To Do application for Android: 1.4 Services">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="texi2html 5.0">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smalllisp {margin-left: 3.2em}
+pre.display {font-family: serif}
+pre.format {font-family: serif}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: serif; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: serif; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:pre}
+span.nolinebreak {white-space:pre}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+
+<a name="Services"></a>
+<table class="header" cellpadding="1" cellspacing="1" border="0">
+<tr><td valign="middle" align="left">[<a href="Building_ToDo_1.html#Code-Organization" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_4.html#User-Interface" title="Previous section in reading order"> &lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_1.html#Code-Organization" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_6.html#Receiver" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Next chapter"> &gt;&gt; </a>]</td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left">[<a href="Building_ToDo.html#Top" title="Cover (top) of document">Top</a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_toc.html#SEC_Contents" title="Table of contents">Contents</a>]</td>
+<td valign="middle" align="left">[Index]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
+</tr></table>
+<hr>
+<a name="Services-1"></a>
+<h2 class="section">1.4 Services</h2>
+
+<p>Background services are in the <code>service</code> subpackage.  These are:
+</p>
+<ul>
+<li> <code>AlarmService</code>
+&mdash; Keeps track of which To Do items have an upcoming alarm, and posts
+notifications when the next one(s) are due.
+
+</li><li> <code>PasswordChangeService</code>
+&mdash; When you change your password for private records, it changes
+their encryption key so all records need to be decrypted with the old
+password and re-encrypted with the new one.  This service is
+responsible for updating the stored data.  The changes occur in the
+following sequence:
+
+<ol>
+<li> If there was an old password, all private records are decrypted.
+</li><li> The hash of the old password (if any) is removed from the database.
+</li><li> The hash of the new password (if any) is written to the database.
+</li><li> If there is a new password, all private records are encrypted.
+</li></ol>
+
+<p>This ensures that if the process fails at any point, you will never
+have data encrypted by two different keys.
+</p>
+</li><li> <code>PalmImporterService</code>
+&mdash; This service is used when importing a &lsquo;<tt>.dat</tt>&rsquo; file, which the
+app assumes was created by
+<a href="https://palmdb.net/app/palm-desktop">Palm Desktop</a> as a backup of
+a To Do list from a <a href="https://en.wikipedia.org/wiki/PalmPilot">Palm Pilot</a> or <a href="https://en.wikipedia.org/wiki/Palm_Tungsten">Palm Tungsten</a> PDA.
+
+</li><li> <code>XMLExporterService</code>
+&mdash; This service is used when exporting your To Do list(s) to a backup
+file.
+
+</li><li> <code>XMLImporterService</code>
+&mdash; This service is used when importing To Do items from an XML file.
+(The app currently assumes any file not ending in &lsquo;<tt>.dat</tt>&rsquo; is XML
+data.)
+
+</li></ul>
+
+<hr>
+<table class="header" cellpadding="1" cellspacing="1" border="0">
+<tr><td valign="middle" align="left">[<a href="Building_ToDo_1.html#Code-Organization" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_4.html#User-Interface" title="Previous section in reading order"> &lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_1.html#Code-Organization" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_6.html#Receiver" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Next chapter"> &gt;&gt; </a>]</td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left">[<a href="Building_ToDo.html#Top" title="Cover (top) of document">Top</a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_toc.html#SEC_Contents" title="Table of contents">Contents</a>]</td>
+<td valign="middle" align="left">[Index]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
+</tr></table>
+<p>
+ <font size="-1">
+  This document was generated on <i>March 14, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+ </font>
+ <br>
+
+</p>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<p>A simple and intuitive To Do list based on the app
+bundled with Palm Pilot, plus many other features:
+<ul>
+<li>Entirely offline, requiring few permissions to run.</li>
+<li>Create any number of categories for different lists.</li>
+<li>Set alarms for items that are due or nearly due.</li>
+<li>Configure repeating items which advance their due date when completed.</li>
+<li>Mark items as private and optionally encrypt them with a password.</li>
+<li>Export lists to a local XML file.</li>
+<li>Import lists from either XML or a Palm Pilot data file.</li>
+<li>Backwards compatible with Android 2.2 (Froyo) and up.</li>
+</ul>
+</p>

@@ -3,6 +3,7 @@
 
 # Android Studio-generated files
 *.apk
+*.apk.idsig
 *.iml
 .cxx
 .DS_Store

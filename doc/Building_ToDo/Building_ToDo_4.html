@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created on March 14, 2025 by texi2html 5.0
+texi2html was written by: 
+            Lionel Cons <Lionel.Cons@cern.ch> (original author)
+            Karl Berry  <karl@freefriends.org>
+            Olaf Bachmann <obachman@mathematik.uni-kl.de>
+            and many others.
+Maintained by: Many creative people.
+Send bugs and suggestions to <texi2html-bug@nongnu.org>
+-->
+<head>
+<title>Building the To Do application for Android: 1.3 User Interface</title>
+
+<meta name="description" content="Building the To Do application for Android: 1.3 User Interface">
+<meta name="keywords" content="Building the To Do application for Android: 1.3 User Interface">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="texi2html 5.0">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smalllisp {margin-left: 3.2em}
+pre.display {font-family: serif}
+pre.format {font-family: serif}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: serif; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: serif; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:pre}
+span.nolinebreak {white-space:pre}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+
+<a name="User-Interface"></a>
+<table class="header" cellpadding="1" cellspacing="1" border="0">
+<tr><td valign="middle" align="left">[<a href="Building_ToDo_1.html#Code-Organization" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_3.html#Data-Model" title="Previous section in reading order"> &lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_1.html#Code-Organization" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_5.html#Services" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Next chapter"> &gt;&gt; </a>]</td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left">[<a href="Building_ToDo.html#Top" title="Cover (top) of document">Top</a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_toc.html#SEC_Contents" title="Table of contents">Contents</a>]</td>
+<td valign="middle" align="left">[Index]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
+</tr></table>
+<hr>
+<a name="User-Interface-1"></a>
+<h2 class="section">1.3 User Interface</h2>
+
+<p>The Android Activities and other UI-related classes are in the
+<code>ui</code> subpackage.  These include:
+</p>
+<ul>
+<li> <code>ToDoListActivity</code>
+&mdash; the main entry point of the application, which shows the list of
+To Do items.
+
+</li><li> <code>ToDoDetailsActivity</code>
+&mdash; The screen which shows the general details of a single item from
+the list.
+
+</li><li> <code>ToDoNoteActivity</code>
+&mdash; The screen that lets you add a longer note to a To Do item.
+
+</li><li> <code>CalendarDatePicker</code>
+&mdash; A custom calendar-like view for selecting a due date.
+
+</li><li> <code>CalendarDatePickerDialog</code>
+&mdash; A dialog wrapper around <code>CalendarDatePicker</code>
+
+</li><li> <code>RepeatEditor</code>
+&mdash; The screen that lets you customize when a repeating task needs to
+be done again once it has been marked complete.
+
+</li><li> <code>RepeatDialog</code>
+&mdash; A dialog wrapper around <code>RepeatEditor</code>
+
+</li><li> <code>CategoryListActivity</code>
+&mdash; The screen that lets you edit categories for grouping items.
+
+</li><li> <code>PreferencesActivity</code>
+&mdash; The &ldquo;Settings&rdquo; screen of the application.
+
+</li><li> <code>ExportActivity</code>
+&mdash; The screen from which you can save the app&rsquo;s data to a backup file.
+
+</li><li> <code>ImportActivity</code>
+&mdash; The screen from which you can load app date from a backup file.
+</li></ul>
+
+<hr>
+<p>
+ <font size="-1">
+  This document was generated on <i>March 14, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+ </font>
+ <br>
+
+</p>
+</body>
+</html>

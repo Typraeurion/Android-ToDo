@@ -1,0 +1,16 @@
+Version 1.3.0
+* Target Android 8.1 (Oreo); dropped support
+  for Android 2.2 (Froyo) through 3 (Honeycomb).
+* Major changes (internal and external) to the alarm notification system:
+  * When running on Oreo or higher, vibrate and alarm
+    sound settings are removed from the app Settings page;
+    these are instead managed by the Android system.
+  * When creating or updating a To Do item with an alarm enabled,
+    check whether permission has been given to post notifications.
+    If not, alert the user to enable this in the system settings.
+  * Instead of putting the text of all To Do alarms in the same
+    notification, the app creates a separate notification for each
+    due (or overdue) item.  When the user clicks on a notification,
+    the app switches to the category for that item if needed.
+  * Notifications are no longer automatically cleared when clicked.
+    Instead, completing a To Do item clears any associated notification.

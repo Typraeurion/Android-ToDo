@@ -1,0 +1,18 @@
+Version 1.1
+* Added support for SDK >= 11 (Honeycomb);
+  dropped support for SDK 4-7 (Donut through Eclair)
+* Bug fixes for XML import:
+  * Update/merge was comparing the item creation time
+    rather than the last modification time.
+  * When reverting, only overwrite if the item creation time is the same;
+    otherwise consider it to be a different item.
+  * When updating, only overwrite if the item creating time is the same
+    and the modification time is newer; otherwise consider it to be
+    a different item.
+  * When merging, only overwrite if the item creation time is the same
+    (in addition to the update checks); otherwise write a new item.
+  * Don’t export the password or private records when the
+    “export private” option is un-checked.
+* Update an item’s modification time when its due date
+  or note changes or is deleted or the item is (un)checked.
+* Hide the password field in Settings if a password has not been set.

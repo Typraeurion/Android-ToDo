@@ -1,0 +1,11 @@
+Version 1.2.1
+* Fixed a bug where a to-do item with no description would cause
+  exporting the data to crash.
+* Bumped the target SDK version to 23 (Marshmallow).
+* Added a new preference item for vibrating when an alarm occurs.
+* Fixed an old issue where preferences could not be changed
+  when importing a file.
+* When exporting or importing a file *and* on Marshmallow or higher,
+  check whether the file location is outside of package-specific
+  storage and if so request permission to access the folder if we
+  don't already have it.

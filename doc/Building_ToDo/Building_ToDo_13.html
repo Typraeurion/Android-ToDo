@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created on March 14, 2025 by texi2html 5.0
+texi2html was written by: 
+            Lionel Cons <Lionel.Cons@cern.ch> (original author)
+            Karl Berry  <karl@freefriends.org>
+            Olaf Bachmann <obachman@mathematik.uni-kl.de>
+            and many others.
+Maintained by: Many creative people.
+Send bugs and suggestions to <texi2html-bug@nongnu.org>
+-->
+<head>
+<title>Building the To Do application for Android: 2.2 Generating Icons</title>
+
+<meta name="description" content="Building the To Do application for Android: 2.2 Generating Icons">
+<meta name="keywords" content="Building the To Do application for Android: 2.2 Generating Icons">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="texi2html 5.0">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smalllisp {margin-left: 3.2em}
+pre.display {font-family: serif}
+pre.format {font-family: serif}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: serif; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: serif; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:pre}
+span.nolinebreak {white-space:pre}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+
+<a name="Generating-Icons"></a>
+<table class="header" cellpadding="1" cellspacing="1" border="0">
+<tr><td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_12.html#Development-Environment" title="Previous section in reading order"> &lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_14.html#Testing" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_20.html#To-Do" title="Next chapter"> &gt;&gt; </a>]</td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left">[<a href="Building_ToDo.html#Top" title="Cover (top) of document">Top</a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_toc.html#SEC_Contents" title="Table of contents">Contents</a>]</td>
+<td valign="middle" align="left">[Index]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
+</tr></table>
+<hr>
+<a name="Generating-Icons-1"></a>
+<h2 class="section">2.2 Generating Icons</h2>
+
+<p>Some of the application icons are generated from 3-D image description
+files using <a href="http://www.povray.org/">Persistence of Vision</a>.  The
+image files are included with the source code (in
+&lsquo;<tt>app/src/main/res/drawable*/</tt>&rsquo;, but in case you want to tweak or
+change any image you can use <code>povray</code> to generate new ones.
+The &lsquo;<tt>.pov</tt>&rsquo; sources are under &lsquo;<tt>app/src/main/graphics/</tt>&rsquo;.
+</p>
+<p>Because some of the raster icons contain small details that may get
+lost if rendered at a low resolution, it is recommended that you
+render the initial image at a size which is the least common multiple
+of all icon sizes &mdash;
+288&#x00d7;288 &mdash; and then use a raster graphics program such as the
+<a href="http://www.gimp.org/">GIMP</a>,
+<a href="http://www.imagemagick.org/"><code>convert</code></a>, or
+<a href="http://netpbm.sourceforge.net/"><code>pamscale</code></a>.  For each
+image file &lsquo;<tt>foo.png</tt>&rsquo;, you need to create several icons, aiming
+for a size of about
+&#x2155; inch on the screen: for example, a
+16&#x00d7;16 icon in
+&lsquo;<tt>res/drawable/foo_16.png</tt>&rsquo;, a
+32&#x00d7;32 icon in
+&lsquo;<tt>res/drawable/foo_32.png</tt>&rsquo;, a
+36&#x00d7;36 icon in
+&lsquo;<tt>res/drawable/foo_36.png</tt>&rsquo;, a
+24&#x00d7;24 icon in
+&lsquo;<tt>res/drawable-ldpi/foo.png</tt>&rsquo;, a
+32&#x00d7;32 icon in
+&lsquo;<tt>res/drawable-mdpi/foo.png</tt>&rsquo;, a
+48&#x00d7;48 icon in
+&lsquo;<tt>res/drawable-hdpi/foo.png</tt>&rsquo;, and a
+64&#x00d7;64 icon in
+&lsquo;<tt>res/drawable-xhdpi/foo.png</tt>&rsquo;.
+</p>
+<p>The command for generating an image from one of the &lsquo;<tt>.pov</tt>&rsquo;
+descriptions is:
+</p>
+<div class="example">
+<pre class="example">povray +FN +AM3 +A0.3 +UA +W288 +H288 foo.pov
+</pre></div>
+
+<p>The main application icon was drawn by hand in the GIMP, and can be
+found in &lsquo;<tt>IconMaster.xcf</tt>&rsquo;.  <em>For Android Nougat and
+earlier,</em> this raster image is scaled down from
+384&#x00d7;384 to about
+&#x00bd; inch on screen: a
+60&#x00d7;60 icon in &lsquo;<tt>res/drawable-ldpi/icon.png</tt>&rsquo;,
+80&#x00d7;80 in &lsquo;<tt>res/drawable-mdpi/icon.png</tt>&rsquo;,
+120&#x00d7;120 in &lsquo;<tt>res/drawable-hdpi/icon.png</tt>&rsquo;, and
+160&#x00d7;160 in &lsquo;<tt>res/drawable-xhdpi/icon.png</tt>&rsquo;.
+</p>
+<p>Android Oreo introduced &ldquo;adaptive icons&rdquo;, so the usual icon &mdash;
+which has the natural rectangular shape of a piece of paper &mdash; had to
+be squeezed down to fit into a mask that can be anything from a
+rounded squircle to a circle.  To generate the various sizes of this
+icon, the canvas has to be enlarged to
+and then scaled back down to
+80&#x00d7;80, 120&#x00d7;120, 160&#x00d7;160, and 240&#x00d7;240 for the various pixel densities in
+&lsquo;<tt>res/drawable-*dpi/icon_foreground.png</tt>&rsquo;.  In addition, a
+background image has to be provided in
+&lsquo;<tt>res/drawable-*dpi/icon_background.png</tt>&rsquo;.
+</p>
+<table class="cartouche" border="1"><tr><td>
+<p>Reproducibility Issues
+Some publishing systems (e.g. F-Droid) require that compiled code and
+generated / modified resources be kept exactly the same across any
+build environment.  When writing PNG images, applications tend to use
+the system&rsquo;s &ldquo;zlib&rdquo; compression library, which is ordinarily the one
+provided from zlib.net.  Some systems may replace this library with an
+alternative such as &ldquo;zlib-ng&rdquo;; in order to get consistent output,
+you may need to install &ldquo;zlib&rdquo; separately and have this library
+loaded when running Android Studio, &lsquo;<samp>./gradlew</samp>&rsquo;, and any other
+application you use to create PNG images.  For example, the following
+may be used from the command line:
+</p><div class="example">
+<pre class="example">export LD_PRELOAD=/usr/local/lib/libz.so.1
+</pre></div>
+<p>which will cause the application to use the zlib implementation in
+&lsquo;<tt>/usr/local/lib/</tt>&rsquo; instead of the default implementation in
+&lsquo;<tt>/usr/lib/</tt>&rsquo; or &lsquo;<tt>/usr/lib64/</tt>&rsquo;.
+</p></td></tr></table>
+
+<hr>
+<table class="header" cellpadding="1" cellspacing="1" border="0">
+<tr><td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_12.html#Development-Environment" title="Previous section in reading order"> &lt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_14.html#Testing" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_20.html#To-Do" title="Next chapter"> &gt;&gt; </a>]</td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left"> &nbsp; </td>
+<td valign="middle" align="left">[<a href="Building_ToDo.html#Top" title="Cover (top) of document">Top</a>]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_toc.html#SEC_Contents" title="Table of contents">Contents</a>]</td>
+<td valign="middle" align="left">[Index]</td>
+<td valign="middle" align="left">[<a href="Building_ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
+</tr></table>
+<p>
+ <font size="-1">
+  This document was generated on <i>March 14, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+ </font>
+ <br>
+
+</p>
+</body>
+</html>
