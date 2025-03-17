@@ -1,7 +1,21 @@
-<p>A simple and intuitive To Do list based on the app
+<div>A simple and intuitive To Do list based on the app
 bundled with Palm Pilot, plus many other features:
 <ul>
-<li>Entirely offline, requiring few permissions to run.</li>
+<li>Entirely offline, requiring few permissions to run.
+<ul>
+<li>Permission to use external storage is only needed to back up or
+restore your lists.  On Marshmallow (Android 6) and later, it is only
+requested if you write the file to a public folder.</li>
+<li>Permission to run on system boot and to post notifications is only
+needed to check for items which are due and that you have set an alarm
+for.  On Marshmallow (Android 6) and later, notification permissions
+are only requested if you save a To Do item with an alarm.</li>
+<li>Permission to vibrate is only needed when notifying you of items
+which are due and that you have set an alarm for, if you have “Alarm
+vibrate” enabled in the app settings for Nougat (Android 7) or
+earlier.  On Oreo (Android 8) and later, alarm vibration and sounds is
+managed in the system settings.
+</ul></li>
 <li>Create any number of categories for different lists.</li>
 <li>Set alarms for items that are due or nearly due.</li>
 <li>Configure repeating items which advance their due date when completed.</li>
@@ -10,4 +24,4 @@ bundled with Palm Pilot, plus many other features:
 <li>Import lists from either XML or a Palm Pilot data file.</li>
 <li>Backwards compatible with Android 2.2 (Froyo) and up.</li>
 </ul>
-</p>
+</div>

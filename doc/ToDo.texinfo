@@ -629,7 +629,7 @@ alone.
 
 @item ``Update'':
 This option will only import records from the backup file whose
-modification time is newer than the corresponing record in the
+modification time is newer than the corresponding record in the
 application database.  Use this if you want to keep your To Do list on
 multiple devices, to synchronize changes between the two.  Note that if
 you update a record on both devices and then try to synchronize them
