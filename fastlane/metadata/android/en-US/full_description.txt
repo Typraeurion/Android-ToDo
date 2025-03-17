@@ -1,4 +1,4 @@
-<p>A simple and intuitive To Do list based on the app
+<div>A simple and intuitive To Do list based on the app
 bundled with Palm Pilot, plus many other features:
 <ul>
 <li>Entirely offline, requiring few permissions to run.</li>
@@ -10,4 +10,4 @@ bundled with Palm Pilot, plus many other features:
 <li>Import lists from either XML or a Palm Pilot data file.</li>
 <li>Backwards compatible with Android 2.2 (Froyo) and up.</li>
 </ul>
-</p>
+</div>
