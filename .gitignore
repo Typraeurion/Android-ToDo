@@ -12,5 +12,4 @@
 .idea
 /build
 /captures
-/gradle/libs.versions.toml
 /local.properties
