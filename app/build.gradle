@@ -14,6 +14,8 @@ android {
 
     compileSdk 27
 
+    buildToolsVersion "35.0.1"
+
     /**
      * The defaultConfig block encapsulates default settings and entries
      * for all build variants and can override some attributes in
@@ -71,7 +73,6 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support:appcompat-v7:27.0.2'
     //implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     //implementation 'com.android.support:design:22.2.1'
