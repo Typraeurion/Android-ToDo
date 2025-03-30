@@ -2,8 +2,11 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.3.0 (2025.03.14)\n
+version 1.4.0 (2025.03.30)\n
 by Trevin Beattie\n
+\n
+Documentation for this app can be found on its GitHub project page:
+https://github.com/Typraeurion/Android-ToDo/releases\n
 \n
 This program is distributed under the terms of the Gnu Public License,
 version 3.0.\n
@@ -135,7 +138,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ErrorSDNotFound">Storage media not found</string>
     <string name="ExportButtonCancel">Cancel</string>
     <string name="ExportButtonOK">Export</string>
-    <string name="ExportTextFile">File:</string>
+    <string name="ExportEditDirectoryHint">Folder in which to save the export file</string>
+    <string name="ExportEditFileHint">Name of the export file</string>
+    <string name="ExportFileDialogTitle">Export To Do File</string>
+    <string name="ExportRadioButtonPrivateFolder">Save to app private storage</string>
+    <string name="ExportRadioButtonPublicFolder">Save to shared storage</string>
+    <string name="ExportTextDirectory">Folder:</string>
+    <string name="ExportTextFile">File Name:</string>
     <string name="ExportTextIncludePrivate">Include Private:</string>
     <string name="ExportTextPasswordNotSetWarning">No password has been entered in Settings.  Encrypted records will not be exported!</string>
     <string name="HideButtonCancel">Cancel</string>
@@ -146,7 +155,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="HideTitle">Hide when not yet due</string>
     <string name="ImportButtonCancel">Cancel</string>
     <string name="ImportButtonOK">Import</string>
-    <string name="ImportTextFile">File:</string>
+    <string name="ImportEditDirectoryHint">Folder containing the import file</string>
+    <string name="ImportEditFileHint">Name of the import file</string>
+    <string name="ImportEditPasswordHint">Password</string>
+    <string name="ImportFileDialogTitle">Import To Do File</string>
+    <string name="ImportRadioButtonPrivateFolder">File from app private storage</string>
+    <string name="ImportRadioButtonPublicFolder">File from shared storage</string>
+    <string name="ImportTextDirectory">Folder:</string>
+    <string name="ImportTextFile">File Name:</string>
     <string name="ImportTextImportType">Import Type:</string>
     <string name="ImportTextIncludePrivate">Include Private:</string>
     <string name="ImportTextPassword">Saved Password:</string>
@@ -166,9 +182,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="MenuExport">Export Data</string>
     <string name="MenuImport">Import Data</string>
     <string name="MenuInfo">About&#8230;</string>
+    <string name="MenuPasswordSet">Set Password</string>
     <string name="MenuSettings">Settings</string>
     <string name="MenuShowCompleted">Toggle Show Completed</string>
-    <string name="MenuPasswordSet">Set Password</string>
     <string-array name="MonList">
 	<item>@string/MonthJan</item>
 	<item>@string/MonthFeb</item>

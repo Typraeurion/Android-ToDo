@@ -52,7 +52,7 @@ Commons 3.0 Attribution-ShareAlike License.
 @contents
 
 @ifnottex
-@node Top, Building from the Source, (dir), (dir)
+@node Top, Code Organization, (dir), (dir)
 @top Menu
 @menu
 * Code Organization::
@@ -538,7 +538,7 @@ be squeezed down to fit into a mask that can be anything from a
 rounded squircle to a circle.  To generate the various sizes of this
 icon, the canvas has to be enlarged to
 @ifnothtml
-@math{558 @times 588}
+@math{588 @times 588}
 @end ifnothtml
 and then scaled back down to
 @ifnothtml
@@ -573,6 +573,16 @@ export LD_PRELOAD=/usr/local/lib/libz.so.1
 which will cause the application to use the zlib implementation in
 @file{/usr/local/lib/} instead of the default implementation in
 @file{/usr/lib/} or @file{/usr/lib64/}.
+@end cartouche
+
+@cartouche EXIF Prohibition
+Some publishing platforms such as F-Droid forbid any EXIF metadata in
+images.  The @url{https://exiftool.org/,@code{exiftool}} utility may
+be used to strip this metadata from your images:
+@example
+exiftool -all= drawable*/*.png
+@end example
+The tool renames the original files to e.g. @file{abc.png_original}.
 @end cartouche
 
 @node Testing, Generating the Application Package, Generating Icons, Building from the Source
@@ -626,20 +636,21 @@ the code has branches that follow different paths for each of these
 versions:
 
 @itemize @bullet
-@item Ice Cream Sandwich (Android 4.0, API 14--15),
-which is the current minimum version
-@item KitKat (Android 4.4, API 19) through Lollipop (Android 5.1, API 22)
-@item Marshmallow (Android 6, API 23), which is the current target version
+@item Ice Cream Sandwich (Android 4.0, API 14--15), which is the current minimum version
+@item Jelly Bean (Android 4.1, API 16–18)
+@item KitKat (Android 4.4, API 19–20) through Lollipop (Android 5.1, API 22)
+@item Marshmallow (Android 6, API 23)
 @item Nougat (Android 7, API 24--25)
-@item Oreo (Android 8, API 26--27)
+@item Oreo (Android 8.1, API 27)
+@item Pie (Android 9, API 28)
+@item Quince Tart (Android 10, API 29) through Red Velvet Cake (Android 11, API 30)
+@item Snow Cone (Android 12, API 31--32), which is the current target version
 @end itemize
 
 Testing the following API's is suggested to ensure compatibility with
 new devices:
 
 @itemize @bullet
-@item Pie (Android 9, API 28) through Red Velvet Cake (Android 11, API 30)
-@item Snow Cone (Android 12, API 31--32)
 @item Tiramisu (Android 13, API 33) through Upside-down Cake (Android 14, API 34)
 @item Vanilla Ice Cream (Android 15, API 35) and up
 @end itemize
@@ -700,11 +711,19 @@ which should show the point in the code where the error occurred.
 @node Generating the Application Package, Generating Documentation, Testing, Building from the Source
 @section Generating the Application Package (APK)
 
+@cartouche Version Control
+If you will be generating a signed APK for publishing, @emph{and} you
+are using Gradle version 8.3 or higher, @strong{commit all of the
+source code} prior to generating the APK.  The Android Gradle plugin
+includes the commit hash in
+@file{META-INF/version-control-info.textproto}.
+@end cartouche
+
 In Android Studio, click on the Build menu then ``Build APK''.  If
 there were no errors, this should produce @file{app/app-release.apk}
 (in Android Studio 2.3) or @file{app/release/app-release.apk} (in
 Android Studio 2024).  You should rename this file to a more
-descriptive name like @file{todo-1.2.0.apk}.
+descriptive name like @file{todo-1.3.0.apk}.
 
 Alternatively from the command line, run the following commands:
 
@@ -721,11 +740,15 @@ also need to know where the keystore of your app signing key is
 located.
 @verbatim
 ${BUILD_TOOLS_VERSION_DIRECTORY}/apksigner sign \
+  --alignment-preserved \
   --ks ${ANDROID_KEYSTORE} --ks-key-alias ${SIGNING_KEY_ALIAS} \
   --out app/${APP_NAME}-${VERSION}.apk \
   app/build/outputs/apk/release/app-release-unsigned.apk
 @end verbatim
 
+@emph{(The @code{--alignment-preserved} option is needed if you are
+using build tools 35 or higher.  Omit it for earlier version of the
+build tools.)}
 
 @node Generating Documentation,  , Generating the Application Package, Building from the Source
 @section Generating Documentation

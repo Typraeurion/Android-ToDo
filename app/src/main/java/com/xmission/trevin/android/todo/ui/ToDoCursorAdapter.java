@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,15 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.ui.ToDoListActivity.*;
-
 import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.RepeatSettings;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
 
 import android.app.Activity;
 import android.app.NotificationManager;
@@ -50,7 +49,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     public final static String TAG = "ToDoCursorAdapter";
 
     private final Activity callingActivity;
-    private final SharedPreferences prefs;
+    private final ToDoPreferences prefs;
     private final ContentResolver contentResolver;
     private final Uri listUri;
 
@@ -58,14 +57,14 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     private final StringEncryption encryptor;
 
     /** The notification manager for clearing notifications of completed items */
-    private NotificationManager notificationManager;
+    private final NotificationManager notificationManager;
 
     /**
      * Keep track of which rows are assigned to which views.
      * Binding occurs over and over again for the same rows,
      * so we want to avoid any unnecessary work.
      */
-    private Map<View,Long> bindingMap = new HashMap<>();
+    private final Map<View,Long> bindingMap = new HashMap<>();
 
     /** The item whose due date is currently selected */
     Uri selectedItemUri = null;
@@ -79,7 +78,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
             NotificationManager notificationManager) {
         super(context, layout, cursor);
         callingActivity = activity;
-        prefs = context.getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
+        prefs = ToDoPreferences.getInstance(context);
         contentResolver = cr;
         listUri = uri;
         encryptor = encryption;
@@ -144,7 +143,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 		cursor.getColumnIndex(ToDoItem.CHECKED)) != 0);
 	priorityText.setText(Integer.toString(cursor.getInt(
 		cursor.getColumnIndex(ToDoItem.PRIORITY))));
-	priorityText.setVisibility(prefs.getBoolean(TPREF_SHOW_PRIORITY, false)
+	priorityText.setVisibility(prefs.showPriority()
 		? View.VISIBLE : View.GONE);
 	String description = context.getString(R.string.PasswordProtected);
 	int privacy = cursor.getInt(cursor.getColumnIndex(ToDoItem.PRIVATE));
@@ -187,11 +186,11 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	    dueDateText.setText(df.format(due));
 	    overdueText.setText(due.before(new Date()) ? "!" : "");
 	}
-	dueDateText.setVisibility(prefs.getBoolean(TPREF_SHOW_DUE_DATE, false)
+	dueDateText.setVisibility(prefs.showDueDate()
 		? View.VISIBLE : View.GONE);
 	categText.setText(cursor.getString(cursor.getColumnIndex(
 		ToDoItem.CATEGORY_NAME)));
-	categText.setVisibility(prefs.getBoolean(TPREF_SHOW_CATEGORY, false)
+	categText.setVisibility(prefs.showCategory()
 		? View.VISIBLE : View.GONE);
 
 	RepeatSettings repeat = new RepeatSettings(cursor);
@@ -366,7 +365,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     } */
 
     /** Listener for click events on the note icon */
-    class OnNoteClickListener implements View.OnClickListener {
+    static class OnNoteClickListener implements View.OnClickListener {
 	private final Uri itemUri;
 
 	/** Create a new click listener for a specific To-Do item's note */
@@ -402,7 +401,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     }
 
     /** Listener for (long-)click events on the To Do item */
-    class OnDetailsClickListener
+    static class OnDetailsClickListener
     implements View.OnLongClickListener, View.OnClickListener {
 	private final Uri itemUri;
 

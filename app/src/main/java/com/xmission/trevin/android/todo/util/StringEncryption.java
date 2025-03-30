@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,9 +27,9 @@ import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.xmission.trevin.android.crypto.*;
-import com.xmission.trevin.android.todo.data.ToDo;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoMetadata;
-import com.xmission.trevin.android.todo.ui.ToDoListActivity;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.provider.ToDo;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoMetadata;
 
 import android.content.*;
 import android.database.Cursor;
@@ -102,10 +102,7 @@ public class StringEncryption {
 			+ ") released encryption without holding it!");
 	    if (globalEncryption != null) {
 		globalEncryption.forgetPassword();
-		context.getSharedPreferences(ToDoListActivity.TODO_PREFERENCES,
-			Context.MODE_PRIVATE).edit().putBoolean(
-				ToDoListActivity.TPREF_SHOW_ENCRYPTED,
-				false).apply();
+                ToDoPreferences.getInstance(context).setShowEncrypted(false);
 	    }
 	    globalEncryption = null;
 	}
@@ -173,10 +170,8 @@ public class StringEncryption {
 	    key = null;
 	}
 	salt = null;
-	if (userPassword != null) {
+	if (userPassword != null)
 	    Arrays.fill(userPassword, (char) 0);
-	    userPassword = null;
-	}
 	userPassword = null;
     }
 

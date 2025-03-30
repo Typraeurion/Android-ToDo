@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,32 +16,35 @@
  */
 package com.xmission.trevin.android.todo.service;
 
-import static com.xmission.trevin.android.todo.ui.ToDoListActivity.*;
-
 import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.AlarmItemInfo;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
 import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 import com.xmission.trevin.android.todo.ui.ToDoListActivity;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.app.*;
 import android.content.*;
+import android.content.pm.ServiceInfo;
 import android.database.*;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore.Audio.Media;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import androidx.core.app.NotificationCompat;
 
 /**
  * Displays a notification when a To Do item's alarm comes due.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated as of API 30 (Red Velvet Cake), {@link IntentService}
+ * should be replaced with {@code androidx.work.WorkManager}.
  */
 public class AlarmService extends IntentService {
 
@@ -100,7 +103,7 @@ public class AlarmService extends IntentService {
     private NotificationChannel silentChannel;
 
     /** Shared preferences */
-    private SharedPreferences prefs;
+    private ToDoPreferences prefs;
 
     /** The name of the app; used for the title of notifications */
     private String appName;
@@ -144,7 +147,7 @@ public class AlarmService extends IntentService {
 	notificationManager = (NotificationManager)
 		getSystemService(NOTIFICATION_SERVICE);
 	alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-	prefs = getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
+	prefs = ToDoPreferences.getInstance(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Oreo and up must use channels to send notifications
@@ -174,14 +177,13 @@ public class AlarmService extends IntentService {
                             .setContentText(getString(
                                     R.string.AlarmServiceBackgroundMessage))
                             .build();
-            // To Do: In API 29+, call the version of this method
-            // which includes a third parameter for
-            // ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
-            // **unless** we're acknowledging a notification click;
-            // "short" services are not allowed to start a foreground service.
-            //if (!ACTION_NOTIFICATION_ACK.equals(intent.getAction())) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 startForeground(FG_NOTIFICATION_ID, busyNotification);
-            //}
+            // In API 29+, call the version of this method
+            // which includes a third parameter for the service type.
+            else
+                startForeground(FG_NOTIFICATION_ID, busyNotification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         }
     }
 
@@ -253,6 +255,8 @@ public class AlarmService extends IntentService {
 	where.append(ToDoItem.ALARM_DAYS_EARLIER).append(" IS NOT NULL");
 	Cursor c = getContentResolver().query(ToDoItem.CONTENT_URI,
 		ITEM_PROJECTION, where.toString(), null, null);
+        if (c == null)
+            return;
 	try {
 	    while (c.moveToNext()) {
                 AlarmItemInfo item = new AlarmItemInfo(c);
@@ -308,10 +312,10 @@ public class AlarmService extends IntentService {
                 return false;
         }
 
-	boolean showPrivate = prefs.getBoolean(TPREF_SHOW_PRIVATE, false);
-	boolean showEncrypted = prefs.getBoolean(TPREF_SHOW_ENCRYPTED, false);
-	boolean doVibrate = prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false);
-        long soundID = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
+	boolean showPrivate = prefs.showPrivate();
+	boolean showEncrypted = prefs.showEncrypted();
+	boolean doVibrate = prefs.notificationVibrate();
+        long soundID = prefs.getNotificationSound();
 	StringEncryption encryptor = showEncrypted
 	    ? StringEncryption.holdGlobalEncryption() : null;
 	int dueItems = 0;
@@ -340,7 +344,7 @@ public class AlarmService extends IntentService {
 
     /** Date format to use for debug log messages */
     static final SimpleDateFormat LOG_DATE_FORMAT =
-            new SimpleDateFormat("yyyy-MM-dd");
+            new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
     /**
      * Create and post a notification for a given due item.
@@ -358,7 +362,7 @@ public class AlarmService extends IntentService {
      *        of the item&rsquo;s description.
      * @param showEncrypted whether encrypted records are shown.  If not,
      *        the notification will show &ldquo;[Locked]&rdquo; (if
-     *        @code{showPrivate} is @code{true}) instead of the
+     *        {@code showPrivate} is {@code true}) instead of the
      *        item&rsquo;s description.  The notification may still show
      *        &ldquo;[Locked]&rdquo; if we are unable to decrypt the item.
      * @param encryptor the {@link StringEncryption} service we use to
@@ -419,7 +423,7 @@ public class AlarmService extends IntentService {
          */
         PendingIntent intent = PendingIntent.getService(this,
                 (int) item.getId(), mainIntent,
-       		PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification notice;
 
         Log.d(TAG, String.format(".postNotification(\"%s\" (%d), \"%s\" (%d), \"%s\", %s)",
@@ -460,7 +464,7 @@ public class AlarmService extends IntentService {
                 builder = builder.setShowWhen(true);
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-                builder = builder.setGroup(String.format(
+                builder = builder.setGroup(String.format(Locale.US,
                         NOTIFICATION_GROUP_FORMAT, item.getCategoryId()));
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -499,24 +503,25 @@ public class AlarmService extends IntentService {
 
     /** Date+time format to use for debug log messages */
     static final SimpleDateFormat LOG_DATIME_FORMAT =
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss z");
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss z", Locale.US);
 
     /** Schedule an alarm for the next item due to come up. */
     private void resetAlarm() {
-	Intent intent = new Intent(this, AlarmInitReceiver.class);
-	PendingIntent sender = PendingIntent.getBroadcast(
-		this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-	if (pendingAlarms.isEmpty()) {
+        Intent intent = new Intent(this, AlarmInitReceiver.class);
+        PendingIntent sender = PendingIntent.getBroadcast(
+                this, 0, intent,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        if (pendingAlarms.isEmpty()) {
             Log.d(TAG, "No To Do alarms are pending;"
                     + " cancelling any intended alarm");
-	    alarmManager.cancel(sender);
+            alarmManager.cancel(sender);
         } else {
             Log.d(TAG, String.format("%d To Do alarms are pending;"
                     + " scheduling an alarm for the next item at %s",
                     pendingAlarms.size(), LOG_DATIME_FORMAT.format(
                             pendingAlarms.first().getAlarmDate())));
-	    alarmManager.set(AlarmManager.RTC_WAKEUP,
-		    pendingAlarms.first().getAlarmDate().getTime(), sender);
+            alarmManager.set(AlarmManager.RTC_WAKEUP,
+                    pendingAlarms.first().getAlarmDate().getTime(), sender);
         }
     }
 

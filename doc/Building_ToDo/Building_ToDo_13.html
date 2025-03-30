@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on March 14, 2025 by texi2html 5.0
+<!-- Created on March 30, 2025 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -150,6 +150,17 @@ may be used from the command line:
 &lsquo;<tt>/usr/lib/</tt>&rsquo; or &lsquo;<tt>/usr/lib64/</tt>&rsquo;.
 </p></td></tr></table>
 
+<table class="cartouche" border="1"><tr><td>
+<p>EXIF Prohibition
+Some publishing platforms such as F-Droid forbid any EXIF metadata in
+images.  The <a href="https://exiftool.org/"><code>exiftool</code></a> utility may
+be used to strip this metadata from your images:
+</p><div class="example">
+<pre class="example">exiftool -all= drawable*/*.png
+</pre></div>
+<p>The tool renames the original files to e.g. &lsquo;<tt>abc.png_original</tt>&rsquo;.
+</p></td></tr></table>
+
 <hr>
 <table class="header" cellpadding="1" cellspacing="1" border="0">
 <tr><td valign="middle" align="left">[<a href="Building_ToDo_11.html#Building-from-the-Source" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
@@ -168,7 +179,7 @@ may be used from the command line:
 </tr></table>
 <p>
  <font size="-1">
-  This document was generated on <i>March 14, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 30, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 

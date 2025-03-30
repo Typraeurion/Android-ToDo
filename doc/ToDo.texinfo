@@ -86,12 +86,12 @@ features without using this manual.
 @node Device Compatibility, Permissions, The Basics, The Basics
 @section Device Compatibility
 
-The application is designed for compatibility with Android 8 (Oreo)
-but also runs on Android 4.0 (Ice Cream Sandwich) through 14
+The application is designed for compatibility with Android 12 (Snow
+Cone) but also runs on Android 4.0 (Ice Cream Sandwich) through 14
 (Upside-down Cake) which should cover 98.6% of Android devices on the
-market as of February 2025.  (It has been tested on Ice Cream
-Sandwich, Marshmallow, Oreo, Tiramisu, and Upside-down Cake.)  Support
-for newer Android devices is planned.
+market as of March 2025.  (It has been tested on Ice Cream Sandwich,
+Marshmallow, Oreo, Quince Tart, and Upside-down Cake.)  Support for
+newer Android devices is planned.
 
 @node Permissions, Adding To Do Items, Device Compatibility, The Basics
 @section Permissions
@@ -104,6 +104,12 @@ system-level functions.  The permissions the app requests include:
 @item Receive the system ``boot completed'' event.
 The app uses this to show notifications for any alarms which may have
 come due prior to your device starting up.
+
+@item Foreground service.
+This permission was added in Android 10 (Quince Tart).  The app runs a
+service to handle alarms for To Do items that are due at a time that
+you set.  As of Android 8 (Oreo), this service needs to run in the
+foreground in order to post notifications.
 
 @item Post notifications.
 The app sends notifications if you set an alarm for any To Do items at
@@ -555,40 +561,53 @@ they were created without a password,) change them so they are not
 private.
 
 @item
-Export a backup copy of your To Do list, but @i{do not} include private
-records.
-
-@image{Export_exclude_private,72mm,57.6mm}
+Export a backup copy of your To Do list (@pxref{Exporting To Do
+data}), but @i{do not} include private records.
 
 @item
-Exit the To Do application, and open up the Android Settings
-application.
+Exit the To Do application, and open up the Android Settings.
 
-@image{Android_home_screen,72mm,128.1mm}
+@image{App_drawer,72mm,128mm}
+
+@page
+
+@emph{(The following sequence may vary depending on your version of
+Android.)}
 
 @item
-Choose ``Applications''
+Choose ``Apps''
 
-@image{Android_settings,72mm,128.1mm}
+@image{Settings-Apps,72mm,128mm}
 
-@item
-Choose ``Manage applications''.
+@page
 
 @item
 Choose ``To Do''.
 
-@item
-Press the ``Clear data'' button, and confirm that you really want to do
-this.
+@image{Settings-Apps-ToDo,72mm,128mm}
 
-@image{Android_application_info,72mm,128.1mm}
+@page
+
+@item
+Select ``Storage & Cache''
+
+@image{Settings-App-Storage,72mm,128mm}
+
+@page
+
+@item
+Press the ``Clear storage'' button, and confirm that you really want
+to do this.
+
+@image{Settings-App-Storage-Clear,72mm,128mm}
 
 @item
 Exit all the way out of the Android Settings, and go back to the To Do
 application.  It should now be empty.
 
 @item
-Import the file you had previously backed up.
+Import the file you had previously backed up.  (@xref{Importing To Do
+data})
 
 @item
 If you had any records which were private but not encrypted, change them
@@ -602,18 +621,93 @@ Set a new password.  Make sure you remember this one!
 @node Exporting and Importing, Known Bugs, Private Records, Top
 @chapter Exporting and Importing
 
-In order to protect against the loss of data on your Android device, you
-should periodically make a backup copy.  In the main menu select
-``Export Data'' to save all of your To Do items to a file on your
-device.  You can choose where to save the file and what to name it, but
-by default it is saved to your device's mass storage media, for example
-@file{/sdcard/Android/Data/.../todo.xml}.  That way you can plug it into
-your computer and copy the file there to keep it safe.
+@ifnottex
+@menu
+* Exporting To Do data::
+* Importing To Do data::
+@end menu
+@end ifnottex
+
+@node Exporting To Do data, Importing To Do data, Exporting and Importing, Exporting and Importing
+@section Exporting To Do data
+
+In order to protect against the loss of data on your Android device,
+you should periodically make a backup copy.  First, if you have set a
+password for your private records make sure you have entered the
+password in the ``Settings'' to unlock them.  Then in the main menu
+select ``Export Data'' to save all of your To Do items to a file on
+your device.
+
+@image{Export-private,72mm,65.1mm}
+
+You can choose where to save the file and what to name it, but by
+default it is saved to the app's private storage area on your device.
+The export dialog shows the location of this storage, which can vary
+depending on your version of Android --- for example:
+@file{/sdcard/Android/Data/com.xmission.trevin.android.todo/files/}.
+
+@page
+
+If you select ``Saved to shared storage'', you have the option to save
+it anywhere supported by Android's Storage Access Framework if running
+Android 7 (Nougat) or newer.  You will need to enter the name of the
+export file you wish to save, ending in @file{.xml}.
+
+@image{SAF-Create_Document,72mm,83.5mm}
+
+After pressing ``Save'' you will return to the app's Export screen.
+
+@page
+
+If you are using Android 6 (Marshmallow) or older, selecting ``Save to
+shared storage'' will change the folder to the device's default
+@file{Downloads} directory.  You can change the location by typing it
+in, but be sure the location is accessible.
+
+@image{Export-shared,72mm,88.5mm}
+
+If you wish to include private records in the exported file, be sure
+the ``Include Private'' box is checked.  You can also export just the
+non-private items by leaving this box unchecked.  When ready, press
+``Export''.  The app will show a progress bar as it writes the data
+out (if it takes long enough) then return to the To Do list.
+
+@page
+
+@node Importing To Do data, Known Bugs, Exporting To Do data, Exporting and Importing
+@section Importing To Do data
 
 When you need to restore To Do items from your backup file, select
-``Import Data'' from the main menu, make sure the file shown is the same
-one you wish to import (by default it remembers the last file entered,)
-and select the type of import you wish to perform.  The choices are:
+``Import Data'' from the main menu and select or enter the location of
+the file to import.  If you are importing the data you previously
+saved to the app's private storage area, you will need to enter the
+same name that you gave the exported file.
+
+@image{Import-private,72mm,95.1mm}
+
+@page
+
+If you are importing data from a file in shared storage, select
+``File from shared storage''.  On Android 7 (Nougat) or newer, you can
+browse through the available storage folders to find the @file{.xml}
+file with your saved To Do lists.
+
+@image{SAF-Open_Document,72mm,54.9mm}
+
+When you select the document you will return to the app's Import
+screen.
+
+@page
+
+If you are using Android 6 (Marshmallow) or older, selecting ``File
+from shared storage'' will change the folder to the device's default
+@file{Downloads} directory.  You can change the location by typing it
+in, but you will need to know in advance where the file is located;
+the app doesn't provide a file browser.
+
+@image{Import-shared,72mm,100.2mm}
+
+Next, select the type of import you wish to perform.  The choices are:
 
 @itemize @bullet
 @item ``Clean'':

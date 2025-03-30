@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on March 17, 2025 by texi2html 5.0
+<!-- Created on March 30, 2025 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -10,10 +10,10 @@ Maintained by: Many creative people.
 Send bugs and suggestions to <texi2html-bug@nongnu.org>
 -->
 <head>
-<title>To Do list for Android: 7 Known Bugs</title>
+<title>To Do list for Android: 6.1 Exporting To Do data</title>
 
-<meta name="description" content="To Do list for Android: 7 Known Bugs">
-<meta name="keywords" content="To Do list for Android: 7 Known Bugs">
+<meta name="description" content="To Do list for Android: 6.1 Exporting To Do data">
+<meta name="keywords" content="To Do list for Android: 6.1 Exporting To Do data">
 <meta name="resource-type" content="document">
 <meta name="distribution" content="global">
 <meta name="Generator" content="texi2html 5.0">
@@ -49,13 +49,13 @@ ul.no-bullet {list-style: none}
 
 <body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
 
-<a name="Known-Bugs"></a>
+<a name="Exporting-To-Do-data"></a>
 <table class="header" cellpadding="1" cellspacing="1" border="0">
 <tr><td valign="middle" align="left">[<a href="ToDo_20.html#Exporting-and-Importing" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
 <td valign="middle" align="left">[<a href="ToDo_20.html#Exporting-and-Importing" title="Previous section in reading order"> &lt; </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo.html#Top" title="Up section"> Up </a>]</td>
-<td valign="middle" align="left">[ &gt; ]</td>
-<td valign="middle" align="left">[ &gt;&gt; ]</td>
+<td valign="middle" align="left">[<a href="ToDo_20.html#Exporting-and-Importing" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="ToDo_22.html#Importing-To-Do-data" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="ToDo_23.html#Known-Bugs" title="Next chapter"> &gt;&gt; </a>]</td>
 <td valign="middle" align="left"> &nbsp; </td>
 <td valign="middle" align="left"> &nbsp; </td>
 <td valign="middle" align="left"> &nbsp; </td>
@@ -66,179 +66,59 @@ ul.no-bullet {list-style: none}
 <td valign="middle" align="left">[<a href="ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
 </tr></table>
 <hr>
-<a name="Known-Bugs-1"></a>
-<h1 class="chapter">7 Known Bugs</h1>
+<a name="Exporting-To-Do-data-1"></a>
+<h2 class="section">6.1 Exporting To Do data</h2>
 
-<p>The following bugs are known to exist in version 1.3.0 (build date
-2025.03.14) of To Do.  If you encounter any other bugs, please go to
-my project page on GitHub to report them:
+<p>In order to protect against the loss of data on your Android device,
+you should periodically make a backup copy.  First, if you have set a
+password for your private records make sure you have entered the
+password in the &ldquo;Settings&rdquo; to unlock them.  Then in the main menu
+select &ldquo;Export Data&rdquo; to save all of your To Do items to a file on
+your device.
 </p>
-<p><a href="https://github.com/Typraeurion/Android-ToDo/issues">https://github.com/Typraeurion/Android-ToDo/issues</a>
+<img src="Export-private.png" alt="Export-private">
+
+<p>You can choose where to save the file and what to name it, but by
+default it is saved to the app&rsquo;s private storage area on your device.
+The export dialog shows the location of this storage, which can vary
+depending on your version of Android &mdash; for example:
+&lsquo;<tt>/sdcard/Android/Data/com.xmission.trevin.android.todo/files/</tt>&rsquo;.
 </p>
-<ul>
-<li>
-It is not possible to enter a new item or change the text of an existing
-item directly in the To Do list; this can only be done in the item
-details form.  I tried making the text in the list editable, but had
-difficulty getting it to work.
 
-</li><li>
-If you start to create a new item and then press &ldquo;Cancel&rdquo; instead of
-&ldquo;OK&rdquo;, a blank item will be left in the list.
 
-</li><li>
-If all categories are shown in the list page and you click &ldquo;New&rdquo;, the
-application may or may not crash; normally it should create the item
-with a category of &ldquo;Unfiled.&rdquo;  I haven&rsquo;t been able to reproduce this
-bug consistently.
-
-</li><li>
-It is not possible to delete the last remaining category in the category
-list.
-
-</li><li>
-When choosing an end date for a repeating task, the &ldquo;End on&rdquo; button
-text is not changed to show the chosen date.  (The end date will be
-saved when you click &ldquo;OK&rdquo;.)
-
-</li><li>
-If an end date has been chosen for a repeating task, there is no way to
-change it back to &ldquo;no end date.&rdquo;
-
-</li><li>
-The number of records that can be imported from a previously exported
-file is limited by the amount of memory available to the application.
-If you find that the application dies when importing a file, try
-splitting the file into two or more smaller files, copying the
-&lsquo;<samp>&lt;Metadata&gt;</samp>&rsquo; and &lsquo;<samp>&lt;Categories&gt;</samp>&rsquo; sections into each file, and
-import them separately.
-
-</li><li>
-When importing a backup file, the progress bar may not update properly.
-</li></ul>
-
-<p>The following bugs were in the 1.2.1 release (built 2025.02.24) but
-have been fixed as of 1.2.2 (built 2025.03.06).
+<p>If you select &ldquo;Saved to shared storage&rdquo;, you have the option to save
+it anywhere supported by Android&rsquo;s Storage Access Framework if running
+Android 7 (Nougat) or newer.  You will need to enter the name of the
+export file you wish to save, ending in &lsquo;<tt>.xml</tt>&rsquo;.
 </p>
-<ul>
-<li>
-Notifications may have been broken for Ice Cream Sandwich.  <em>This
-bug was introduced in 2025.02.20 so does not impact earlier versions.</em>
+<img src="SAF-Create_Document.png" alt="SAF-Create_Document">
 
-</li><li>
-Updating the app settings or the export/import file name may have been
-broken for Froyo.  <em>This bug was introduced in 2025.02.20 so does
-not impact earlier versions.</em>
-</li></ul>
-
-<p>The following bugs were in the 2025.02.20 release but have been fixed
-as of 2025.02.24.
+<p>After pressing &ldquo;Save&rdquo; you will return to the app&rsquo;s Export screen.
 </p>
-<ul>
-<li>
-Exporting any item with a due date that is hidden until some number of
-days in advance would result in an invalid XML file which could not be
-imported back.  The workaround is to manually edit the XML file and
-look for &ldquo;&lsquo;<samp>&lt;hide days-earlier=&quot;</samp>&rsquo;&rdquo; with a line break before the
-number; remove the line break (e.g. &ldquo;&lsquo;<samp>&lt;hide
-days-earlier=&quot;3&quot;/&gt;</samp>&rsquo;&rdquo;).  <em>This bug was introduced in 2025.02.20
-so does not impact earlier versions.</em>
 
-</li><li>
-It is not possible to restore the preferences from a previously exported
-file.
-</li></ul>
 
-<p>The following bugs were in the 2017.07.25 release but have been fixed
-as of 2025.02.20.
+<p>If you are using Android 6 (Marshmallow) or older, selecting &ldquo;Save to
+shared storage&rdquo; will change the folder to the device&rsquo;s default
+&lsquo;<tt>Downloads</tt>&rsquo; directory.  You can change the location by typing it
+in, but be sure the location is accessible.
 </p>
-<ul>
-<li>
-If any item in the list is missing its description, the application
-will crash when you try to export the data for a backup.  Attempting
-to open the application again will fail.  If this happens, you will
-need to close the application and re-start it.  To fix this, select
-&ldquo;All&rdquo; categories, show completed items, then search through the list
-for the offending item(s) with a blank description and either delete
-them or fill in the description.  Then try exporting your data again.
-</li></ul>
+<img src="Export-shared.png" alt="Export-shared">
 
-<p>The following bugs were in the 2014.06.02 release but have been fixed as
-of 2017.07.25.
+<p>If you wish to include private records in the exported file, be sure
+the &ldquo;Include Private&rdquo; box is checked.  You can also export just the
+non-private items by leaving this box unchecked.  When ready, press
+&ldquo;Export&rdquo;.  The app will show a progress bar as it writes the data
+out (if it takes long enough) then return to the To Do list.
 </p>
-<ul>
-<li>
-Opening the details of any To Do item in landscape orientation would
-cause the application to crash.  That was because the application tries
-to show or hide the &ldquo;Completed&rdquo; date depending on whether an item was
-ever checked, but in landscape mode this field is on the same row as the
-&ldquo;Due&rdquo; date.  In the 2017.07.25 release, the &ldquo;Completed&rdquo; field is
-always shown even if it has no value.
 
-</li><li>
-After an alarm has already gone off, the alarm would go off again every
-time a change is made to any To Do item.
-</li></ul>
-
-<p>The following bugs were in the 2014.04.06 release but have been fixed as
-of 2014.06.02.
-</p>
-<ul>
-<li>
-On Honeycomb (Android 3) and newer devices, after viewing the details of
-a To Do item or going to the application settings and then returning to
-the To Do list, the selected category on the main screen would switch to
-&ldquo;All&rdquo;.
-
-</li><li>
-How to access the menu may not be apparent on Honeycomb or newer devices
-which lack a physical menu button.  The application interface has been
-updated so that the menu is now accessible from the title bar.
-</li></ul>
-
-<p>In addition to the above bug fixes, a new menu option was added for
-conveniently toggling whether to show or hide completed items without
-having to enter the application settings screen.
-</p>
-<p>The following bugs were in the 2014.03.29 release but have been fixed as
-of 2014.04.06.
-</p>
-<ul>
-<li>
-When exporting a backup file the application included private records
-regardless of whether &ldquo;Include Private&rdquo; was checked or not.
-
-</li><li>
-Importing a backup file in &ldquo;Update&rdquo; mode was checking an item&rsquo;s
-creation time rather than its modification time, so a modified item
-would never be updated from the file.
-
-</li><li>
-When an item as checked complete or the due date changed directly from
-the list (as opposed to the item details,) its modification time is not
-changed.  As a result, the change is not carried over if you export the
-list and then import it to another device in &ldquo;Update&rdquo; mode.
-
-</li></ul>
-
-<p>The following bugs were in the 2014.03.23 release but have been fixed as
-of 2014.03.29.
-</p>
-<ul>
-<li>
-If you have not set a password and you try to enter one in the Settings,
-the application will crash.  In the 2014.03.29 release, the password
-field no longer appears when a password has not been set.
-
-</li></ul>
 
 <hr>
 <table class="header" cellpadding="1" cellspacing="1" border="0">
 <tr><td valign="middle" align="left">[<a href="ToDo_20.html#Exporting-and-Importing" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
 <td valign="middle" align="left">[<a href="ToDo_20.html#Exporting-and-Importing" title="Previous section in reading order"> &lt; </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo.html#Top" title="Up section"> Up </a>]</td>
-<td valign="middle" align="left">[ &gt; ]</td>
-<td valign="middle" align="left">[ &gt;&gt; ]</td>
+<td valign="middle" align="left">[<a href="ToDo_20.html#Exporting-and-Importing" title="Up section"> Up </a>]</td>
+<td valign="middle" align="left">[<a href="ToDo_22.html#Importing-To-Do-data" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="ToDo_23.html#Known-Bugs" title="Next chapter"> &gt;&gt; </a>]</td>
 <td valign="middle" align="left"> &nbsp; </td>
 <td valign="middle" align="left"> &nbsp; </td>
 <td valign="middle" align="left"> &nbsp; </td>
@@ -250,7 +130,7 @@ field no longer appears when a password has not been set.
 </tr></table>
 <p>
  <font size="-1">
-  This document was generated on <i>March 17, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 30, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 

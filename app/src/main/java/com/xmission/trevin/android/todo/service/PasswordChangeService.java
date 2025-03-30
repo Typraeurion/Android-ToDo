@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ import java.security.GeneralSecurityException;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
 
 import android.app.IntentService;
 import android.content.*;
@@ -113,8 +113,6 @@ public class PasswordChangeService extends IntentService
 
     /** @return the number of entries changed so far */
     public int getChangedCount() { return numChanged; }
-
-    static final java.util.Random RANDOM = new java.util.Random();
 
     /** Called when an activity requests a password change */
     @Override

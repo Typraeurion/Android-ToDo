@@ -16,22 +16,20 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.data.ToDo.ToDoItem.DEFAULT_SORT_ORDER;
-import static com.xmission.trevin.android.todo.data.ToDo.ToDoItem.USER_SORT_ORDERS;
+import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.DEFAULT_SORT_ORDER;
+import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.USER_SORT_ORDERS;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.ITEM_PROJECTION;
-import static com.xmission.trevin.android.todo.ui.ToDoListActivity.TPREF_SORT_ORDER;
 
 import android.annotation.TargetApi;
 import android.app.LoaderManager;
 import android.content.CursorLoader;
 import android.content.Loader;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.xmission.trevin.android.todo.data.ToDo;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 
 /**
  * As of Honeycomb (API 11), the application needs to re-initialize
@@ -50,7 +48,7 @@ class ItemLoaderCallbacks
     private static final String TAG = "ItemLoaderCallbacks";
 
     private final ToDoListActivity listActivity;
-    private final SharedPreferences sharedPrefs;
+    private final ToDoPreferences sharedPrefs;
 
     // Used to map To Do entries from the database to views
     private final ToDoCursorAdapter itemAdapter;
@@ -59,7 +57,7 @@ class ItemLoaderCallbacks
     private final Uri todoUri;
 
     ItemLoaderCallbacks(ToDoListActivity activity,
-                        SharedPreferences prefs,
+                        ToDoPreferences prefs,
                         ToDoCursorAdapter adapter,
                         Uri uri) {
         listActivity = activity;
@@ -84,10 +82,10 @@ class ItemLoaderCallbacks
                 if (myCursor != null)
                     myCursor.close();
                 */
-                int selectedSortOrder = sharedPrefs.getInt(TPREF_SORT_ORDER, 0);
+                int selectedSortOrder = sharedPrefs.getSortOrder();
                 if ((selectedSortOrder < 0) ||
                         (selectedSortOrder >= USER_SORT_ORDERS.length)) {
-                    sharedPrefs.edit().putInt(TPREF_SORT_ORDER, 0).apply();
+                    sharedPrefs.setSortOrder(0);
                     selectedSortOrder = 0;
                 }
                 setSelection(listActivity.generateWhereClause());

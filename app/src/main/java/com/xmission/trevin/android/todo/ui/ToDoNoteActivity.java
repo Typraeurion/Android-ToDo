@@ -20,7 +20,7 @@ import java.security.GeneralSecurityException;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.data.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDo.*;
 
 import android.app.*;
 import android.content.*;

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.xmission.trevin.android.todo.data;
+package com.xmission.trevin.android.todo.provider;
 
 import android.net.Uri;
 import android.provider.BaseColumns;
@@ -26,7 +26,7 @@ import android.provider.BaseColumns;
  */
 public final class ToDo {
     /** The content provider part of the URI for locating To Do records */
-    public static final String AUTHORITY = "com.xmission.trevin.android.todo.data.ToDo";
+    public static final String AUTHORITY = "com.xmission.trevin.android.todo.provider.ToDo";
 
     // This class cannot be instantiated
     private ToDo() {}

@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on March 17, 2025 by texi2html 5.0
+<!-- Created on March 30, 2025 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -54,8 +54,8 @@ ul.no-bullet {list-style: none}
 <tr><td valign="middle" align="left">[<a href="ToDo_18.html#Private-Records" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
 <td valign="middle" align="left">[<a href="ToDo_19.html#Lost-Password" title="Previous section in reading order"> &lt; </a>]</td>
 <td valign="middle" align="left">[<a href="ToDo.html#Top" title="Up section"> Up </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo_21.html#Known-Bugs" title="Next section in reading order"> &gt; </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo_21.html#Known-Bugs" title="Next chapter"> &gt;&gt; </a>]</td>
+<td valign="middle" align="left">[<a href="ToDo_21.html#Exporting-To-Do-data" title="Next section in reading order"> &gt; </a>]</td>
+<td valign="middle" align="left">[<a href="ToDo_23.html#Known-Bugs" title="Next chapter"> &gt;&gt; </a>]</td>
 <td valign="middle" align="left"> &nbsp; </td>
 <td valign="middle" align="left"> &nbsp; </td>
 <td valign="middle" align="left"> &nbsp; </td>
@@ -69,103 +69,17 @@ ul.no-bullet {list-style: none}
 <a name="Exporting-and-Importing-1"></a>
 <h1 class="chapter">6 Exporting and Importing</h1>
 
-<p>In order to protect against the loss of data on your Android device, you
-should periodically make a backup copy.  In the main menu select
-&ldquo;Export Data&rdquo; to save all of your To Do items to a file on your
-device.  You can choose where to save the file and what to name it, but
-by default it is saved to your device&rsquo;s mass storage media, for example
-&lsquo;<tt>/sdcard/Android/Data/.../todo.xml</tt>&rsquo;.  That way you can plug it into
-your computer and copy the file there to keep it safe.
-</p>
-<p>When you need to restore To Do items from your backup file, select
-&ldquo;Import Data&rdquo; from the main menu, make sure the file shown is the same
-one you wish to import (by default it remembers the last file entered,)
-and select the type of import you wish to perform.  The choices are:
-</p>
-<ul>
-<li> &ldquo;Clean&rdquo;:
-Use this when importing a backup file to a new device, or if you need to
-undo all changes which have been made since the file was exported.  This
-will erase all of your To Do items and categories before importing
-records fom the file.
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top"><a href="ToDo_21.html#Exporting-To-Do-data">6.1 Exporting To Do data</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top"><a href="ToDo_22.html#Importing-To-Do-data">6.2 Importing To Do data</a></td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
 
-</li><li> &ldquo;Overwrite&rdquo;:
-This option will restore all records from your backup file &mdash; even if
-the title has changed &mdash; but leave any new records in the application
-alone.
-
-</li><li> &ldquo;Update&rdquo;:
-This option will only import records from the backup file whose
-modification time is newer than the corresponding record in the
-application database.  Use this if you want to keep your To Do list on
-multiple devices, to synchronize changes between the two.  Note that if
-you update a record on both devices and then try to synchronize them
-with an update, the earlier changes will be lost in favor of the later
-ones.
-
-</li><li> &ldquo;Merge&rdquo;:
-This option will import records from the backup file which have the same
-category and title as the corresponding record in the application
-database, <i>if</i> it has a newer modification time, similar to an
-Update.  However if the record in the backup file has a different
-category or title, or it does not exist in the application database, it
-will be added.
-
-</li><li> &ldquo;Add&rdquo;:
-This option will add all records from the backup file as new items in
-your To Do list, regardless of duplicates.  This should be used if you
-created different lists on separate devices and want to copy the list
-from one to the other.
-
-</li><li> &ldquo;Test&rdquo;:
-This option simply parses the backup file and reads all of its records
-without importing any.  Use this if you need to verify the integrity of
-your backup file, particularly if you have manually edited it or had it
-created by a different application.
-
-</li></ul>
-
-<img src="Import_activity.png" alt="Import_activity">
-
-<p>If you have set a password for your private records, you do not need to
-enter it to back up your private data; the application saves the
-encrypted records.  You <i>will</i> need that password when you need to
-import those private records back in to the application.  This may be
-different than your current password.  <b>Important!  Do not forget the
-password you had when you made the backup file.</b>  Without thet password,
-it will be practically impossible to recover your private records;
-however you may still restore all of your non-private records by
-un-checking &ldquo;Include Private&rdquo; on the Import form.
-</p>
-<p>If you have not entered your password in the application settings when
-you attempt to import a backup file, the import form will warn you that
-any private records imported will not be encrypted.  You may either
-cancel the operation to go enter your password and then try again, or go
-ahead and import the data and then re-encrypt the private records
-later.  To encrypt them afterward, either open up and save each private
-record individually, or choose &ldquo;Set Password&rdquo; from the main menu and
-change the password.  <i>(You can change it to the same password if you
-wish.)</i>
-</p>
 <hr>
-<table class="header" cellpadding="1" cellspacing="1" border="0">
-<tr><td valign="middle" align="left">[<a href="ToDo_18.html#Private-Records" title="Beginning of this chapter or previous chapter"> &lt;&lt; </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo_19.html#Lost-Password" title="Previous section in reading order"> &lt; </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo.html#Top" title="Up section"> Up </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo_21.html#Known-Bugs" title="Next section in reading order"> &gt; </a>]</td>
-<td valign="middle" align="left">[<a href="ToDo_21.html#Known-Bugs" title="Next chapter"> &gt;&gt; </a>]</td>
-<td valign="middle" align="left"> &nbsp; </td>
-<td valign="middle" align="left"> &nbsp; </td>
-<td valign="middle" align="left"> &nbsp; </td>
-<td valign="middle" align="left"> &nbsp; </td>
-<td valign="middle" align="left">[<a href="ToDo.html#Top" title="Cover (top) of document">Top</a>]</td>
-<td valign="middle" align="left">[<a href="ToDo_toc.html#SEC_Contents" title="Table of contents">Contents</a>]</td>
-<td valign="middle" align="left">[Index]</td>
-<td valign="middle" align="left">[<a href="ToDo_abt.html#SEC_About" title="About (help)"> ? </a>]</td>
-</tr></table>
 <p>
  <font size="-1">
-  This document was generated on <i>March 17, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 30, 2025</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 

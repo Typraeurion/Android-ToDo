@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,9 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.data.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDo.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 import com.xmission.trevin.android.todo.service.AlarmService;
 import com.xmission.trevin.android.todo.service.PasswordChangeService;
@@ -45,6 +46,7 @@ import android.database.DataSetObserver;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -63,8 +65,7 @@ import android.widget.*;
  */
 @SuppressLint("NewApi")
 @SuppressWarnings("deprecation")
-public class ToDoListActivity extends ListActivity
-implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class ToDoListActivity extends ListActivity {
 
     private static final String TAG = "ToDoListActivity";
 
@@ -108,7 +109,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     };
 
     /** Shared preferences */
-    private SharedPreferences prefs;
+    private ToDoPreferences prefs;
 
     /** Preferences tag for the To Do application */
     public static final String TODO_PREFERENCES = "ToDoPrefs";
@@ -205,19 +206,11 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     private final ToDoContentObserver registeredObserver =
 	new ToDoContentObserver();
 
-    /**
-     * Category Loader callbacks for API ≥ 11.
-     * This <b>must</b> be stored in an Object reference
-     * because we need to support API’s 8–10 as well.
-     */
-    private Object categoryLoaderCallbacks = null;
+    /** Category Loader callbacks */
+    private CategoryLoaderCallbacks categoryLoaderCallbacks = null;
 
-    /**
-     * Item Loader callbacks for API ≥ 11.
-     * This <b>must</b> be stored in an Object reference
-     * because we need to support API’s 8–10 as well.
-     */
-    private Object itemLoaderCallbacks = null;
+    /** Item Loader callbacks for */
+    private ItemLoaderCallbacks itemLoaderCallbacks = null;
 
     /** Called when the activity is first created. */
     @SuppressWarnings("unchecked")
@@ -246,15 +239,28 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	}
 
 	encryptor = StringEncryption.holdGlobalEncryption();
-	prefs = getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
-	prefs.registerOnSharedPreferenceChangeListener(this);
+	prefs = ToDoPreferences.getInstance(this);
+        prefs.registerOnToDoPreferenceChangeListener(
+                new ToDoPreferences.OnToDoPreferenceChangeListener() {
+                    @Override
+                    public void onToDoPreferenceChanged(ToDoPreferences prefs) {
+                        updateListFilter();
+                    }
+                }, TPREF_SHOW_CHECKED, TPREF_SHOW_PRIVATE,
+                TPREF_SELECTED_CATEGORY, TPREF_SORT_ORDER);
+        prefs.registerOnToDoPreferenceChangeListener(
+                new ToDoPreferences.OnToDoPreferenceChangeListener() {
+                    @Override
+                    public void onToDoPreferenceChanged(ToDoPreferences prefs) {
+                        updateListView();
+                    }
+                }, TPREF_SHOW_CATEGORY, TPREF_SHOW_DUE_DATE, TPREF_SHOW_PRIORITY);
 	String whereClause = generateWhereClause();
 
-        int selectedSortOrder = prefs.getInt(TPREF_SORT_ORDER, 0);
+        int selectedSortOrder = prefs.getSortOrder();
         if ((selectedSortOrder < 0) ||
         	(selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length)) {
-            prefs.edit().putInt(TPREF_SORT_ORDER, 0).apply();
-	    selectedSortOrder = 0;
+            prefs.setSortOrder(0);
 	}
 
 	/*
@@ -270,7 +276,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
         categoryLoaderCallbacks = new CategoryLoaderCallbacks(this,
                 prefs, categoryAdapter, categoryUri);
         getLoaderManager().initLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
-                null, (LoaderManager.LoaderCallbacks<Cursor>) categoryLoaderCallbacks);
+                null, categoryLoaderCallbacks);
 
         Cursor itemCursor = null;
         itemAdapter = new ToDoCursorAdapter(
@@ -329,8 +335,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	    @Override
 	    public void onChanged() {
 		Log.d(TAG, ".DataSetObserver.onChanged");
-		long selectedCategory =
-			prefs.getLong(TPREF_SELECTED_CATEGORY, -1);
+		long selectedCategory = prefs.getSelectedCategory();
 		if (categoryList.getSelectedItemId() != selectedCategory) {
 		    Log.w(TAG, "The category ID at the selected position has changed!");
 		}
@@ -361,7 +366,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     public void onRestart() {
 	Log.d(TAG, ".onRestart");
 	if (categoryLoaderCallbacks instanceof LoaderManager.LoaderCallbacks) {
-	    getLoaderManager().restartLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
+            getLoaderManager().restartLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
 		    null, (LoaderManager.LoaderCallbacks<Cursor>) categoryLoaderCallbacks);
 	    getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
 		    null, (LoaderManager.LoaderCallbacks<Cursor>) itemLoaderCallbacks);
@@ -427,13 +432,13 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
      *        <i>(Currently does nothing; Fix Me)</i>
      */
     private void showItemIfNeeded(long categoryId, long itemId) {
-        long selectedCategory = prefs.getLong(TPREF_SELECTED_CATEGORY, -1);
+        long selectedCategory = prefs.getSelectedCategory();
         if ((selectedCategory >= 0) && (categoryId != selectedCategory)) {
             Log.d(TAG, String.format("Changing the selected category from %d to %d",
                     selectedCategory, categoryId));
             // Switch to the category this item is in
             setCategorySpinnerByID(categoryId);
-            prefs.edit().putLong(TPREF_SELECTED_CATEGORY, categoryId).apply();
+            prefs.setSelectedCategory(categoryId);
         }
 
         //ListView listView = getListView();
@@ -480,19 +485,19 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     // FIX ME: SQL should be moved to the data layer
     public String generateWhereClause() {
 	StringBuilder whereClause = new StringBuilder();
-	if (!prefs.getBoolean(TPREF_SHOW_CHECKED, false)) {
+	if (!prefs.showChecked()) {
 	    whereClause.append(ToDoItem.CHECKED).append(" = 0")
 		.append(" AND (").append(ToDoItem.HIDE_DAYS_EARLIER)
 		.append(" IS NULL OR (").append(ToDoItem.DUE_TIME).append(" - ")
 		.append(ToDoItem.HIDE_DAYS_EARLIER).append(" * 86400000 < ")
 		.append(System.currentTimeMillis()).append("))");
 	}
-	if (!prefs.getBoolean(TPREF_SHOW_PRIVATE, false)) {
+	if (!prefs.showPrivate()) {
 	    if (whereClause.length() > 0)
 		whereClause.append(" AND ");
 	    whereClause.append(ToDoItem.PRIVATE).append(" = 0");
 	}
-	long selectedCategory = prefs.getLong(TPREF_SELECTED_CATEGORY, -1);
+	long selectedCategory = prefs.getSelectedCategory();
 	if (selectedCategory >= 0) {
 	    if (whereClause.length() > 0)
 		whereClause.append(" AND ");
@@ -510,8 +515,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	    ContentValues values = new ContentValues();
 	    // This is the only time an empty description is allowed
 	    values.put(ToDoItem.DESCRIPTION, "");
-	    long selectedCategory = prefs.getLong(
-		    TPREF_SELECTED_CATEGORY, ToDoCategory.UNFILED);
+	    long selectedCategory = prefs.getSelectedCategory();
 	    if (selectedCategory < 0)
 		selectedCategory = ToDoCategory.UNFILED;
 	    values.put(ToDoItem.CATEGORY_ID, selectedCategory);
@@ -547,7 +551,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 	    Log.d(TAG, ".CategorySpinnerListener.onItemSelected(p="
 		    + position + ",id=" + rowID + ")");
 	    if (position == 0) {
-		prefs.edit().putLong(TPREF_SELECTED_CATEGORY, -1).apply();
+		prefs.setSelectedCategory(ToDoPreferences.ALL_CATEGORIES);
 	    }
 	    else if (position == parent.getCount() - 1) {
 		// This must be the "Edit categories..." button.
@@ -562,7 +566,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
 		parent.getContext().startActivity(intent);
 	    }
 	    else {
-		prefs.edit().putLong(TPREF_SELECTED_CATEGORY, rowID).apply();
+		prefs.setSelectedCategory(rowID);
 	    }
 	    lastSelectedPosition = position;
 	}
@@ -593,43 +597,42 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     }
 
     /**
-     * Called when the settings dialog stores a new user setting
-     * <i>or</i> when settings are imported from a backup file.
+     * Called when the settings dialog changes a preference related to
+     * filtering the To Do list
      */
-    @Override
-    public void onSharedPreferenceChanged(
-	    final SharedPreferences prefs, final String key) {
-        Log.d(TAG, ".onSharedPreferenceChanged(\"" + key + "\")");
-        // In case this was called from the importer service,
-        // make sure we're running on the UI thread instead.
-        runOnUiThread(new Runnable() {
-            public void run() {
-                if (key.equals(TPREF_SHOW_CHECKED) || key.equals(TPREF_SHOW_PRIVATE) ||
-                        key.equals(TPREF_SELECTED_CATEGORY) ||
-                        key.equals(TPREF_SORT_ORDER)) {
-                    String whereClause = generateWhereClause();
+    public void updateListFilter() {
+        String whereClause = generateWhereClause();
 
-                    int selectedSortOrder = prefs.getInt(TPREF_SORT_ORDER, 0);
-                    if ((selectedSortOrder < 0) ||
-                            (selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length))
-                        selectedSortOrder = 0;
+        int selectedSortOrder = prefs.getSortOrder();
+        if ((selectedSortOrder < 0) ||
+                (selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length))
+            selectedSortOrder = 0;
 
-                    Log.d(TAG, ".onSharedPreferenceChanged: requerying the data where "
-                            + whereClause);
-                    getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-                            null, (LoaderManager.LoaderCallbacks<Cursor>)
-                                    itemLoaderCallbacks);
-                } else if (key.equals(TPREF_SHOW_CATEGORY) ||
-                        key.equals(TPREF_SHOW_DUE_DATE) ||
-                        key.equals(TPREF_SHOW_PRIORITY)) {
-                    // To do: is there another way to do this?
-                    // The data has not actually changed, just the widget visibility.
-                    Log.d(TAG, ".onSharedPreferenceChanged: signaling a data change");
-                    itemAdapter.notifyDataSetChanged();
-                }
-                // To do: etc...
-            }
-        });
+        Log.d(TAG, ".updateListFilter: requerying the data where "
+                + whereClause + " ordered by "
+                + ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
+            Cursor itemCursor = managedQuery(todoUri,
+                    ITEM_PROJECTION, whereClause, null,
+                    ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
+            // Change the cursor used by this list
+            itemAdapter.changeCursor(itemCursor);
+        } else {
+            getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+                    null, (LoaderManager.LoaderCallbacks<Cursor>)
+                            itemLoaderCallbacks);
+        }
+    }
+
+    /**
+     * Called when the settings dialog changes whether categories,
+     * priorities, and/or due dates are displayed alongside the To Do items.
+     */
+    public void updateListView() {
+        // To do: is there another way to do this?
+        // The data has not actually changed, just the widget visibility.
+        Log.d(TAG, ".updateListView: signaling a data change");
+        itemAdapter.notifyDataSetChanged();
     }
 
     /** Called when the user presses the Menu button. */
@@ -649,8 +652,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 	if (item.getItemId() == R.id.menuShowCompleted) {
-	    prefs.edit().putBoolean(TPREF_SHOW_CHECKED,
-		    !prefs.getBoolean(TPREF_SHOW_CHECKED, false)).apply();
+	    prefs.setShowChecked(!prefs.showChecked());
 	    return true;
         }
 

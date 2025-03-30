@@ -17,7 +17,9 @@
 package com.xmission.trevin.android.todo.data;
 
 import android.database.Cursor;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
+
+import com.xmission.trevin.android.todo.provider.ToDo;
 
 import java.util.Calendar;
 import java.util.Date;

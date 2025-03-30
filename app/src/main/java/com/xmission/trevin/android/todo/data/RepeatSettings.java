@@ -16,11 +16,11 @@
  */
 package com.xmission.trevin.android.todo.data;
 
-import static com.xmission.trevin.android.todo.data.ToDo.ToDoItem.*;
+import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.*;
 
 import java.util.*;
 
-import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
 
 import android.content.ContentValues;
 import android.database.Cursor;

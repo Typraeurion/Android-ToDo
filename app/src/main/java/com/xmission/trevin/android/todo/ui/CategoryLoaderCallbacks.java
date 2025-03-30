@@ -16,21 +16,19 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.data.ToDo.ToDoCategory.DEFAULT_SORT_ORDER;
+import static com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory.DEFAULT_SORT_ORDER;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.CATEGORY_PROJECTION;
-import static com.xmission.trevin.android.todo.ui.ToDoListActivity.TPREF_SELECTED_CATEGORY;
 
 import android.annotation.TargetApi;
 import android.app.LoaderManager;
 import android.content.CursorLoader;
 import android.content.Loader;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.xmission.trevin.android.todo.data.ToDo;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 
 /**
  * As of Honeycomb (API 11), the application needs to re-initialize
@@ -49,7 +47,7 @@ class CategoryLoaderCallbacks
     private static final String TAG = "CategoryLoaderCallbacks";
 
     private final ToDoListActivity listActivity;
-    private final SharedPreferences sharedPrefs;
+    private final ToDoPreferences sharedPrefs;
 
     // Used to map categories from the database to views
     private final CategoryFilterCursorAdapter categoryAdapter;
@@ -58,7 +56,7 @@ class CategoryLoaderCallbacks
     private final Uri categoryUri;
 
     CategoryLoaderCallbacks(ToDoListActivity activity,
-                            SharedPreferences prefs,
+                            ToDoPreferences prefs,
                             CategoryFilterCursorAdapter adapter,
                             Uri uri) {
         listActivity = activity;
@@ -140,7 +138,7 @@ class CategoryLoaderCallbacks
         Log.d(TAG, ".onLoadFinished");
         categoryAdapter.swapCursor(data);
         listActivity.setCategorySpinnerByID(
-                sharedPrefs.getLong(TPREF_SELECTED_CATEGORY, -1));
+                sharedPrefs.getSelectedCategory());
     }
 
     public void onLoaderReset(Loader<Cursor> loader) {

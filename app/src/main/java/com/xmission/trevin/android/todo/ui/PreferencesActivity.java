@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,12 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.ui.ToDoListActivity.*;
-
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
 import android.Manifest;
 import android.app.*;
-import android.content.*;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.AudioManager;
@@ -34,8 +31,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore.Audio.AudioColumns;
 import android.provider.MediaStore.Audio.Media;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.PermissionChecker;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.PermissionChecker;
 import android.text.InputType;
 import android.util.Log;
 import android.view.*;
@@ -44,8 +41,9 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.data.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDo.*;
 
 /**
  * The preferences activity manages the user options dialog.
@@ -56,7 +54,7 @@ public class PreferencesActivity extends Activity {
 
     public static final String LOG_TAG = "PreferencesActivity";
 
-    private SharedPreferences prefs;
+    private ToDoPreferences prefs;
 
     CheckBox privateCheckBox = null;
     EditText passwordEditText = null;
@@ -84,10 +82,10 @@ public class PreferencesActivity extends Activity {
 
 	setContentView(R.layout.preferences);
 
-	prefs = getSharedPreferences(TODO_PREFERENCES, MODE_PRIVATE);
+	prefs = ToDoPreferences.getInstance(this);
 
 	Spinner spinner = (Spinner) findViewById(R.id.PrefsSpinnerSortBy);
-	setSpinnerByID(spinner, prefs.getInt(TPREF_SORT_ORDER, 0));
+	setSpinnerByID(spinner, prefs.getSortOrder());
 	spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 	    @Override
 	    public void onNothingSelected(AdapterView<?> parent) {
@@ -101,57 +99,57 @@ public class PreferencesActivity extends Activity {
 		if (position >= ToDoItem.USER_SORT_ORDERS.length)
 		    Log.e(LOG_TAG, "Unknown sort order selected");
 		else
-		    prefs.edit().putInt(TPREF_SORT_ORDER, position).apply();
+		    prefs.setSortOrder(position);
 	    }
 	});
 
 	CheckBox checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowChecked);
-	checkBox.setChecked(prefs.getBoolean(TPREF_SHOW_CHECKED, false));
+	checkBox.setChecked(prefs.showChecked());
 	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 	    @Override
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowCompleted.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_CHECKED, isChecked).apply();
+		prefs.setShowChecked(isChecked);
 	    }
 	});
 
 	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowDueDate);
-	checkBox.setChecked(prefs.getBoolean(TPREF_SHOW_DUE_DATE, false));
+	checkBox.setChecked(prefs.showDueDate());
 	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 	    @Override
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowDueDate.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_DUE_DATE, isChecked).apply();
+		prefs.setShowDueDate(isChecked);
 	    }
 	});
 
 	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPriority);
-	checkBox.setChecked(prefs.getBoolean(TPREF_SHOW_PRIORITY, false));
+	checkBox.setChecked(prefs.showPriority());
 	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 	    @Override
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowPriority.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_PRIORITY, isChecked).apply();
+		prefs.setShowPriority(isChecked);
 	    }
 	});
 
 	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowCategory);
-	checkBox.setChecked(prefs.getBoolean(TPREF_SHOW_CATEGORY, false));
+	checkBox.setChecked(prefs.showCategory());
 	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 	    @Override
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowCategory.onCheckedChanged("
 			+ isChecked + ")");
-		prefs.edit().putBoolean(TPREF_SHOW_CATEGORY, isChecked).apply();
+		prefs.setShowCategory(isChecked);
 	    }
 	});
 
 	encryptor = StringEncryption.holdGlobalEncryption();
 	privateCheckBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPrivate);
-	privateCheckBox.setChecked(prefs.getBoolean(TPREF_SHOW_PRIVATE, false));
+	privateCheckBox.setChecked(prefs.showPrivate());
 	final TableRow passwordRow =
 	    (TableRow) findViewById(R.id.TableRowPassword);
 	passwordRow.setVisibility((encryptor.hasPassword(getContentResolver())
@@ -171,7 +169,7 @@ public class PreferencesActivity extends Activity {
 		passwordRow.setVisibility((isChecked &&
 			encryptor.hasPassword(getContentResolver()))
 			? View.VISIBLE : View.GONE);
-		prefs.edit().putBoolean(TPREF_SHOW_PRIVATE, isChecked).apply();
+		prefs.setShowPrivate(isChecked);
 	    }
 	});
 
@@ -194,7 +192,7 @@ public class PreferencesActivity extends Activity {
 
 	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxAlarmVibrate);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            checkBox.setChecked(prefs.getBoolean(TPREF_NOTIFICATION_VIBRATE, false));
+            checkBox.setChecked(prefs.notificationVibrate());
             checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -207,7 +205,7 @@ public class PreferencesActivity extends Activity {
                         buttonView.setChecked(false);
                         return;
                     }
-                    prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, isChecked).apply();
+                    prefs.setNotificationVibrate(isChecked);
                 }
             });
 
@@ -226,7 +224,7 @@ public class PreferencesActivity extends Activity {
                             getString(R.string.PrefTextNoSound));
             spinner = (Spinner) findViewById(R.id.PrefsSpinnerAlarmSound);
             spinner.setAdapter(soundAdapter);
-            final long initialSound = prefs.getLong(TPREF_NOTIFICATION_SOUND, -1);
+            final long initialSound = prefs.getNotificationSound();
             setSpinnerByID(spinner, initialSound);
             spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
                 long lastSound = initialSound;
@@ -250,7 +248,7 @@ public class PreferencesActivity extends Activity {
                                     anyx.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     }
-                    prefs.edit().putLong(TPREF_NOTIFICATION_SOUND, id).apply();
+                    prefs.setNotificationSound(id);
                 }
                 @Override
                 public void onNothingSelected(AdapterView<?> parent) {}
@@ -281,7 +279,7 @@ public class PreferencesActivity extends Activity {
 	    // In Lollipop and earlier, permissions are granted at install time.
 	    return PermissionChecker.checkSelfPermission(this,
                     Manifest.permission.VIBRATE) ==
-                PackageManager.PERMISSION_GRANTED;
+                    PermissionChecker.PERMISSION_GRANTED;
 
 	if (ContextCompat.checkSelfPermission(this,
             Manifest.permission.VIBRATE)
@@ -336,7 +334,7 @@ public class PreferencesActivity extends Activity {
             if (Manifest.permission.VIBRATE.equals(permissions[i])) {
                 if (results[i] == PackageManager.PERMISSION_GRANTED) {
                     Log.i(LOG_TAG, "Vibrate permission granted, enabling vibrating alarm");
-                    prefs.edit().putBoolean(TPREF_NOTIFICATION_VIBRATE, true).apply();
+                    prefs.setNotificationVibrate(true);
                     CheckBox checkBox = (CheckBox)
                             findViewById(R.id.PrefsCheckBoxAlarmVibrate);
                     checkBox.setChecked(true);
@@ -368,7 +366,7 @@ public class PreferencesActivity extends Activity {
 		Arrays.fill(newPassword, (char) 0);
 		try {
 		    if (encryptor.checkPassword(getContentResolver())) {
-			prefs.edit().putBoolean(TPREF_SHOW_ENCRYPTED, true).apply();
+			prefs.setShowEncrypted(true);
 			super.onBackPressed();
 			return;
 		    } else {
@@ -383,7 +381,7 @@ public class PreferencesActivity extends Activity {
 	    }
 	}
 	encryptor.forgetPassword();
-	prefs.edit().putBoolean(TPREF_SHOW_ENCRYPTED, false).apply();
+	prefs.setShowEncrypted(false);
 	super.onBackPressed();
     }
 

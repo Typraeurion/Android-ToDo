@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ import android.view.*;
 import android.widget.*;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.data.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDo.*;
 
 /**
  * An extension of the @{link SimpleCursorAdapter} which adds two

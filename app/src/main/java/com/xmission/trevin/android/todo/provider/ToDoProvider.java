@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2025 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,9 @@
  */
 package com.xmission.trevin.android.todo.provider;
 
-import com.xmission.trevin.android.todo.data.ToDo;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoCategory;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoItem;
-import com.xmission.trevin.android.todo.data.ToDo.ToDoMetadata;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDo.ToDoMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,9 +28,9 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.*;
 import android.net.Uri;
-import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
+import androidx.annotation.NonNull;
 
 /**
  * Provides access to a database of To Do items and categories.
@@ -78,9 +77,9 @@ public class ToDoProvider extends ContentProvider {
     @Override
     public Cursor query(@NonNull Uri uri, String[] projection, String selection,
                         String[] selectionArgs, String sortOrder) {
-	Log.d(TAG, getClass().getSimpleName() + ".query(" + uri.toString()
-		+ ", " + Arrays.toString(projection)
-		+ ", \"" + selection + "\")");
+	Log.d(TAG, String.format("%s.query(%s, %s, \"%s\"),",
+                getClass().getSimpleName(), uri,
+		Arrays.toString(projection), selection));
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
         // In case no sort order is specified set the default
@@ -150,8 +149,8 @@ public class ToDoProvider extends ContentProvider {
 
     @Override
     public String getType(@NonNull Uri uri) {
-	Log.d(TAG, getClass().getSimpleName() + ".getType("
-		+ uri.toString() + ")");
+	Log.d(TAG, String.format("%s.getType(%s)",
+                getClass().getSimpleName(), uri));
         switch (sUriMatcher.match(uri)) {
         case CATEGORIES:
             return ToDoCategory.CONTENT_TYPE;
@@ -178,8 +177,8 @@ public class ToDoProvider extends ContentProvider {
 
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues initialValues) {
-	Log.d(TAG, getClass().getSimpleName() + ".insert(" + uri.toString()
-		+ "," + initialValues + ")");
+	Log.d(TAG, String.format("%s.insert(%s, %s)",
+                getClass().getSimpleName(), uri, initialValues));
 	ContentValues values;
         if (initialValues != null) {
             values = new ContentValues(initialValues);
@@ -270,7 +269,8 @@ public class ToDoProvider extends ContentProvider {
 
     @Override
     public int delete(@NonNull Uri uri, String where, String[] whereArgs) {
-	Log.d(TAG, getClass().getSimpleName() + ".delete(" + uri.toString() + ")");
+	Log.d(TAG, String.format("%s.delete(%s)",
+                getClass().getSimpleName(), uri));
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int count;
         switch (sUriMatcher.match(uri)) {
@@ -342,8 +342,8 @@ public class ToDoProvider extends ContentProvider {
     @Override
     public int update(@NonNull Uri uri, ContentValues values, String where,
 	    String[] whereArgs) {
-	Log.d(TAG, getClass().getSimpleName() + ".update(" + uri.toString()
-		+ "," + values + ")");
+	Log.d(TAG, String.format("%s.update(%s, %s)",
+                getClass().getSimpleName(), uri, values));
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int count;
         switch (sUriMatcher.match(uri)) {
