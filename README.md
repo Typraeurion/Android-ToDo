@@ -16,6 +16,12 @@ Pilot, plus many other features:
 See the [To Do list](doc/ToDo.pdf) documentation for full details on
 using the app.
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/com.xmission.trevin.android.todo/)
+
+Or download the latest APK from the [Releases Section](https://github.com/Typraeurion/Android-ToDo/releases/latest).
+
 This application is free to use and modify according to the terms of
 the [Gnu General Public License (GPL) Version 3](doc/gpl-3.0.txt).
 Instructions for building the application from source are in the
