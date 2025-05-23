@@ -36,10 +36,10 @@ android {
         targetSdk 32
 
         // Defines the version number of your app.
-        versionCode 1040001
+        versionCode 1040101
 
         // Defines a user-friendly version name for your app.
-        versionName "1.4.0"
+        versionName "1.4.1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }

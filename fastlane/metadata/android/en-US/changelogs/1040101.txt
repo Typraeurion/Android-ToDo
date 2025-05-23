@@ -1,0 +1,4 @@
+Version 1.4.1
+* Set the initial focus for the item details screen to the description line.
+* In the "About..." text clarified that the source code is available
+  on the GitHub project page, and added spacing for better readability.

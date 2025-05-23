@@ -2,16 +2,19 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.4.0 (2025.03.30)\n
+version 1.4.1 (2025.05.23)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
 https://github.com/Typraeurion/Android-ToDo/releases\n
 \n
 This program is distributed under the terms of the Gnu Public License,
-version 3.0.\n
+version 3.0.  The source code may be obtained from the git repository
+shown above.\n
+\n
 Encryption code in this program is derived from the Legion of the
 Bouncy Castle Inc under an MIT style license.  (See below.).\n
+\n
 Some of the images used by this program are reproduced from work
 created and shared by the Android Open Source Project and used
 according to the terms described in the Creative Commons 2.5
