@@ -14,7 +14,7 @@
     android:width="15sp">
    </TextView>
    <LinearLayout android:id="@+id/LinearLayoutItem"
-    android:layout_height="fill_parent"
+    android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:layout_weight="10"
     android:layout_width="fill_parent">
@@ -26,14 +26,17 @@
       <!-- To do: Replace all stock photos with PoV-ray generated images -->
       <ImageView style="@style/ListImage"
        android:id="@+id/ToDoNoteImage"
+       android:contentDescription="@string/TooltipNote"
        android:src="@drawable/postit">
       </ImageView>
       <ImageView style="@style/ListImage"
        android:id="@+id/ToDoAlarmImage"
+       android:contentDescription="@string/TooltipAlarm"
        android:src="@drawable/alarm">
       </ImageView>
       <ImageView style="@style/ListImage"
        android:id="@+id/ToDoRepeatImage"
+       android:contentDescription="@string/TooltipRepeat"
        android:src="@drawable/repeat">
       </ImageView>
    </LinearLayout>

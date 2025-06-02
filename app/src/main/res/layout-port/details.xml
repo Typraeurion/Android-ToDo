@@ -14,7 +14,7 @@
      android:id="@+id/DetailEditTextDescription"
      android:layout_width="fill_parent"
      android:layout_height="wrap_content"
-     android:inputType="text|textCapSentences">
+     android:inputType="text|textCapSentences|textMultiLine">
         <requestFocus/>
     </EditText>
 

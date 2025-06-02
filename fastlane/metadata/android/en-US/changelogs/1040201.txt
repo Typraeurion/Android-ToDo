@@ -1,0 +1,8 @@
+Version 1.4.2
+* Adjusted the styles of the list item layout so that the lines scale properly
+  when the font and/or display size is adjusted in the system settings.
+  (Addresses GitHub issue #4.)
+* Use a multi-line field for the item description on the details screen
+  in case the description is very long or the screen is very narrow.
+* Added contentDescription for accessibility
+  to the note, alarm, and repeat icons.

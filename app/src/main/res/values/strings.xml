@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.4.1 (2025.05.23)\n
+version 1.4.2 (2025.06.02)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -440,6 +440,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ToastBadPassword">The password you entered is incorrect.</string>
     <string name="ToastPasswordProtected">A password is required to decrypt private entries.</string>
     <string name="ToastVibrateNotPermitted">Permission to vibrate for alarms has not been granted.</string>
+    <string name="TooltipAlarm">Alarm</string>
+    <string name="TooltipNote">Note</string>
+    <string name="TooltipRepeat">Repeating</string>
     <string-array name="WeekdayList">
 	<item>@string/WeekdaySunday</item>
 	<item>@string/WeekdayMonday</item>
