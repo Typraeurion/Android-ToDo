@@ -12,9 +12,9 @@ android {
      * features included in this API level and lower.
      */
 
-    compileSdk 32
+    compileSdk = 36
 
-    buildToolsVersion "35.0.1"
+    buildToolsVersion = "35.0.1"
 
     /**
      * The defaultConfig block encapsulates default settings and entries
@@ -27,28 +27,38 @@ android {
     defaultConfig {
 
         // Uniquely identifies the package for publishing.
-        applicationId "com.xmission.trevin.android.todo"
+        applicationId = "com.xmission.trevin.android.todo"
 
         // Defines the minimum API level required to run the app.
-        minSdk 14
+        minSdk = 14
 
         // Specifies the API level used to test the app.
-        targetSdk 32
+        targetSdk = 33
 
         // Defines the version number of your app.
-        versionCode 1040201
+        versionCode = 1040201
 
         // Defines a user-friendly version name for your app.
-        versionName "1.4.2"
+        versionName = "1.4.2"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
+    // Java 1.8 compatibility is recommended for backward
+    // compatibility with older devices, e.g. API < 26.
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
     buildTypes {
+        debug {
+            testCoverageEnabled = true
+        }
         release {
             // Minifying entails removing unused code and resources,
             // obfuscating class names, and rewriting code.
-            minifyEnabled false
+            minifyEnabled = false
         }
     }
 
@@ -78,5 +88,5 @@ dependencies {
     androidTestImplementation('org.apache.commons:commons-lang3:3.5')
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.apache.commons:commons-lang3:3.17.0'
+    testImplementation 'org.apache.commons:commons-lang3:3.20.0'
 }

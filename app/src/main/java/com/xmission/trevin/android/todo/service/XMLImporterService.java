@@ -44,6 +44,7 @@ import android.content.*;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
@@ -272,14 +273,27 @@ public class XMLImporterService extends IntentService
         // Get the location of the todo.xml file
         String fileLocation = intent.getStringExtra(XML_DATA_FILENAME);
         // Get the import type
-        ImportType importType = (ImportType)
-                intent.getSerializableExtra(XML_IMPORT_TYPE);
-        boolean importPrivate = Boolean.TRUE.equals(
-                intent.getSerializableExtra(IMPORT_PRIVATE));
+        ImportType importType;
+        boolean importPrivate;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            importType= intent.getSerializableExtra(
+                    XML_IMPORT_TYPE, ImportType.class);
+        } else {
+            importType= (ImportType)
+                    intent.getSerializableExtra(XML_IMPORT_TYPE);
+        }
+        importPrivate = intent.getBooleanExtra(IMPORT_PRIVATE, false);
         Log.d(LOG_TAG, String.format(".onHandleIntent(%s,\"%s\")",
                 importType, fileLocation));
         importCount = 0;
         totalCount = 0;
+
+        if (importType == null) {
+            Log.e(LOG_TAG, "Import type not provided or invalid");
+            // To Do: showToast(getString(R.string.ErrorExportFailed));
+            // To Do: notifyObservers(false);
+            return;
+        }
 
         InputStream iStream;
 

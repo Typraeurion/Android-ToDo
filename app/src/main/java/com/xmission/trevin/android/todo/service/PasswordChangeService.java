@@ -17,6 +17,8 @@
 package com.xmission.trevin.android.todo.service;
 
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.util.StringEncryption;
@@ -88,6 +90,15 @@ public class PasswordChangeService extends IntentService
 
     private PasswordBinder binder = new PasswordBinder();
 
+    /** Handler for making calls involving the UI */
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+
+    /**
+     * Observers to call (on the UI thread) when
+     * {@link #onHandleIntent(Intent)} is finished
+     */
+    private final List<HandleIntentObserver> observers = new ArrayList<>();
+
     /** Create the importer service with a named worker thread */
     public PasswordChangeService() {
 	super(PasswordChangeService.class.getSimpleName());
@@ -132,15 +143,15 @@ public class PasswordChangeService extends IntentService
 	    StringEncryption encryptor = new StringEncryption();
 	    if (oldPassword != null) {
 		if (!encryptor.hasPassword(resolver)) {
-		    Toast.makeText(this, R.string.ToastBadPassword,
-			    Toast.LENGTH_LONG).show();
-		    return;
+                    showToast(getString(R.string.ToastBadPassword));
+                    notifyObservers(false);
+                    return;
 		}
 		encryptor.setPassword(oldPassword);
 		if (!encryptor.checkPassword(resolver)) {
-		    Toast.makeText(this, R.string.ToastBadPassword,
-			    Toast.LENGTH_LONG).show();
-		    return;
+                    showToast(getString(R.string.ToastBadPassword));
+                    notifyObservers(false);
+                    return;
 		}
 		// Decrypt all entries
 		c = resolver.query(
@@ -180,9 +191,9 @@ public class PasswordChangeService extends IntentService
 		encryptor.forgetPassword();
 	    } else {
 		if (encryptor.hasPassword(resolver)) {
-		    Toast.makeText(this, R.string.ToastBadPassword,
-			    Toast.LENGTH_LONG).show();
-		    return;
+                    showToast(getString(R.string.ToastBadPassword));
+                    notifyObservers(false);
+                    return;
 		}
 	    }
 
@@ -236,11 +247,14 @@ public class PasswordChangeService extends IntentService
 		    globalEncryption.forgetPassword();
 	    }
 
+            notifyObservers(true);
+
 	} catch (GeneralSecurityException gsx) {
 	    if (c != null)
 		c.close();
-	    Log.e(TAG, "Error changing the password!", gsx);
-	    Toast.makeText(this, gsx.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e(TAG, "Error changing the password!", gsx);
+            showToast(gsx.getMessage());
+            notifyObservers(gsx);
 	} finally {
 	    StringEncryption.releaseGlobalEncryption();
 	}
@@ -259,6 +273,92 @@ public class PasswordChangeService extends IntentService
     public IBinder onBind(Intent intent) {
         Log.d(TAG, ".onBind");
 	return binder;
+    }
+
+    public void registerObserver(HandleIntentObserver observer) {
+        Log.d(TAG, String.format(".registerObserver(%s)",
+                observer.getClass().getName()));
+        observers.add(observer);
+    }
+
+    public void unregisterObserver(HandleIntentObserver observer) {
+        Log.d(TAG, String.format(".unregisterObserver(%s)",
+                observer.getClass().getName()));
+        observers.remove(observer);
+    }
+
+    /**
+     * Notify all observers that the intent handler is finished.
+     * The notifications will all be done on the UI thread.
+     *
+     * @param success whether the intent handler completed successfully
+     */
+    private void notifyObservers(final boolean success) {
+        if (observers.isEmpty())
+            // Shortcut out
+            return;
+        uiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                for (HandleIntentObserver observer : observers) try {
+                    if (success)
+                        observer.onComplete();
+                    else
+                        observer.onRejected();
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to notify "
+                            + observer.getClass().getName(), e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Show a toast message.  This must be done on the UI thread.
+     * In addition, we&rsquo;ll notify any observers of the message.
+     *
+     * @param message the message to toast
+     */
+    private void showToast(String message) {
+        uiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(PasswordChangeService.this, message,
+                        Toast.LENGTH_LONG).show();
+                for (HandleIntentObserver observer : observers) try {
+                    observer.onToast(message);
+                } catch (Exception e) {
+                    Log.w(TAG, String.format(
+                            "Failed to notify %s of toast \"%s\"",
+                            observer.getClass().getName(), message), e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Notify all observers that an exception has occurred.
+     * The notifications will all be done on the UI thread.
+     *
+     * @param e the exception that occurred
+     */
+    private void notifyObservers(final Exception e) {
+        if (observers.isEmpty())
+            // Shortcut out
+            return;
+        uiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                for (HandleIntentObserver observer : observers) try {
+                    observer.onError(e);
+                } catch (Exception e2) {
+                    Log.w(TAG, String.format(
+                            "Failed to notify %s of %s",
+                            observer.getClass().getName(),
+                            e.getClass().getName()), e2);
+                }
+            }
+        });
     }
 
 }
