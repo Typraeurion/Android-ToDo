@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.4.2 (2025.06.02)\n
+version 1.4.3 (2025.12.29)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -185,8 +185,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="MenuExport">Export Data</string>
     <string name="MenuImport">Import Data</string>
     <string name="MenuInfo">About&#8230;</string>
+    <string name="MenuLock">Lock Encrypted Records</string>
+    <string name="MenuPasswordChange">Change Password</string>
     <string name="MenuPasswordSet">Set Password</string>
     <string name="MenuSettings">Settings</string>
+    <string name="MenuUnlock">Unlock Encrypted Records</string>
     <string name="MenuShowCompleted">Toggle Show Completed</string>
     <string-array name="MonList">
 	<item>@string/MonthJan</item>

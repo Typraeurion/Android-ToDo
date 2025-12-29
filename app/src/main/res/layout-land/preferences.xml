@@ -61,37 +61,6 @@
 	     android:layout_height="wrap_content"
 	     android:text="@string/PrefTextShowPrivate"/>
 	</TableRow>
-    <!-- /TableLayout>
-
-    <TableLayout android:id="@+id/TableLayout02"
-     android:orientation="horizontal"
-     android:layout_width="fill_parent"
-     android:layout_height="wrap_content" -->
-	<TableRow android:id="@+id/TableRowPassword"
-	 android:layout_height="wrap_content"
-	 android:layout_width="fill_parent"
-	 android:visibility="gone">
-	    <TextView android:id="@+id/PrefsTextPassword"
-	     android:text="Password"
-	     android:gravity="right|center_vertical"
-	     android:layout_height="fill_parent"
-	     android:layout_width="wrap_content"/>
-	    <LinearLayout android:id="@+id/LinearLayout03"
-	     android:layout_width="fill_parent"
-	     android:layout_height="wrap_content"
-	     android:layout_weight="1"
-	     android:orientation="horizontal">
-		<EditText android:id="@+id/PrefsEditTextPassword"
-		 android:inputType="textPassword"
-		 android:layout_height="wrap_content"
-		 android:layout_width="fill_parent"
-		 android:layout_weight="1"/>
-		<CheckBox android:id="@+id/PrefsCheckBoxShowPassword"
-		 android:layout_height="wrap_content"
-		 android:layout_width="wrap_content"
-		 android:text="Show"/>
-	    </LinearLayout>
-	</TableRow>
 
 	<TableRow android:id="@+id/TableRow04"
 	 android:layout_height="wrap_content"

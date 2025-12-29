@@ -644,15 +644,16 @@ versions:
 @item Oreo (Android 8.1, API 27)
 @item Pie (Android 9, API 28)
 @item Quince Tart (Android 10, API 29) through Red Velvet Cake (Android 11, API 30)
-@item Snow Cone (Android 12, API 31--32), which is the current target version
+@item Snow Cone (Android 12, API 31--32)
+@item Tiramisu (Android 13, API 33) through Upside-down Cake (Android 14, API 34), which is the current target version
 @end itemize
 
 Testing the following API's is suggested to ensure compatibility with
 new devices:
 
 @itemize @bullet
-@item Tiramisu (Android 13, API 33) through Upside-down Cake (Android 14, API 34)
-@item Vanilla Ice Cream (Android 15, API 35) and up
+@item Vanilla Ice Cream (Android 15, API 35)
+@item Baklava (Android 16, API 36) and up
 @end itemize
 
 On the last page finalize the details of the virtual device.  Give it

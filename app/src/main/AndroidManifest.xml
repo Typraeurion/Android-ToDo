@@ -4,15 +4,15 @@
     package="com.xmission.trevin.android.todo"
     android:installLocation="auto"
     android:targetSandboxVersion="1"
-    android:versionCode="1040201"
-    android:versionName="1.4.2">
+    android:versionCode="1040301"
+    android:versionName="1.4.3">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <!-- New permission added in Pie (SDK 28) -->
     <uses-permission-sdk-23 android:name="android.permission.FOREGROUND_SERVICE"/>
-    <!-- As of API 34, this should be changed to
-         (or appended with?) FOREGROUND_SERVICE_DATA_SYNC. -->
+    <!-- More granular permission as of Upside-down Cake (SDK 34) -->
+    <uses-permission-sdk-23 android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 
     <!-- We only need permission to vibrate through Nougat (SDK 25).
          Starting with Oreo (26), vibrating is a part of system
@@ -45,7 +45,7 @@
          No other changes are anticipated through SDK [35]. -->
 
     <uses-sdk android:minSdkVersion="14"
-              android:targetSdkVersion="33"/>
+              android:targetSdkVersion="34"/>
 
     <!-- For data extraction rules, see: https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore -->
     <!-- For full backup content, see: https://developer.android.com/identity/data/autobackup#Files -->
@@ -60,7 +60,7 @@
         android:roundIcon="@mipmap/icon"
         android:label="@string/app_name"
         android:theme="@style/Theme.Light.WithActionBar"
-        tools:targetApi="33">
+        tools:targetApi="34">
 
         <activity
             android:name=".ui.ToDoListActivity"

@@ -1,0 +1,4 @@
+Version 1.4.3
+* Bumped the target SDK version from 33 (Tiramisu) to 34 (Upside-down Cake).
+* Moved the password field for unlocking encrypted records
+  from the Settings screen to a separate pop-up dialog.

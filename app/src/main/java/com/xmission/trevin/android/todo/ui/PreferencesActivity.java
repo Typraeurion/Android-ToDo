@@ -17,7 +17,6 @@
 package com.xmission.trevin.android.todo.ui;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
 import android.Manifest;
@@ -33,7 +32,6 @@ import android.provider.MediaStore.Audio.AudioColumns;
 import android.provider.MediaStore.Audio.Media;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
-import android.text.InputType;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
@@ -57,7 +55,7 @@ public class PreferencesActivity extends Activity {
     private ToDoPreferences prefs;
 
     CheckBox privateCheckBox = null;
-    EditText passwordEditText = null;
+    // EditText passwordEditText = null;
 
     /** The global encryption object */
     StringEncryption encryptor;
@@ -150,43 +148,12 @@ public class PreferencesActivity extends Activity {
 	encryptor = StringEncryption.holdGlobalEncryption();
 	privateCheckBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPrivate);
 	privateCheckBox.setChecked(prefs.showPrivate());
-	final TableRow passwordRow =
-	    (TableRow) findViewById(R.id.TableRowPassword);
-	passwordRow.setVisibility((encryptor.hasPassword(getContentResolver())
-		&& privateCheckBox.isChecked()) ? View.VISIBLE : View.GONE);
-	passwordEditText =
-	    (EditText) findViewById(R.id.PrefsEditTextPassword);
-	if (encryptor.hasKey())
-	    passwordEditText.setText(encryptor.getPassword(), 0,
-		    encryptor.getPassword().length);
-	else
-	    passwordEditText.setText("");
 	privateCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 	    @Override
 	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
 		Log.d(LOG_TAG, "prefsCheckBoxShowPrivate.onCheckedChanged("
 			+ isChecked + ")");
-		passwordRow.setVisibility((isChecked &&
-			encryptor.hasPassword(getContentResolver()))
-			? View.VISIBLE : View.GONE);
 		prefs.setShowPrivate(isChecked);
-	    }
-	});
-
-	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPassword);
-	passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT
-		+ (checkBox.isChecked()
-			? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-			: InputType.TYPE_TEXT_VARIATION_PASSWORD));
-	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxShowPassword.onCheckedChanged("
-			+ isChecked + ")");
-		passwordEditText.setInputType(InputType.TYPE_CLASS_TEXT
-			+ (isChecked
-				? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-				: InputType.TYPE_TEXT_VARIATION_PASSWORD));
 	    }
 	});
 
@@ -313,6 +280,7 @@ public class PreferencesActivity extends Activity {
                 default:
                     name = Integer.toString(results[i]);
             }
+            resultNames[i] = name;
         }
         Log.d(LOG_TAG, String.format(".onRequestPermissionsResult(%d, %s, %s)",
                 code, Arrays.toString(permissions),
@@ -353,35 +321,6 @@ public class PreferencesActivity extends Activity {
     @Override
     public void onBackPressed() {
 	Log.d(LOG_TAG, ".onBackPressed()");
-	if (privateCheckBox.isChecked() &&
-		(passwordEditText.length() > 0)) {
-	    if (!encryptor.hasPassword(getContentResolver())) {
-		// To do: the password field should have been disabled
-		Toast.makeText(PreferencesActivity.this,
-			R.string.ToastBadPassword, Toast.LENGTH_LONG).show();
-	    } else {
-		char[] newPassword = new char[passwordEditText.length()];
-		passwordEditText.getText().getChars(0, newPassword.length, newPassword, 0);
-		encryptor.setPassword(newPassword);
-		Arrays.fill(newPassword, (char) 0);
-		try {
-		    if (encryptor.checkPassword(getContentResolver())) {
-			prefs.setShowEncrypted(true);
-			super.onBackPressed();
-			return;
-		    } else {
-			Toast.makeText(PreferencesActivity.this,
-				R.string.ToastBadPassword,
-				Toast.LENGTH_LONG).show();
-		    }
-		} catch (GeneralSecurityException gsx) {
-		    Toast.makeText(PreferencesActivity.this,
-			    gsx.getMessage(), Toast.LENGTH_LONG).show();
-		}
-	    }
-	}
-	encryptor.forgetPassword();
-	prefs.setShowEncrypted(false);
 	super.onBackPressed();
     }
 

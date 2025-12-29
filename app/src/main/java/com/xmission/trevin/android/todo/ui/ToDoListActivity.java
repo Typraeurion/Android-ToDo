@@ -26,6 +26,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
@@ -74,6 +76,7 @@ public class ToDoListActivity extends ListActivity {
     private static final int DUEDATE_DIALOG_ID = 7;
     private static final int PASSWORD_DIALOG_ID = 8;
     private static final int PROGRESS_DIALOG_ID = 9;
+    private static final int UNLOCK_DIALOG_ID = 10;
 
     /**
      * The columns we are interested in from the category table
@@ -165,6 +168,22 @@ public class ToDoListActivity extends ListActivity {
     /** Due Date dialog box */
     CalendarDatePickerDialog dueDateDialog = null;
 
+    /**
+     * Local copy of whether a password has been set.
+     * This needs to be updated whenever the password hash
+     * metadata is added or removed.
+     */
+    boolean hasPassword = false;
+
+    /** Our main menu */
+    Menu menu = null;
+
+    /** &ldquo;Unlock Encrypted&rdquo; dialog */
+    Dialog unlockDialog = null;
+
+    /** Text field of the unlock dialog */
+    EditText unlockPasswordEditText = null;
+
     /** Password change dialog */
     Dialog passwordChangeDialog = null;
 
@@ -183,7 +202,11 @@ public class ToDoListActivity extends ListActivity {
     /** Encryption for private records */
     StringEncryption encryptor;
 
-    /** Keep track of changes so that we can update any alarms */
+    /**
+     * Keep track of changes so that we can
+     * update any alarms and update UI elements
+     * related to setting or clearing the password.
+     */
     private class ToDoContentObserver extends ContentObserver {
 	public ToDoContentObserver() {
 	    super(new Handler());
@@ -201,6 +224,7 @@ public class ToDoListActivity extends ListActivity {
 		new Intent(ToDoListActivity.this, AlarmService.class);
 	    alarmIntent.setAction(Intent.ACTION_EDIT);
 	    startService(alarmIntent);
+            checkForPassword.run();
 	}
     }
     private final ToDoContentObserver registeredObserver =
@@ -212,8 +236,10 @@ public class ToDoListActivity extends ListActivity {
     /** Item Loader callbacks for */
     private ItemLoaderCallbacks itemLoaderCallbacks = null;
 
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
+
     /** Called when the activity is first created. */
-    @SuppressWarnings("unchecked")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -245,8 +271,19 @@ public class ToDoListActivity extends ListActivity {
                     @Override
                     public void onToDoPreferenceChanged(ToDoPreferences prefs) {
                         updateListFilter();
+                        if (menu != null) {
+                            MenuItem unlockItem =
+                                    menu.findItem(R.id.menuUnlock);
+                            unlockItem.setTitle(encryptor.hasKey()
+                                    ? R.string.MenuLock
+                                    : R.string.MenuUnlock);
+                            unlockItem.setVisible(
+                                    hasPassword && prefs.showPrivate());
+                        }
                     }
-                }, TPREF_SHOW_CHECKED, TPREF_SHOW_PRIVATE,
+                },
+                TPREF_SHOW_CHECKED,
+                TPREF_SHOW_ENCRYPTED, TPREF_SHOW_PRIVATE,
                 TPREF_SELECTED_CATEGORY, TPREF_SORT_ORDER);
         prefs.registerOnToDoPreferenceChangeListener(
                 new ToDoPreferences.OnToDoPreferenceChangeListener() {
@@ -254,8 +291,8 @@ public class ToDoListActivity extends ListActivity {
                     public void onToDoPreferenceChanged(ToDoPreferences prefs) {
                         updateListView();
                     }
-                }, TPREF_SHOW_CATEGORY, TPREF_SHOW_DUE_DATE, TPREF_SHOW_PRIORITY);
-	String whereClause = generateWhereClause();
+                },
+                TPREF_SHOW_CATEGORY, TPREF_SHOW_DUE_DATE, TPREF_SHOW_PRIORITY);
 
         int selectedSortOrder = prefs.getSortOrder();
         if ((selectedSortOrder < 0) ||
@@ -263,12 +300,15 @@ public class ToDoListActivity extends ListActivity {
             prefs.setSortOrder(0);
 	}
 
+        // To Do: When we switch from Content Resolver to a direct repository,
+        // replace this with checkForPassword on a separate thread.
+        hasPassword = encryptor.hasPassword(getContentResolver());
+
 	/*
 	 * Perform two managed queries.
 	 * On API level ≥ 11, you need to find a way to re-initialize
 	 * the cursor when the activity is restarted!
 	 */
-	Cursor categoryCursor = null;
         categoryAdapter = new CategoryFilterCursorAdapter(this, 0);
         Log.d(TAG, ".onCreate: initializing a category loader manager");
         if (Log.isLoggable(TAG, Log.DEBUG))
@@ -278,7 +318,6 @@ public class ToDoListActivity extends ListActivity {
         getLoaderManager().initLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
                 null, categoryLoaderCallbacks);
 
-        Cursor itemCursor = null;
         itemAdapter = new ToDoCursorAdapter(
                 this, R.layout.list_item, null,
                 getContentResolver(), todoUri, this, encryptor,
@@ -287,7 +326,7 @@ public class ToDoListActivity extends ListActivity {
         itemLoaderCallbacks = new ItemLoaderCallbacks(this,
                 prefs, itemAdapter, todoUri);
         getLoaderManager().initLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-                null, (LoaderManager.LoaderCallbacks<Cursor>) itemLoaderCallbacks);
+                null, itemLoaderCallbacks);
 
         // Inflate our view so we can find our lists
 	setContentView(R.layout.list);
@@ -361,15 +400,14 @@ public class ToDoListActivity extends ListActivity {
     }
 
     /** Called when the activity is about to be started after having been stopped */
-    @SuppressWarnings("unchecked")
     @Override
     public void onRestart() {
 	Log.d(TAG, ".onRestart");
-	if (categoryLoaderCallbacks instanceof LoaderManager.LoaderCallbacks) {
+	if (categoryLoaderCallbacks != null) {
             getLoaderManager().restartLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
-		    null, (LoaderManager.LoaderCallbacks<Cursor>) categoryLoaderCallbacks);
+		    null, categoryLoaderCallbacks);
 	    getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-		    null, (LoaderManager.LoaderCallbacks<Cursor>) itemLoaderCallbacks);
+		    null, itemLoaderCallbacks);
 	}
 	super.onRestart();
     }
@@ -611,17 +649,9 @@ public class ToDoListActivity extends ListActivity {
         Log.d(TAG, ".updateListFilter: requerying the data where "
                 + whereClause + " ordered by "
                 + ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
-            Cursor itemCursor = managedQuery(todoUri,
-                    ITEM_PROJECTION, whereClause, null,
-                    ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-            // Change the cursor used by this list
-            itemAdapter.changeCursor(itemCursor);
-        } else {
-            getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
-                    null, (LoaderManager.LoaderCallbacks<Cursor>)
-                            itemLoaderCallbacks);
-        }
+        getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+                null, itemLoaderCallbacks);
+        itemAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -641,10 +671,18 @@ public class ToDoListActivity extends ListActivity {
         super.onCreateOptionsMenu(menu);
         Log.d(TAG, "onCreateOptionsMenu");
 	getMenuInflater().inflate(R.menu.menu_main, menu);
+        MenuItem unlockItem = menu.findItem(R.id.menuUnlock);
+        unlockItem.setVisible(hasPassword && prefs.showPrivate());
+        unlockItem.setTitle(encryptor.hasKey()
+                ? R.string.MenuLock
+                : R.string.MenuUnlock);
+        menu.findItem(R.id.menuPassword).setTitle(hasPassword
+                ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
 	menu.findItem(R.id.menuSettings).setIntent(
 		new Intent(this, PreferencesActivity.class));
         menu.findItem(R.id.menuShowCompleted).setShowAsAction(
                 MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        this.menu = menu;
         return true;
     }
 
@@ -656,34 +694,71 @@ public class ToDoListActivity extends ListActivity {
 	    return true;
         }
 
-        else if (item.getItemId() == R.id.menuInfo) {
+        if (item.getItemId() == R.id.menuInfo) {
 	    showDialog(ABOUT_DIALOG_ID);
 	    return true;
         }
 
-        else if (item.getItemId() == R.id.menuExport) {
+        if (item.getItemId() == R.id.menuUnlock) {
+            if (encryptor.hasKey()) {
+                prefs.setShowEncrypted(false);
+                encryptor.forgetPassword();
+                if (unlockPasswordEditText != null)
+                    unlockPasswordEditText.setText("");
+                menu.findItem(R.id.menuUnlock).setTitle(R.string.MenuUnlock);
+            } else {
+                showDialog(UNLOCK_DIALOG_ID);
+            }
+            return true;
+        }
+
+        if (item.getItemId() == R.id.menuExport) {
 	    Intent intent = new Intent(this, ExportActivity.class);
 	    startActivity(intent);
 	    return true;
         }
 
-        else if (item.getItemId() == R.id.menuImport) {
+        if (item.getItemId() == R.id.menuImport) {
 	    Intent intent = new Intent(this, ImportActivity.class);
 	    startActivity(intent);
 	    return true;
         }
 
-        else if (item.getItemId() == R.id.menuPassword) {
+        if (item.getItemId() == R.id.menuPassword) {
 	    showDialog(PASSWORD_DIALOG_ID);
 	    return true;
         }
 
-        else {
-            Log.w(TAG, "onOptionsItemSelected(" + item.getItemId()
-                    + "): Not handled");
-            return false;
-        }
+        Log.w(TAG, "onOptionsItemSelected(" + item.getItemId()
+                + "): Not handled");
+        return false;
     }
+
+    private final CompoundButton.OnCheckedChangeListener unlockShowPasswordListener =
+            new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton button,
+                        boolean state) {
+                    int inputType = InputType.TYPE_CLASS_TEXT
+                        + (state ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                            : InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                    unlockPasswordEditText.setInputType(inputType);
+                }
+    };
+
+    private final CompoundButton.OnCheckedChangeListener changeShowPasswordListener =
+            new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton button,
+                        boolean state) {
+                    int inputType = InputType.TYPE_CLASS_TEXT
+                        + (state ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                                 : InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                    passwordChangeEditText[0].setInputType(inputType);
+                    passwordChangeEditText[1].setInputType(inputType);
+                    passwordChangeEditText[2].setInputType(inputType);
+                }
+    };
 
     /** Called when opening a dialog for the first time */
     @Override
@@ -762,49 +837,52 @@ public class ToDoListActivity extends ListActivity {
 	    });
 	    return dueDateDialog;
 
+        case UNLOCK_DIALOG_ID:
+            builder = new AlertDialog.Builder(this);
+	    builder.setIcon(R.drawable.ic_menu_login);
+	    builder.setTitle(R.string.MenuUnlock);
+            View unlockLayout =
+                ((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
+                .inflate(R.layout.unlock,
+                        (ScrollView) findViewById(R.id.UnlockLayoutRoot));
+            builder.setView(unlockLayout);
+            final DialogInterface.OnClickListener listener1 =
+                    new UnlockOnClickListener();
+            builder.setPositiveButton(R.string.ConfirmationButtonOK, listener1);
+            builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener1);
+            unlockDialog = builder.create();
+            CheckBox showPasswordCheckBox1 =
+                    (CheckBox) unlockLayout.findViewById(R.id.CheckBoxShowPassword);
+            unlockPasswordEditText =
+                    (EditText) unlockLayout.findViewById(R.id.EditTextPassword);
+            showPasswordCheckBox1.setOnCheckedChangeListener(unlockShowPasswordListener);
+            return unlockDialog;
+
 	case PASSWORD_DIALOG_ID:
 	    builder = new AlertDialog.Builder(this);
 	    builder.setIcon(R.drawable.ic_menu_login);
-	    builder.setTitle(R.string.MenuPasswordSet);
+	    builder.setTitle(hasPassword ? R.string.MenuPasswordChange
+                    : R.string.MenuPasswordSet);
 	    View passwordLayout =
 		((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
 		.inflate(R.layout.password,
 			(ScrollView) findViewById(R.id.PasswordLayoutRoot));
 	    builder.setView(passwordLayout);
-	    DialogInterface.OnClickListener listener =
+	    DialogInterface.OnClickListener listener2 =
 		new PasswordChangeOnClickListener();
-	    builder.setPositiveButton(R.string.ConfirmationButtonOK, listener);
-	    builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener);
+	    builder.setPositiveButton(R.string.ConfirmationButtonOK, listener2);
+	    builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener2);
 	    passwordChangeDialog = builder.create();
-	    CheckBox showPasswordCheckBox =
-		(CheckBox) passwordLayout.findViewById(R.id.CheckBoxShowPassword);
-	    passwordChangeEditText[0] =
-		(EditText) passwordLayout.findViewById(R.id.EditTextOldPassword);
-	    passwordChangeEditText[1] =
-		(EditText) passwordLayout.findViewById(R.id.EditTextNewPassword);
-	    passwordChangeEditText[2] =
-		(EditText) passwordLayout.findViewById(R.id.EditTextConfirmPassword);
-	    showPasswordCheckBox.setOnCheckedChangeListener(
-		    new CompoundButton.OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton button,
-				boolean state) {
-			    int inputType = InputType.TYPE_CLASS_TEXT
-				+ (state ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-					 : InputType.TYPE_TEXT_VARIATION_PASSWORD);
-			    passwordChangeEditText[0].setInputType(inputType);
-			    passwordChangeEditText[1].setInputType(inputType);
-			    passwordChangeEditText[2].setInputType(inputType);
-			}
-	    });
-	    int inputType = InputType.TYPE_CLASS_TEXT
-		+ (showPasswordCheckBox.isChecked()
-			? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-			: InputType.TYPE_TEXT_VARIATION_PASSWORD);
-	    passwordChangeEditText[0].setInputType(inputType);
-	    passwordChangeEditText[1].setInputType(inputType);
-	    passwordChangeEditText[2].setInputType(inputType);
-	    return passwordChangeDialog;
+            CheckBox showPasswordCheckBox2 =
+                (CheckBox) passwordLayout.findViewById(R.id.CheckBoxShowPassword);
+            passwordChangeEditText[0] =
+                (EditText) passwordLayout.findViewById(R.id.EditTextOldPassword);
+            passwordChangeEditText[1] =
+                (EditText) passwordLayout.findViewById(R.id.EditTextNewPassword);
+            passwordChangeEditText[2] =
+                (EditText) passwordLayout.findViewById(R.id.EditTextConfirmPassword);
+            showPasswordCheckBox2.setOnCheckedChangeListener(changeShowPasswordListener);
+            return passwordChangeDialog;
 
 	case PROGRESS_DIALOG_ID:
 	    progressDialog = new ProgressDialog(this);
@@ -846,15 +924,32 @@ public class ToDoListActivity extends ListActivity {
 		    c.get(Calendar.MONTH), c.get(Calendar.DATE));
 	    return;
 
+        case UNLOCK_DIALOG_ID:
+            CheckBox showPasswordCheckBox1 =
+                (CheckBox) unlockDialog.findViewById(
+                        R.id.CheckBoxShowPassword);
+            showPasswordCheckBox1.setChecked(false);
+            unlockShowPasswordListener.onCheckedChanged(
+                    showPasswordCheckBox1, false);
+            if (encryptor.hasKey())
+                unlockPasswordEditText.setText(encryptor.getPassword(), 0,
+                        encryptor.getPassword().length);
+            else
+                unlockPasswordEditText.setText("");
+            return;
+
 	case PASSWORD_DIALOG_ID:
+            passwordChangeDialog.setTitle(hasPassword
+                    ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
 	    TableRow tr = (TableRow) passwordChangeDialog.findViewById(
 		    R.id.TableRowOldPassword);
-	    tr.setVisibility(encryptor.hasPassword(getContentResolver())
-		    ? View.VISIBLE : View.GONE);
-	    CheckBox showPasswordCheckBox =
+            tr.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
+	    CheckBox showPasswordCheckBox2 =
 		(CheckBox) passwordChangeDialog.findViewById(
 			R.id.CheckBoxShowPassword);
-	    showPasswordCheckBox.setChecked(false);
+	    showPasswordCheckBox2.setChecked(false);
+            changeShowPasswordListener.onCheckedChanged(showPasswordCheckBox2,
+                    false);
 	    passwordChangeEditText[0].setText("");
 	    passwordChangeEditText[1].setText("");
 	    passwordChangeEditText[2].setText("");
@@ -912,6 +1007,44 @@ public class ToDoListActivity extends ListActivity {
 	}
     }
 
+    /**
+     * A runner which updates the visibility of the old password row
+     * on the Set/Change Password dialog and the Lock/Unlock menu entry.
+     */
+    private final Runnable updatePasswordVisibility = new Runnable() {
+        @Override
+        public void run() {
+            if (menu != null) {
+                menu.findItem(R.id.menuUnlock).setVisible(hasPassword);
+                menu.findItem(R.id.menuPassword).setTitle(hasPassword
+                        ? R.string.MenuPasswordChange
+                        : R.string.MenuPasswordSet);
+            }
+            if (passwordChangeDialog != null) {
+                TableRow tr = (TableRow) passwordChangeDialog.findViewById(
+                        R.id.TableRowOldPassword);
+                tr.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
+            }
+        }
+    };
+
+    /**
+     * A runner which checks the content resolver for a password hash,
+     * updating the visibility of the &ldquo;Old Password&rdquo; row
+     * on the Set/Change Password dialog and the Lock/Unlock menu entry
+     * accordingly.  If the value has changed since last checked, update
+     * the UI elements on the UI thread.
+     */
+    private final Runnable checkForPassword = new Runnable() {
+        @Override
+        public void run() {
+            boolean oldHasPassword = hasPassword;
+            hasPassword = encryptor.hasPassword(getContentResolver());
+            if (hasPassword != oldHasPassword)
+                runOnUiThread(updatePasswordVisibility);
+        }
+    };
+
     class DueDateListSelectionListener
 		implements DialogInterface.OnClickListener {
 	@Override
@@ -956,6 +1089,70 @@ public class ToDoListActivity extends ListActivity {
 	}
     }
 
+    class UnlockOnClickListener implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            Log.d(TAG, "UnlockOnClickListener.onClick(" + which + ")");
+            switch (which) {
+                case DialogInterface.BUTTON_NEGATIVE:
+                    dialog.dismiss();
+                    return;
+
+                case DialogInterface.BUTTON_POSITIVE:
+                    if (unlockPasswordEditText.length() > 0) {
+                        char[] password = new char[unlockPasswordEditText.length()];
+                        unlockPasswordEditText.getText().getChars(0,
+                                password.length, password, 0);
+                        encryptor.setPassword(password);
+                        executor.submit(checkPasswordForUnlock);
+                    } else {
+                        encryptor.forgetPassword();
+                        prefs.setShowEncrypted(false);
+                        menu.findItem(R.id.menuUnlock)
+                                .setTitle(R.string.MenuUnlock);
+                    }
+                    return;
+            }
+        }
+    }
+
+    /**
+     * Check the password that the user entered in
+     * {@link UnlockOnClickListener} against the database.
+     * This must be done on the non-UI thread.
+     */
+    private final Runnable checkPasswordForUnlock = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (encryptor.checkPassword(getContentResolver())) {
+                    prefs.setShowEncrypted(true);
+                    menu.findItem(R.id.menuUnlock)
+                            .setTitle(R.string.MenuLock);
+                    unlockDialog.dismiss();
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ToDoListActivity.this,
+                                    R.string.ToastBadPassword,
+                                    Toast.LENGTH_LONG).show();
+                            unlockDialog.show();
+                        }
+                    });
+                }
+            } catch (GeneralSecurityException gsx) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(ToDoListActivity.this,
+                                R.string.ToastBadPassword,
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+        }
+    };
     class PasswordChangeOnClickListener
 		implements DialogInterface.OnClickListener {
 	@Override
@@ -989,6 +1186,7 @@ public class ToDoListActivity extends ListActivity {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 			    dialog.dismiss();
+                            passwordChangeDialog.show();
 			}
 		    });
 		    builder.show();
