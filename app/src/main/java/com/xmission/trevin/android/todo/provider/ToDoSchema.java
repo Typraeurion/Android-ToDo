@@ -20,24 +20,24 @@ import android.net.Uri;
 import android.provider.BaseColumns;
 
 /**
- * Field definitions for the To Do list provider
+ * Field definitions for the To Do list database
  *
  * @author Trevin Beattie
  */
-public final class ToDo {
+public final class ToDoSchema {
     /** The content provider part of the URI for locating To Do records */
     public static final String AUTHORITY = "com.xmission.trevin.android.todo.provider.ToDo";
 
     // This class cannot be instantiated
-    private ToDo() {}
+    private ToDoSchema() {}
 
     /**
      * Additional data that doesn't fit into a relational schema
      * but needs to be stored with the database
      */
-    public static final class ToDoMetadata implements BaseColumns {
+    public static final class ToDoMetadataColumns implements BaseColumns {
         // This class cannot be instantiated
-        private ToDoMetadata() {}
+        private ToDoMetadataColumns() {}
 
         /**
          * The content:// style URL for this table
@@ -71,9 +71,9 @@ public final class ToDo {
     /**
      * Categories table
      */
-    public static final class ToDoCategory implements BaseColumns {
+    public static final class ToDoCategoryColumns implements BaseColumns {
         // This class cannot be instantiated
-        private ToDoCategory() {}
+        private ToDoCategoryColumns() {}
 
         /**
          * The content:// style URL for this table
@@ -108,9 +108,9 @@ public final class ToDo {
     /**
      * To Do table
      */
-    public static final class ToDoItem implements BaseColumns {
+    public static final class ToDoItemColumns implements BaseColumns {
         // This class cannot be instantiated
-        private ToDoItem() {}
+        private ToDoItemColumns() {}
 
         /**
          * The content:// style URL for this table

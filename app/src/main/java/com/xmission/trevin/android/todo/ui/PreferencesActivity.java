@@ -41,7 +41,7 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 /**
  * The preferences activity manages the user options dialog.
@@ -94,7 +94,7 @@ public class PreferencesActivity extends Activity {
 		    int position, long id) {
 		Log.d(LOG_TAG, "spinnerSortBy.onItemSelected("
 			+ position + "," + id + ")");
-		if (position >= ToDoItem.USER_SORT_ORDERS.length)
+		if (position >= ToDoItemColumns.USER_SORT_ORDERS.length)
 		    Log.e(LOG_TAG, "Unknown sort order selected");
 		else
 		    prefs.setSortOrder(position);

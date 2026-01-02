@@ -20,7 +20,7 @@ import java.security.GeneralSecurityException;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 import android.app.*;
 import android.content.*;
@@ -47,14 +47,14 @@ public class ToDoNoteActivity extends Activity {
      * The columns we are interested in from the item table
      */
     private static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItem._ID,
-            ToDoItem.DESCRIPTION,
-            ToDoItem.NOTE,
-            ToDoItem.PRIVATE,
+            ToDoItemColumns._ID,
+            ToDoItemColumns.DESCRIPTION,
+            ToDoItemColumns.NOTE,
+            ToDoItemColumns.PRIVATE,
     };
 
     /** The URI by which we were started for the To-Do item */
-    private Uri todoUri = ToDoItem.CONTENT_URI;
+    private Uri todoUri = ToDoItemColumns.CONTENT_URI;
 
     /** The note */
     EditText toDoNote = null;
@@ -85,12 +85,12 @@ public class ToDoNoteActivity extends Activity {
 	setContentView(R.layout.note);
 
 	int isPrivate = itemCursor.getInt(
-        	itemCursor.getColumnIndex(ToDoItem.PRIVATE));
+        	itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
 
 	encryptor = StringEncryption.holdGlobalEncryption();
         String description = getResources().getString(R.string.PasswordProtected);
         String note = description;
-	int i = itemCursor.getColumnIndex(ToDoItem.DESCRIPTION);
+	int i = itemCursor.getColumnIndex(ToDoItemColumns.DESCRIPTION);
         if (isPrivate > 1) {
             if (encryptor.hasKey()) {
         	try {
@@ -108,7 +108,7 @@ public class ToDoNoteActivity extends Activity {
         } else {
             description = itemCursor.getString(i);
         }
-        i = itemCursor.getColumnIndex(ToDoItem.NOTE);
+        i = itemCursor.getColumnIndex(ToDoItemColumns.NOTE);
         if (itemCursor.isNull(i)) {
             note = "";
         } else {
@@ -160,7 +160,7 @@ public class ToDoNoteActivity extends Activity {
 	    ContentValues values = new ContentValues();
 	    String note = toDoNote.getText().toString();
 	    if (note.length() == 0) {
-		values.putNull(ToDoItem.NOTE);
+		values.putNull(ToDoItemColumns.NOTE);
 	    } else {
 		/*
 		 * Figure out whether to encrypt this record.
@@ -172,22 +172,22 @@ public class ToDoNoteActivity extends Activity {
 		if (!itemCursor.moveToFirst())
 		    throw new SQLiteDoneException();
 		int isPrivate = itemCursor.getInt(
-			itemCursor.getColumnIndex(ToDoItem.PRIVATE));
+			itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
 		itemCursor.close();
-		values.put(ToDoItem.NOTE, note);
+		values.put(ToDoItemColumns.NOTE, note);
 		if (isPrivate > 1) {
 		    if (encryptor.hasKey()) {
 			try {
-			    values.put(ToDoItem.NOTE, encryptor.encrypt(note));
+			    values.put(ToDoItemColumns.NOTE, encryptor.encrypt(note));
 			} catch (GeneralSecurityException gsx) {
-			    values.put(ToDoItem.PRIVATE, 1);
+			    values.put(ToDoItemColumns.PRIVATE, 1);
 			}
 		    } else {
-			values.put(ToDoItem.PRIVATE, 1);
+			values.put(ToDoItemColumns.PRIVATE, 1);
 		    }
 		}
 	    }
-	    values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 	    try {
 		getContentResolver().update(todoUri, values, null, null);
 		ToDoNoteActivity.this.finish();
@@ -228,8 +228,8 @@ public class ToDoNoteActivity extends Activity {
 		    dialog.dismiss();
 		    try {
 			ContentValues values = new ContentValues();
-			values.putNull(ToDoItem.NOTE);
-			values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+			values.putNull(ToDoItemColumns.NOTE);
+			values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 			ToDoNoteActivity.this.getContentResolver().update(
 				ToDoNoteActivity.this.todoUri, values, null, null);
 			ToDoNoteActivity.this.finish();

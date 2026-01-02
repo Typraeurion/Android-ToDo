@@ -16,10 +16,10 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory.*;
+import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns.*;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 
 import android.app.*;
@@ -106,7 +106,7 @@ public class CategoryListActivity extends ListActivity {
 		Log.d(TAG, "newButton.onClick: adding a new category to the list");
 		// Add a new item to the list
 		Map<String,Object> newEntry = new HashMap<>();
-		newEntry.put(ToDoCategory.NAME, "");
+		newEntry.put(ToDoCategoryColumns.NAME, "");
 		categoryList.add(newEntry);
 		// Tell the adapter to refresh the display
 		categoryAdapter.notifyDataSetChanged();
@@ -124,25 +124,25 @@ public class CategoryListActivity extends ListActivity {
 		// To do: start a transaction
 		try {
 		    for (Map<String,Object> entry : categoryList) {
-			String newName = (String) entry.get(ToDoCategory.NAME);
-			if (entry.containsKey(ToDoCategory._ID)) {
+			String newName = (String) entry.get(ToDoCategoryColumns.NAME);
+			if (entry.containsKey(ToDoCategoryColumns._ID)) {
 			    // Has this entry been modified?
 			    if (!newName.equals(entry.get(ORIG_NAME))) {
 				Uri itemUri = ContentUris.withAppendedId(
 					categoryUri,
-					(Long) entry.get(ToDoCategory._ID));
+					(Long) entry.get(ToDoCategoryColumns._ID));
 				if (newName.length() == 0) {
 				    cr.delete(itemUri, null, null);
 				} else {
 				    ContentValues values = new ContentValues();
-				    values.put(ToDoCategory.NAME, newName);
+				    values.put(ToDoCategoryColumns.NAME, newName);
 				    cr.update(itemUri, values, null, null);
 				}
 			    }
 			} else {
 			    if (newName.length() > 0) {
 				ContentValues values = new ContentValues();
-				values.put(ToDoCategory.NAME, newName);
+				values.put(ToDoCategoryColumns.NAME, newName);
 				cr.insert(categoryUri, values);
 			    }
 			}

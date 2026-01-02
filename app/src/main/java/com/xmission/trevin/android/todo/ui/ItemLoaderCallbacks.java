@@ -16,8 +16,8 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.DEFAULT_SORT_ORDER;
-import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.USER_SORT_ORDERS;
+import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.DEFAULT_SORT_ORDER;
+import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.USER_SORT_ORDERS;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.ITEM_PROJECTION;
 
 import android.annotation.TargetApi;

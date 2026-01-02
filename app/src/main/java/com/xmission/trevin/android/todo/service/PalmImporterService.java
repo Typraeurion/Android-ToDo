@@ -22,9 +22,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 
 import android.app.IntentService;
@@ -149,16 +151,16 @@ public class PalmImporterService extends IntentService implements
     /** Data file schema resource ID */
     private int dataResourceID;
 
-    /** Number of fields per ToDo entry */
+    /** Number of fields per ToDoSchema entry */
     private int dataFieldsPerEntry;
 
-    /** Position of the record ID in the ToDo entry */
+    /** Position of the record ID in the ToDoSchema entry */
     private int dataRecordIDPosition;
 
-    /** Position of the status field in the ToDo entry */
+    /** Position of the status field in the ToDoSchema entry */
     private int dataRecordStatusPosition;
 
-    /** Position of the placement field in the ToDo entry */
+    /** Position of the placement field in the ToDoSchema entry */
     private int dataRecordPlacementPosition;
 
     /** Field types in the schema */
@@ -740,10 +742,10 @@ public class PalmImporterService extends IntentService implements
 	categoryMap = new SparseArray<>();
 	// There is an implicit category entry for Unfiled
 	CategoryEntry unfiled = new CategoryEntry();
-	unfiled.ID = (int) ToDoCategory.UNFILED;
+	unfiled.ID = (int) ToDoSchema.ToDoCategoryColumns.UNFILED;
 	unfiled.longName = "Unfiled";
 	unfiled.shortName = "Unfiled";
-	unfiled.newID = ToDoCategory.UNFILED;
+	unfiled.newID = ToDoSchema.ToDoCategoryColumns.UNFILED;
 	categoryMap.put(unfiled.ID, unfiled);
 	for (i = 0; i < catCount; i++) {
 	    dataCategories[i] = readCategoryEntry(stream);
@@ -1189,11 +1191,11 @@ public class PalmImporterService extends IntentService implements
 	Map<Long,String> categoryIDMap = new HashMap<>();
 	Map<String,Long> categoryNameMap = new HashMap<>();
 	ContentResolver resolver = getContentResolver();
-	Cursor c = resolver.query(ToDoCategory.CONTENT_URI, new String[] {
-		ToDoCategory._ID, ToDoCategory.NAME }, null, null, null);
+	Cursor c = resolver.query(ToDoCategoryColumns.CONTENT_URI, new String[] {
+		ToDoCategoryColumns._ID, ToDoSchema.ToDoCategoryColumns.NAME }, null, null, null);
 	while (c.moveToNext()) {
-	    long id = c.getLong(c.getColumnIndex(ToDoCategory._ID));
-	    String name = c.getString(c.getColumnIndex(ToDoCategory.NAME));
+	    long id = c.getLong(c.getColumnIndex(ToDoSchema.ToDoCategoryColumns._ID));
+	    String name = c.getString(c.getColumnIndex(ToDoSchema.ToDoCategoryColumns.NAME));
 	    categoryIDMap.put(id, name);
 	    categoryNameMap.put(name, id);
 	}
@@ -1204,13 +1206,13 @@ public class PalmImporterService extends IntentService implements
 	switch (importType) {
 	case CLEAN:
 	    Log.d(LOG_TAG, ".mergeCategories: removing all existing categories");
-	    resolver.delete(ToDoCategory.CONTENT_URI, null, null);
+	    resolver.delete(ToDoCategoryColumns.CONTENT_URI, null, null);
 	    for (i = 0; i < dataCategories.length; i++) {
 		Log.d(LOG_TAG, ".mergeCategories: adding \""
 			+ dataCategories[i].longName + "\"");
-		values.put(ToDoCategory._ID, dataCategories[i].newID);
-		values.put(ToDoCategory.NAME, dataCategories[i].longName);
-		resolver.insert(ToDoCategory.CONTENT_URI, values);
+		values.put(ToDoSchema.ToDoCategoryColumns._ID, dataCategories[i].newID);
+		values.put(ToDoCategoryColumns.NAME, dataCategories[i].longName);
+		resolver.insert(ToDoSchema.ToDoCategoryColumns.CONTENT_URI, values);
 		importCount = dataCategories.length + dataToDos.length + i + 1;
 	    }
 	    break;
@@ -1222,18 +1224,18 @@ public class PalmImporterService extends IntentService implements
 			Log.d(LOG_TAG, ".mergeCategories: replacing \""
 				+ categoryIDMap.get(dataCategories[i].newID)
 				+ "\" with \"" + dataCategories[i].longName + "\"");
-			values.remove(ToDoCategory._ID);
-			values.put(ToDoCategory.NAME, dataCategories[i].longName);
+			values.remove(ToDoCategoryColumns._ID);
+			values.put(ToDoSchema.ToDoCategoryColumns.NAME, dataCategories[i].longName);
 			resolver.update(ContentUris.withAppendedId(
-				ToDoCategory.CONTENT_URI, dataCategories[i].ID),
+				ToDoSchema.ToDoCategoryColumns.CONTENT_URI, dataCategories[i].ID),
 				values, null, null);
 		    }
 		} else {
 		    Log.d(LOG_TAG, ".mergeCategories: adding \""
 			    + dataCategories[i].longName + "\"");
-		    values.put(ToDoCategory._ID, dataCategories[i].newID);
-		    values.put(ToDoCategory.NAME, dataCategories[i].longName);
-		    resolver.insert(ToDoCategory.CONTENT_URI, values);
+		    values.put(ToDoCategoryColumns._ID, dataCategories[i].newID);
+		    values.put(ToDoCategoryColumns.NAME, dataCategories[i].longName);
+		    resolver.insert(ToDoCategoryColumns.CONTENT_URI, values);
 		}
 		importCount = dataCategories.length + dataToDos.length + i + 1;
 	    }
@@ -1242,7 +1244,7 @@ public class PalmImporterService extends IntentService implements
 	    // Since we can't have duplicate category names,
 	    // adding is the same as merging.
 	case ADD:
-	    values.remove(ToDoCategory._ID);
+	    values.remove(ToDoCategoryColumns._ID);
 	    for (i = 0; i < dataCategories.length; i++) {
 		if (categoryNameMap.containsKey(dataCategories[i].longName)) {
 		    dataCategories[i].newID =
@@ -1255,8 +1257,8 @@ public class PalmImporterService extends IntentService implements
 		} else {
 		    Log.d(LOG_TAG, ".mergeCategories: adding \""
 			    + dataCategories[i].longName + "\"");
-		    values.put(ToDoCategory.NAME, dataCategories[i].longName);
-		    Uri newItem = resolver.insert(ToDoCategory.CONTENT_URI, values);
+		    values.put(ToDoSchema.ToDoCategoryColumns.NAME, dataCategories[i].longName);
+		    Uri newItem = resolver.insert(ToDoCategoryColumns.CONTENT_URI, values);
 		    dataCategories[i].newID = Long.parseLong(
 			    newItem.getPathSegments().get(1));
 		}
@@ -1292,7 +1294,7 @@ public class PalmImporterService extends IntentService implements
 	    if (importType == ImportType.CLEAN) {
 		// Wipe them all out
 		Log.d(LOG_TAG, ".mergeToDos: removing all existing To Do items");
-		resolver.delete(ToDoItem.CONTENT_URI, null, null);
+		resolver.delete(ToDoSchema.ToDoItemColumns.CONTENT_URI, null, null);
 	    }
 
 	    // Merge the categories first
@@ -1301,17 +1303,17 @@ public class PalmImporterService extends IntentService implements
 	    currentMode = OpMode.ITEMS;
 
 	    final String[] EXISTING_ITEM_PROJECTION = {
-		    ToDoItem._ID, ToDoItem.CATEGORY_NAME, ToDoItem.DESCRIPTION,
-		    ToDoItem.CREATE_TIME };
+		    ToDoSchema.ToDoItemColumns._ID, ToDoSchema.ToDoItemColumns.CATEGORY_NAME, ToDoItemColumns.DESCRIPTION,
+		    ToDoItemColumns.CREATE_TIME };
 
 	    // Find the highest available record ID
-	    Cursor c = resolver.query(ToDoItem.CONTENT_URI,
+	    Cursor c = resolver.query(ToDoSchema.ToDoItemColumns.CONTENT_URI,
 		    EXISTING_ITEM_PROJECTION, null, null,
-		    // The table prefix is required here because
-		    // the provider joins the to-do table with the category table.
-		    ToDoProvider.TODO_TABLE_NAME + "." + ToDoItem._ID + " DESC");
+		    // The table prefix is required here because the
+		    // repository joins the to-do table with the category table.
+		    ToDoRepositoryImpl.TODO_TABLE_NAME + "." + ToDoItemColumns._ID + " DESC");
 	    if (c.moveToFirst()) {
-		long nextID = c.getLong(c.getColumnIndex(ToDoItem._ID));
+		long nextID = c.getLong(c.getColumnIndex(ToDoItemColumns._ID));
 		if (nextID >= nextFreeRecordID)
 		    nextFreeRecordID = nextID + 1;
 	    }
@@ -1329,18 +1331,18 @@ public class PalmImporterService extends IntentService implements
 		     * it contains; for others, we check these fields.
 		     */
 		    existingRecord.clear();
-		    c = resolver.query(ContentUris.withAppendedId(ToDoItem.CONTENT_URI,
+		    c = resolver.query(ContentUris.withAppendedId(ToDoSchema.ToDoItemColumns.CONTENT_URI,
 			    dataToDos[i].ID), EXISTING_ITEM_PROJECTION,
 			    null, null, null);
 		    if (c.moveToFirst()) {
-			existingRecord.put(ToDoItem.DESCRIPTION,
-				c.getString(c.getColumnIndex(ToDoItem.DESCRIPTION)));
-			existingRecord.put(ToDoItem.CATEGORY_NAME,
-				c.getString(c.getColumnIndex(ToDoItem.CATEGORY_NAME)));
+			existingRecord.put(ToDoItemColumns.DESCRIPTION,
+				c.getString(c.getColumnIndex(ToDoItemColumns.DESCRIPTION)));
+			existingRecord.put(ToDoSchema.ToDoItemColumns.CATEGORY_NAME,
+				c.getString(c.getColumnIndex(ToDoSchema.ToDoItemColumns.CATEGORY_NAME)));
 		    }
 		    c.close();
 		}
-		values.put(ToDoItem.CREATE_TIME, System.currentTimeMillis());
+		values.put(ToDoSchema.ToDoItemColumns.CREATE_TIME, System.currentTimeMillis());
 		switch (importType) {
 		case OVERWRITE:
 		    if (existingRecord.size() > 0) {
@@ -1350,36 +1352,36 @@ public class PalmImporterService extends IntentService implements
 				    ".mergeToDos: replacing existing record"
 				    + " %d [%s] \"%s\" with [%s] \"%s\"",
 				    dataToDos[i].ID,
-				    existingRecord.getAsString(ToDoItem.CATEGORY_NAME),
-				    existingRecord.getAsString(ToDoItem.DESCRIPTION),
+				    existingRecord.getAsString(ToDoSchema.ToDoItemColumns.CATEGORY_NAME),
+				    existingRecord.getAsString(ToDoItemColumns.DESCRIPTION),
 				    categoryMap.get(dataToDos[i].categoryIndex).longName,
 				    dataToDos[i].description));
 			}
-			resolver.delete(ContentUris.withAppendedId(ToDoItem.CONTENT_URI,
+			resolver.delete(ContentUris.withAppendedId(ToDoItemColumns.CONTENT_URI,
 				dataToDos[i].ID), null, null);
 		    }
 		    // Fall through
 		case CLEAN:
-		    values.put(ToDoItem._ID, dataToDos[i].ID);
+		    values.put(ToDoItemColumns._ID, dataToDos[i].ID);
 		    break;
 		case MERGE:
 		    if ((existingRecord.size() > 0) &&
-			    existingRecord.getAsString(ToDoItem.CATEGORY_NAME).equals(
+			    existingRecord.getAsString(ToDoSchema.ToDoItemColumns.CATEGORY_NAME).equals(
 				    categoryMap.get(dataToDos[i].categoryIndex).longName) &&
-				    existingRecord.getAsString(ToDoItem.DESCRIPTION).equals(
+				    existingRecord.getAsString(ToDoSchema.ToDoItemColumns.DESCRIPTION).equals(
 					    dataToDos[i].description)) {
 			if (dataToDos.length < 64) {
 			    Log.d(LOG_TAG, String.format(
 				    ".mergeToDos: updating record %d [%s] \"%s\"",
 				    dataToDos[i].ID,
-				    existingRecord.getAsString(ToDoItem.CATEGORY_NAME),
-				    existingRecord.getAsString(ToDoItem.DESCRIPTION)));
+				    existingRecord.getAsString(ToDoSchema.ToDoItemColumns.CATEGORY_NAME),
+				    existingRecord.getAsString(ToDoItemColumns.DESCRIPTION)));
 			}
-			values.put(ToDoItem.CREATE_TIME,
-				existingRecord.getAsLong(ToDoItem.CREATE_TIME));
-			resolver.delete(ContentUris.withAppendedId(ToDoItem.CONTENT_URI,
+			values.put(ToDoSchema.ToDoItemColumns.CREATE_TIME,
+				existingRecord.getAsLong(ToDoSchema.ToDoItemColumns.CREATE_TIME));
+			resolver.delete(ContentUris.withAppendedId(ToDoItemColumns.CONTENT_URI,
 				dataToDos[i].ID), null, null);
-			values.put(ToDoItem._ID, dataToDos[i].ID);
+			values.put(ToDoSchema.ToDoItemColumns._ID, dataToDos[i].ID);
 		    } else {
 			if (dataToDos.length < 64) {
 			    Log.d(LOG_TAG, String.format(
@@ -1388,12 +1390,12 @@ public class PalmImporterService extends IntentService implements
 				    dataToDos[i].description, dataToDos[i].ID,
 				    nextFreeRecordID));
 			}
-			values.put(ToDoItem._ID, nextFreeRecordID++);
+			values.put(ToDoItemColumns._ID, nextFreeRecordID++);
 		    }
 		    break;
 		case ADD:
 		    if (existingRecord.size() == 0)
-			values.put(ToDoItem._ID, dataToDos[i].ID);
+			values.put(ToDoSchema.ToDoItemColumns._ID, dataToDos[i].ID);
 		    else {
 			if (dataToDos.length < 64) {
 			    Log.d(LOG_TAG, String.format(
@@ -1402,7 +1404,7 @@ public class PalmImporterService extends IntentService implements
 				    dataToDos[i].description, dataToDos[i].ID,
 				    nextFreeRecordID));
 			}
-			values.put(ToDoItem._ID, nextFreeRecordID++);
+			values.put(ToDoItemColumns._ID, nextFreeRecordID++);
 		    }
 		    break;
 		}
@@ -1410,138 +1412,138 @@ public class PalmImporterService extends IntentService implements
 		// Set all of the other values
 		int privacy = dataToDos[i].isPrivate ?
 			(newCrypt.hasKey() ? 2 : 1) : 0;
-		values.put(ToDoItem.DESCRIPTION,
+		values.put(ToDoSchema.ToDoItemColumns.DESCRIPTION,
 			dataToDos[i].description.replace("\r", ""));
 		if ((dataToDos[i].note != null) &&
 			(dataToDos[i].note.length() > 0))
-		    values.put(ToDoItem.NOTE, dataToDos[i].note.replace("\r", ""));
+		    values.put(ToDoItemColumns.NOTE, dataToDos[i].note.replace("\r", ""));
 		if (privacy == 2) {
 		    try {
 			byte[] encryptedDescription = newCrypt.encrypt(
-				values.getAsString(ToDoItem.DESCRIPTION));
-			if (values.containsKey(ToDoItem.NOTE)) {
+				values.getAsString(ToDoItemColumns.DESCRIPTION));
+			if (values.containsKey(ToDoSchema.ToDoItemColumns.NOTE)) {
 			    byte[] encryptedNote = newCrypt.encrypt(
-				    values.getAsString(ToDoItem.NOTE));
-			    values.put(ToDoItem.NOTE, encryptedNote);
+				    values.getAsString(ToDoItemColumns.NOTE));
+			    values.put(ToDoSchema.ToDoItemColumns.NOTE, encryptedNote);
 			}
-			values.put(ToDoItem.DESCRIPTION, encryptedDescription);
+			values.put(ToDoSchema.ToDoItemColumns.DESCRIPTION, encryptedDescription);
 		    } catch (GeneralSecurityException gsx) {
 			privacy = 1;
 		    }
 		} else {
 		}
-		values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+		values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 		if ((dataToDos[i].dueDate < 0) ||
 			(dataToDos[i].dueDate > ToDoEntry.MAX_DATE))
-		    values.putNull(ToDoItem.DUE_TIME);
+		    values.putNull(ToDoSchema.ToDoItemColumns.DUE_TIME);
 		else
 		    // Add 24 hours - 1 second to the due date so that
 		    // it doesn't show as overdue until the end of the day.
-		    values.put(ToDoItem.DUE_TIME,
+		    values.put(ToDoSchema.ToDoItemColumns.DUE_TIME,
 			    (dataToDos[i].dueDate + 86399) * 1000);
 		if ((dataToDos[i].completionDate < 0) ||
 			(dataToDos[i].completionDate > ToDoEntry.MAX_DATE))
-		    values.putNull(ToDoItem.COMPLETED_TIME);
+		    values.putNull(ToDoItemColumns.COMPLETED_TIME);
 		else
-		    values.put(ToDoItem.COMPLETED_TIME,
+		    values.put(ToDoSchema.ToDoItemColumns.COMPLETED_TIME,
 			    dataToDos[i].completionDate * 1000);
-		values.put(ToDoItem.CHECKED, dataToDos[i].completed ? 1 : 0);
-		values.put(ToDoItem.PRIORITY, dataToDos[i].priority);
-		values.put(ToDoItem.PRIVATE, privacy);
-		values.put(ToDoItem.CATEGORY_ID,
+		values.put(ToDoSchema.ToDoItemColumns.CHECKED, dataToDos[i].completed ? 1 : 0);
+		values.put(ToDoSchema.ToDoItemColumns.PRIORITY, dataToDos[i].priority);
+		values.put(ToDoSchema.ToDoItemColumns.PRIVATE, privacy);
+		values.put(ToDoItemColumns.CATEGORY_ID,
 			categoryMap.get(dataToDos[i].categoryIndex).newID);
 		if (dataToDos[i].hasAlarm) {
-		    values.put(ToDoItem.ALARM_DAYS_EARLIER,
+		    values.put(ToDoItemColumns.ALARM_DAYS_EARLIER,
 			    dataToDos[i].alarmDaysInAdvance);
 		    Calendar alarmShift = Calendar.getInstance();
 		    alarmShift.setTimeInMillis(dataToDos[i].alarmTime * 1000);
 		    int secondsAfterMidnight = (
 			    alarmShift.get(Calendar.HOUR_OF_DAY) * 3600
 			    + alarmShift.get(Calendar.MINUTE) * 60);
-		    values.put(ToDoItem.ALARM_TIME, secondsAfterMidnight * 1000);
+		    values.put(ToDoItemColumns.ALARM_TIME, secondsAfterMidnight * 1000);
 		} else {
-		    values.putNull(ToDoItem.ALARM_DAYS_EARLIER);
-		    values.putNull(ToDoItem.ALARM_TIME);
+		    values.putNull(ToDoItemColumns.ALARM_DAYS_EARLIER);
+		    values.putNull(ToDoItemColumns.ALARM_TIME);
 		}
 		if (dataToDos[i].repeat == null)
-		    values.put(ToDoItem.REPEAT_INTERVAL, ToDoItem.REPEAT_NONE);
+		    values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL, ToDoItemColumns.REPEAT_NONE);
 		else {
 		    switch (dataToDos[i].repeat.type) {
 		    case RepeatEvent.TYPE_REPEAT_BY_DAY:
-			values.put(ToDoItem.REPEAT_INTERVAL,
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL,
 				dataToDos[i].repeatAfterCompleted
-				? ToDoItem.REPEAT_DAY_AFTER
-					: ToDoItem.REPEAT_DAILY);
-			values.putNull(ToDoItem.REPEAT_WEEK_DAYS);
-			values.putNull(ToDoItem.REPEAT_DAY);
-			values.putNull(ToDoItem.REPEAT_WEEK);
-			values.putNull(ToDoItem.REPEAT_MONTH);
+				? ToDoItemColumns.REPEAT_DAY_AFTER
+					: ToDoItemColumns.REPEAT_DAILY);
+			values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS);
+			values.putNull(ToDoItemColumns.REPEAT_DAY);
+			values.putNull(ToDoItemColumns.REPEAT_WEEK);
+			values.putNull(ToDoItemColumns.REPEAT_MONTH);
 			break;
 		    case RepeatEvent.TYPE_REPEAT_BY_WEEK:
 			if (dataToDos[i].repeatAfterCompleted) {
-			    values.put(ToDoItem.REPEAT_INTERVAL,
-				    ToDoItem.REPEAT_WEEK_AFTER);
-			    values.putNull(ToDoItem.REPEAT_WEEK_DAYS);
+			    values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL,
+				    ToDoSchema.ToDoItemColumns.REPEAT_WEEK_AFTER);
+			    values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS);
 			} else {
-			    values.put(ToDoItem.REPEAT_INTERVAL,
-				    ToDoItem.REPEAT_WEEKLY);
-			    values.put(ToDoItem.REPEAT_WEEK_DAYS,
+			    values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL,
+				    ToDoSchema.ToDoItemColumns.REPEAT_WEEKLY);
+			    values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS,
 				    dataToDos[i].repeat.dayOfWeekBitmap);
 			}
-			values.putNull(ToDoItem.REPEAT_DAY);
-			values.putNull(ToDoItem.REPEAT_WEEK);
-			values.putNull(ToDoItem.REPEAT_MONTH);
+			values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_DAY);
+			values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_WEEK);
+			values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_MONTH);
 			break;
 		    case RepeatEvent.TYPE_REPEAT_BY_MONTH_DAY:
 			// These are never "after last completed"
-			values.put(ToDoItem.REPEAT_INTERVAL,
-				ToDoItem.REPEAT_MONTHLY_ON_DAY);
-			values.putNull(ToDoItem.REPEAT_WEEK_DAYS);
-			values.put(ToDoItem.REPEAT_DAY,
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL,
+				ToDoItemColumns.REPEAT_MONTHLY_ON_DAY);
+			values.putNull(ToDoItemColumns.REPEAT_WEEK_DAYS);
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_DAY,
 				dataToDos[i].repeat.dayOfWeek);
-			values.put(ToDoItem.REPEAT_WEEK,
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK,
 				dataToDos[i].repeat.weekOfMonth);
 			break;
 		    case RepeatEvent.TYPE_REPEAT_BY_MONTH_DATE:
-			values.put(ToDoItem.REPEAT_INTERVAL,
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL,
 				dataToDos[i].repeatAfterCompleted
-				? ToDoItem.REPEAT_MONTH_AFTER
-					: ToDoItem.REPEAT_MONTHLY_ON_DATE);
-			values.put(ToDoItem.REPEAT_WEEK_DAYS,
-				ToDoItem.REPEAT_ALL_WEEK);
-			values.put(ToDoItem.REPEAT_DAY,
+				? ToDoSchema.ToDoItemColumns.REPEAT_MONTH_AFTER
+					: ToDoItemColumns.REPEAT_MONTHLY_ON_DATE);
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS,
+				ToDoItemColumns.REPEAT_ALL_WEEK);
+			values.put(ToDoItemColumns.REPEAT_DAY,
 				dataToDos[i].repeat.dateOfMonth);
-			values.putNull(ToDoItem.REPEAT_WEEK);
-			values.putNull(ToDoItem.REPEAT_MONTH);
+			values.putNull(ToDoItemColumns.REPEAT_WEEK);
+			values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_MONTH);
 			break;
 		    case RepeatEvent.TYPE_REPEAT_BY_YEAR:
-			values.put(ToDoItem.REPEAT_INTERVAL,
+			values.put(ToDoItemColumns.REPEAT_INTERVAL,
 				dataToDos[i].repeatAfterCompleted
-				? ToDoItem.REPEAT_YEAR_AFTER
-					: ToDoItem.REPEAT_YEARLY_ON_DATE);
-			values.put(ToDoItem.REPEAT_WEEK_DAYS,
-				ToDoItem.REPEAT_ALL_WEEK);
-			values.put(ToDoItem.REPEAT_DAY,
+				? ToDoItemColumns.REPEAT_YEAR_AFTER
+					: ToDoItemColumns.REPEAT_YEARLY_ON_DATE);
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS,
+				ToDoItemColumns.REPEAT_ALL_WEEK);
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_DAY,
 				dataToDos[i].repeat.dateOfMonth);
-			values.putNull(ToDoItem.REPEAT_WEEK);
-			values.put(ToDoItem.REPEAT_MONTH,
+			values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_WEEK);
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_MONTH,
 				dataToDos[i].repeat.monthOfYear);
 			break;
 		    }
-		    values.putNull(ToDoItem.REPEAT_DAY2);
-		    values.putNull(ToDoItem.REPEAT_WEEK2);
-		    values.put(ToDoItem.REPEAT_INCREMENT,
+		    values.putNull(ToDoItemColumns.REPEAT_DAY2);
+		    values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_WEEK2);
+		    values.put(ToDoSchema.ToDoItemColumns.REPEAT_INCREMENT,
 			    dataToDos[i].repeat.interval);
 		    if ((dataToDos[i].repeat.repeatUntil < 0) ||
 			    (dataToDos[i].repeat.repeatUntil > ToDoEntry.MAX_DATE))
-			values.putNull(ToDoItem.REPEAT_END);
+			values.putNull(ToDoItemColumns.REPEAT_END);
 		    else
-			values.put(ToDoItem.REPEAT_END,
+			values.put(ToDoSchema.ToDoItemColumns.REPEAT_END,
 				dataToDos[i].repeat.repeatUntil * 1000);
 		}
 
 		if (importType != ImportType.TEST)
-		    resolver.insert(ToDoItem.CONTENT_URI, values);
+		    resolver.insert(ToDoSchema.ToDoItemColumns.CONTENT_URI, values);
 
 		importCount = 2 * dataCategories.length + dataToDos.length + i + 1;
 	    }

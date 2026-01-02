@@ -16,9 +16,8 @@
  */
 package com.xmission.trevin.android.todo.provider;
 
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoMetadata;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,15 +35,20 @@ import androidx.annotation.NonNull;
  * Provides access to a database of To Do items and categories.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated Replacing this with a {@link ToDoRepository}
  */
 public class ToDoProvider extends ContentProvider {
 
     private static final String TAG = "ToDoProvider";
 
-    static final String DATABASE_NAME = "to_do.db";
+    /** @deprecated replace with {@link ToDoRepositoryImpl#DATABASE_VERSION} */
     public static final int DATABASE_VERSION = 3;
+    /** @deprecated replace with {@link ToDoRepositoryImpl#CATEGORY_TABLE_NAME} */
     static final String CATEGORY_TABLE_NAME = "category";
+    /** @deprecated replace with {@link ToDoRepositoryImpl#METADATA_TABLE_NAME} */
     static final String METADATA_TABLE_NAME = "misc";
+    /** @deprecated replace with {@link ToDoRepositoryImpl#TODO_TABLE_NAME} */
     public static final String TODO_TABLE_NAME = "todo";
 
     /** Projection fields which are available in a category query */
@@ -88,13 +92,13 @@ public class ToDoProvider extends ContentProvider {
         case CATEGORIES:
             qb.setTables(CATEGORY_TABLE_NAME);
             qb.setProjectionMap(categoryProjectionMap);
-            orderBy = ToDoCategory.DEFAULT_SORT_ORDER;
+            orderBy = ToDoSchema.ToDoCategoryColumns.DEFAULT_SORT_ORDER;
             break;
 
         case CATEGORY_ID:
             qb.setTables(CATEGORY_TABLE_NAME);
             qb.setProjectionMap(categoryProjectionMap);
-            qb.appendWhere(ToDoCategory._ID + " = "
+            qb.appendWhere(ToDoCategoryColumns._ID + " = "
         	    + uri.getPathSegments().get(1));
             orderBy = null;
             break;
@@ -102,31 +106,31 @@ public class ToDoProvider extends ContentProvider {
         case METADATA:
             qb.setTables(METADATA_TABLE_NAME);
             qb.setProjectionMap(metadataProjectionMap);
-            orderBy = ToDoMetadata.NAME;
+            orderBy = ToDoSchema.ToDoMetadataColumns.NAME;
             break;
 
         case METADATUM_ID:
             qb.setTables(METADATA_TABLE_NAME);
             qb.setProjectionMap(metadataProjectionMap);
-            qb.appendWhere(ToDoMetadata._ID + " = "
+            qb.appendWhere(ToDoSchema.ToDoMetadataColumns._ID + " = "
         	    + uri.getPathSegments().get(1));
             orderBy = null;
             break;
 
         case TODOS:
             qb.setTables(TODO_TABLE_NAME + " JOIN " + CATEGORY_TABLE_NAME
-        	    + " ON (" + TODO_TABLE_NAME + "." + ToDoItem.CATEGORY_ID
-        	    + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategory._ID + ")");
+        	    + " ON (" + TODO_TABLE_NAME + "." + ToDoSchema.ToDoItemColumns.CATEGORY_ID
+        	    + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns._ID + ")");
             qb.setProjectionMap(itemProjectionMap);
-            orderBy = ToDoItem.DEFAULT_SORT_ORDER;
+            orderBy = ToDoSchema.ToDoItemColumns.DEFAULT_SORT_ORDER;
             break;
 
         case TODO_ID:
             qb.setTables(TODO_TABLE_NAME + " JOIN " + CATEGORY_TABLE_NAME
-        	    + " ON (" + TODO_TABLE_NAME + "." + ToDoItem.CATEGORY_ID
-        	    + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategory._ID + ")");
+        	    + " ON (" + TODO_TABLE_NAME + "." + ToDoItemColumns.CATEGORY_ID
+        	    + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns._ID + ")");
             qb.setProjectionMap(itemProjectionMap);
-            qb.appendWhere(TODO_TABLE_NAME + "." + ToDoItem._ID
+            qb.appendWhere(TODO_TABLE_NAME + "." + ToDoSchema.ToDoItemColumns._ID
         	    + " = " + uri.getPathSegments().get(1));
             orderBy = null;
             break;
@@ -153,22 +157,22 @@ public class ToDoProvider extends ContentProvider {
                 getClass().getSimpleName(), uri));
         switch (sUriMatcher.match(uri)) {
         case CATEGORIES:
-            return ToDoCategory.CONTENT_TYPE;
+            return ToDoCategoryColumns.CONTENT_TYPE;
 
         case CATEGORY_ID:
-            return ToDoCategory.CONTENT_ITEM_TYPE;
+            return ToDoSchema.ToDoCategoryColumns.CONTENT_ITEM_TYPE;
 
         case METADATA:
-            return ToDoMetadata.CONTENT_TYPE;
+            return ToDoSchema.ToDoMetadataColumns.CONTENT_TYPE;
 
         case METADATUM_ID:
-            return ToDoMetadata.CONTENT_ITEM_TYPE;
+            return ToDoSchema.ToDoMetadataColumns.CONTENT_ITEM_TYPE;
 
         case TODOS:
-            return ToDoItem.CONTENT_TYPE;
+            return ToDoSchema.ToDoItemColumns.CONTENT_TYPE;
 
         case TODO_ID:
-            return ToDoItem.CONTENT_ITEM_TYPE;
+            return ToDoItemColumns.CONTENT_ITEM_TYPE;
 
         default:
             throw new IllegalArgumentException("Unknown URI " + uri);
@@ -197,14 +201,14 @@ public class ToDoProvider extends ContentProvider {
         case CATEGORIES:
 
             // Make sure that the fields are all set
-            if (!values.containsKey(ToDoCategory.NAME))
-        	throw new NullPointerException(ToDoCategory.NAME);
+            if (!values.containsKey(ToDoCategoryColumns.NAME))
+        	throw new NullPointerException(ToDoCategoryColumns.NAME);
 
             db = mOpenHelper.getWritableDatabase();
-            rowId = db.insert(CATEGORY_TABLE_NAME, ToDoCategory.NAME, values);
+            rowId = db.insert(CATEGORY_TABLE_NAME, ToDoCategoryColumns.NAME, values);
             if (rowId > 0) {
         	Uri categoryUri = ContentUris.withAppendedId(
-        		ToDoCategory.CONTENT_URI, rowId);
+        		ToDoSchema.ToDoCategoryColumns.CONTENT_URI, rowId);
         	getContext().getContentResolver().notifyChange(categoryUri, null);
         	return categoryUri;
             }
@@ -212,14 +216,14 @@ public class ToDoProvider extends ContentProvider {
 
         case METADATA:
 
-            if (!values.containsKey(ToDoMetadata.NAME))
-        	throw new NullPointerException(ToDoMetadata.NAME);
+            if (!values.containsKey(ToDoSchema.ToDoMetadataColumns.NAME))
+        	throw new NullPointerException(ToDoSchema.ToDoMetadataColumns.NAME);
 
             db = mOpenHelper.getWritableDatabase();
-            rowId = db.insert(METADATA_TABLE_NAME, ToDoMetadata.NAME, values);
+            rowId = db.insert(METADATA_TABLE_NAME, ToDoSchema.ToDoMetadataColumns.NAME, values);
             if (rowId > 0) {
         	Uri datUri = ContentUris.withAppendedId(
-        		ToDoMetadata.CONTENT_URI, rowId);
+        		ToDoSchema.ToDoMetadataColumns.CONTENT_URI, rowId);
         	getContext().getContentResolver().notifyChange(datUri, null);
         	return datUri;
             }
@@ -230,34 +234,34 @@ public class ToDoProvider extends ContentProvider {
             long now = System.currentTimeMillis();
 
             // Make sure that the non-null fields are all set
-            if (!values.containsKey(ToDoItem.DESCRIPTION))
-        	throw new NullPointerException(ToDoItem.DESCRIPTION);
+            if (!values.containsKey(ToDoSchema.ToDoItemColumns.DESCRIPTION))
+        	throw new NullPointerException(ToDoSchema.ToDoItemColumns.DESCRIPTION);
 
-            if (!values.containsKey(ToDoItem.CREATE_TIME))
-        	values.put(ToDoItem.CREATE_TIME, now);
+            if (!values.containsKey(ToDoSchema.ToDoItemColumns.CREATE_TIME))
+        	values.put(ToDoSchema.ToDoItemColumns.CREATE_TIME, now);
 
-            if (!values.containsKey(ToDoItem.MOD_TIME))
-        	values.put(ToDoItem.MOD_TIME, now);
+            if (!values.containsKey(ToDoItemColumns.MOD_TIME))
+        	values.put(ToDoItemColumns.MOD_TIME, now);
 
-            if (!values.containsKey(ToDoItem.CHECKED))
-        	values.put(ToDoItem.CHECKED, 0);
+            if (!values.containsKey(ToDoSchema.ToDoItemColumns.CHECKED))
+        	values.put(ToDoSchema.ToDoItemColumns.CHECKED, 0);
 
-            if (!values.containsKey(ToDoItem.PRIORITY))
-        	values.put(ToDoItem.PRIORITY, 1);
+            if (!values.containsKey(ToDoSchema.ToDoItemColumns.PRIORITY))
+        	values.put(ToDoItemColumns.PRIORITY, 1);
 
-            if (!values.containsKey(ToDoItem.PRIVATE))
-        	values.put(ToDoItem.PRIVATE, 0);
+            if (!values.containsKey(ToDoItemColumns.PRIVATE))
+        	values.put(ToDoSchema.ToDoItemColumns.PRIVATE, 0);
 
-            if (!values.containsKey(ToDoItem.CATEGORY_ID))
-        	values.put(ToDoItem.CATEGORY_ID, ToDoCategory.UNFILED);
+            if (!values.containsKey(ToDoSchema.ToDoItemColumns.CATEGORY_ID))
+        	values.put(ToDoSchema.ToDoItemColumns.CATEGORY_ID, ToDoCategoryColumns.UNFILED);
 
-            if (!values.containsKey(ToDoItem.REPEAT_INTERVAL))
-        	values.put(ToDoItem.REPEAT_INTERVAL, ToDoItem.REPEAT_NONE);
+            if (!values.containsKey(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL))
+        	values.put(ToDoItemColumns.REPEAT_INTERVAL, ToDoItemColumns.REPEAT_NONE);
 
             db = mOpenHelper.getWritableDatabase();
-            rowId = db.insert(TODO_TABLE_NAME, ToDoItem.DESCRIPTION, values);
+            rowId = db.insert(TODO_TABLE_NAME, ToDoItemColumns.DESCRIPTION, values);
             if (rowId > 0) {
-        	Uri todoUri = ContentUris.withAppendedId(ToDoItem.CONTENT_URI, rowId);
+        	Uri todoUri = ContentUris.withAppendedId(ToDoItemColumns.CONTENT_URI, rowId);
         	getContext().getContentResolver().notifyChange(todoUri, null);
         	return todoUri;
             }
@@ -276,34 +280,34 @@ public class ToDoProvider extends ContentProvider {
         switch (sUriMatcher.match(uri)) {
         case CATEGORIES:
             // Make sure we don't delete the default category
-            where = ToDoCategory._ID + " != " + ToDoCategory.UNFILED + (
+            where = ToDoCategoryColumns._ID + " != " + ToDoSchema.ToDoCategoryColumns.UNFILED + (
         	    TextUtils.isEmpty(where) ? "" : (" AND (" + where + ")"));
             count = db.delete(CATEGORY_TABLE_NAME, where, whereArgs);
             if (count > 0) {
         	// Change the category of all To Do items to Unfiled
         	ContentValues categoryUpdate = new ContentValues();
-        	categoryUpdate.put(ToDoItem.CATEGORY_ID, ToDoCategory.UNFILED);
-        	update(ToDoItem.CONTENT_URI, categoryUpdate, null, null);
+        	categoryUpdate.put(ToDoSchema.ToDoItemColumns.CATEGORY_ID, ToDoCategoryColumns.UNFILED);
+        	update(ToDoSchema.ToDoItemColumns.CONTENT_URI, categoryUpdate, null, null);
             }
             break;
 
         case CATEGORY_ID:
             long categoryId = Long.parseLong(uri.getPathSegments().get(1));
-            if (categoryId == ToDoCategory.UNFILED)
+            if (categoryId == ToDoSchema.ToDoCategoryColumns.UNFILED)
         	// Don't delete the default category
         	return 0;
             db.beginTransaction();
             count = db.delete(CATEGORY_TABLE_NAME,
-        	    ToDoCategory._ID + " = " + categoryId
+        	    ToDoCategoryColumns._ID + " = " + categoryId
         	    + (TextUtils.isEmpty(where) ? "" : (" AND (" + where + ")")),
         	    whereArgs);
             if (count > 0) {
         	// Change the category of all To Do items
         	// that were in this category to Unfiled
         	ContentValues categoryUpdate = new ContentValues();
-        	categoryUpdate.put(ToDoItem.CATEGORY_ID, ToDoCategory.UNFILED);
-        	update(ToDoItem.CONTENT_URI, categoryUpdate,
-        		ToDoItem.CATEGORY_ID + "=" + categoryId, null);
+        	categoryUpdate.put(ToDoSchema.ToDoItemColumns.CATEGORY_ID, ToDoCategoryColumns.UNFILED);
+        	update(ToDoSchema.ToDoItemColumns.CONTENT_URI, categoryUpdate,
+        		ToDoSchema.ToDoItemColumns.CATEGORY_ID + "=" + categoryId, null);
             }
             db.setTransactionSuccessful();
             db.endTransaction();
@@ -315,7 +319,7 @@ public class ToDoProvider extends ContentProvider {
 
         case METADATUM_ID:
             long datId = Long.parseLong(uri.getPathSegments().get(1));
-            count = db.delete(METADATA_TABLE_NAME, ToDoMetadata._ID + " = " + datId
+            count = db.delete(METADATA_TABLE_NAME, ToDoSchema.ToDoMetadataColumns._ID + " = " + datId
         	    + (!TextUtils.isEmpty(where) ? " AND (" + where + ')' : ""),
         	    whereArgs);
             break;
@@ -326,7 +330,7 @@ public class ToDoProvider extends ContentProvider {
 
         case TODO_ID:
             long todoId = Long.parseLong(uri.getPathSegments().get(1));
-            count = db.delete(TODO_TABLE_NAME, ToDoItem._ID + " = " + todoId
+            count = db.delete(TODO_TABLE_NAME, ToDoSchema.ToDoItemColumns._ID + " = " + todoId
                     + (!TextUtils.isEmpty(where) ? " AND (" + where + ')' : ""),
                     whereArgs);
             break;
@@ -355,7 +359,7 @@ public class ToDoProvider extends ContentProvider {
             long categoryId = Long.parseLong(uri.getPathSegments().get(1));
             // To do: prevent duplicate names
             count = db.update(CATEGORY_TABLE_NAME, values,
-        	    ToDoCategory._ID + " = " + categoryId
+        	    ToDoCategoryColumns._ID + " = " + categoryId
         	    + (!TextUtils.isEmpty(where) ? " AND (" + where + ')' : ""),
         	    whereArgs);
             break;
@@ -367,7 +371,7 @@ public class ToDoProvider extends ContentProvider {
         case METADATUM_ID:
             long datId = Long.parseLong(uri.getPathSegments().get(1));
             count = db.update(METADATA_TABLE_NAME, values,
-        	    ToDoMetadata._ID + " = " + datId
+        	    ToDoSchema.ToDoMetadataColumns._ID + " = " + datId
         	    + (!TextUtils.isEmpty(where) ? " AND (" + where + ')' : ""),
         	    whereArgs);
             break;
@@ -379,7 +383,7 @@ public class ToDoProvider extends ContentProvider {
         case TODO_ID:
             long todoId = Long.parseLong(uri.getPathSegments().get(1));
             count = db.update(TODO_TABLE_NAME, values,
-        	    ToDoItem._ID + " = " + todoId
+        	    ToDoItemColumns._ID + " = " + todoId
                     + (!TextUtils.isEmpty(where) ? " AND (" + where + ')' : ""),
                     whereArgs);
             break;
@@ -394,61 +398,61 @@ public class ToDoProvider extends ContentProvider {
 
     static {
         sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        sUriMatcher.addURI(ToDo.AUTHORITY, "categories", CATEGORIES);
-        sUriMatcher.addURI(ToDo.AUTHORITY, "categories/#", CATEGORY_ID);
-        sUriMatcher.addURI(ToDo.AUTHORITY, "misc", METADATA);
-        sUriMatcher.addURI(ToDo.AUTHORITY, "misc/#", METADATUM_ID);
-        sUriMatcher.addURI(ToDo.AUTHORITY, "todo", TODOS);
-        sUriMatcher.addURI(ToDo.AUTHORITY, "todo/#", TODO_ID);
+        sUriMatcher.addURI(ToDoSchema.AUTHORITY, "categories", CATEGORIES);
+        sUriMatcher.addURI(ToDoSchema.AUTHORITY, "categories/#", CATEGORY_ID);
+        sUriMatcher.addURI(ToDoSchema.AUTHORITY, "misc", METADATA);
+        sUriMatcher.addURI(ToDoSchema.AUTHORITY, "misc/#", METADATUM_ID);
+        sUriMatcher.addURI(ToDoSchema.AUTHORITY, "todo", TODOS);
+        sUriMatcher.addURI(ToDoSchema.AUTHORITY, "todo/#", TODO_ID);
 
         categoryProjectionMap = new HashMap<>();
-        categoryProjectionMap.put(ToDoCategory._ID, ToDoCategory._ID);
-        categoryProjectionMap.put(ToDoCategory.NAME, ToDoCategory.NAME);
+        categoryProjectionMap.put(ToDoCategoryColumns._ID, ToDoSchema.ToDoCategoryColumns._ID);
+        categoryProjectionMap.put(ToDoSchema.ToDoCategoryColumns.NAME, ToDoCategoryColumns.NAME);
         metadataProjectionMap = new HashMap<>();
-        metadataProjectionMap.put(ToDoMetadata._ID, ToDoMetadata._ID);
-        metadataProjectionMap.put(ToDoMetadata.NAME, ToDoMetadata.NAME);
-        metadataProjectionMap.put(ToDoMetadata.VALUE, ToDoMetadata.VALUE);
+        metadataProjectionMap.put(ToDoSchema.ToDoMetadataColumns._ID, ToDoSchema.ToDoMetadataColumns._ID);
+        metadataProjectionMap.put(ToDoSchema.ToDoMetadataColumns.NAME, ToDoSchema.ToDoMetadataColumns.NAME);
+        metadataProjectionMap.put(ToDoSchema.ToDoMetadataColumns.VALUE, ToDoSchema.ToDoMetadataColumns.VALUE);
         itemProjectionMap = new HashMap<>();
-        itemProjectionMap.put(ToDoItem._ID,
-        	TODO_TABLE_NAME + "." + ToDoItem._ID);
-        itemProjectionMap.put(ToDoItem.DESCRIPTION, ToDoItem.DESCRIPTION);
-        itemProjectionMap.put(ToDoItem.CREATE_TIME, ToDoItem.CREATE_TIME);
-        itemProjectionMap.put(ToDoItem.MOD_TIME, ToDoItem.MOD_TIME);
-        itemProjectionMap.put(ToDoItem.DUE_TIME, ToDoItem.DUE_TIME);
-        itemProjectionMap.put(ToDoItem.COMPLETED_TIME,
-        	ToDoItem.COMPLETED_TIME);
-        itemProjectionMap.put(ToDoItem.CHECKED, ToDoItem.CHECKED);
-        itemProjectionMap.put(ToDoItem.PRIORITY, ToDoItem.PRIORITY);
-        itemProjectionMap.put(ToDoItem.PRIVATE, ToDoItem.PRIVATE);
-        itemProjectionMap.put(ToDoItem.CATEGORY_ID, ToDoItem.CATEGORY_ID);
-        itemProjectionMap.put(ToDoItem.CATEGORY_NAME,
-        	CATEGORY_TABLE_NAME + "." + ToDoCategory.NAME
-        	+ " AS " + ToDoItem.CATEGORY_NAME);
-        itemProjectionMap.put(ToDoItem.NOTE, ToDoItem.NOTE);
-	itemProjectionMap.put(ToDoItem.ALARM_DAYS_EARLIER,
-		ToDoItem.ALARM_DAYS_EARLIER);
-	itemProjectionMap.put(ToDoItem.ALARM_TIME, ToDoItem.ALARM_TIME);
-	itemProjectionMap.put(ToDoItem.REPEAT_INTERVAL,
-		ToDoItem.REPEAT_INTERVAL);
-	itemProjectionMap.put(ToDoItem.REPEAT_INCREMENT,
-		ToDoItem.REPEAT_INCREMENT);
-	itemProjectionMap.put(ToDoItem.REPEAT_WEEK_DAYS,
-		ToDoItem.REPEAT_WEEK_DAYS);
-	itemProjectionMap.put(ToDoItem.REPEAT_DAY,
-		ToDoItem.REPEAT_DAY);
-	itemProjectionMap.put(ToDoItem.REPEAT_DAY2,
-		ToDoItem.REPEAT_DAY2);
-	itemProjectionMap.put(ToDoItem.REPEAT_WEEK,
-		ToDoItem.REPEAT_WEEK);
-	itemProjectionMap.put(ToDoItem.REPEAT_WEEK2,
-		ToDoItem.REPEAT_WEEK2);
-	itemProjectionMap.put(ToDoItem.REPEAT_MONTH,
-		ToDoItem.REPEAT_MONTH);
-	itemProjectionMap.put(ToDoItem.REPEAT_END, ToDoItem.REPEAT_END);
-	itemProjectionMap.put(ToDoItem.HIDE_DAYS_EARLIER,
-		ToDoItem.HIDE_DAYS_EARLIER);
-	itemProjectionMap.put(ToDoItem.NOTIFICATION_TIME,
-		ToDoItem.NOTIFICATION_TIME);
+        itemProjectionMap.put(ToDoItemColumns._ID,
+        	TODO_TABLE_NAME + "." + ToDoSchema.ToDoItemColumns._ID);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.DESCRIPTION, ToDoSchema.ToDoItemColumns.DESCRIPTION);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.CREATE_TIME, ToDoSchema.ToDoItemColumns.CREATE_TIME);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.MOD_TIME, ToDoSchema.ToDoItemColumns.MOD_TIME);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.DUE_TIME, ToDoSchema.ToDoItemColumns.DUE_TIME);
+        itemProjectionMap.put(ToDoItemColumns.COMPLETED_TIME,
+        	ToDoSchema.ToDoItemColumns.COMPLETED_TIME);
+        itemProjectionMap.put(ToDoItemColumns.CHECKED, ToDoSchema.ToDoItemColumns.CHECKED);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.PRIORITY, ToDoItemColumns.PRIORITY);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.PRIVATE, ToDoItemColumns.PRIVATE);
+        itemProjectionMap.put(ToDoItemColumns.CATEGORY_ID, ToDoSchema.ToDoItemColumns.CATEGORY_ID);
+        itemProjectionMap.put(ToDoItemColumns.CATEGORY_NAME,
+        	CATEGORY_TABLE_NAME + "." + ToDoSchema.ToDoCategoryColumns.NAME
+        	+ " AS " + ToDoItemColumns.CATEGORY_NAME);
+        itemProjectionMap.put(ToDoSchema.ToDoItemColumns.NOTE, ToDoItemColumns.NOTE);
+	itemProjectionMap.put(ToDoItemColumns.ALARM_DAYS_EARLIER,
+		ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER);
+	itemProjectionMap.put(ToDoItemColumns.ALARM_TIME, ToDoSchema.ToDoItemColumns.ALARM_TIME);
+	itemProjectionMap.put(ToDoItemColumns.REPEAT_INTERVAL,
+		ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.REPEAT_INCREMENT,
+		ToDoItemColumns.REPEAT_INCREMENT);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS,
+		ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS);
+	itemProjectionMap.put(ToDoItemColumns.REPEAT_DAY,
+		ToDoItemColumns.REPEAT_DAY);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.REPEAT_DAY2,
+		ToDoItemColumns.REPEAT_DAY2);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK,
+		ToDoSchema.ToDoItemColumns.REPEAT_WEEK);
+	itemProjectionMap.put(ToDoItemColumns.REPEAT_WEEK2,
+		ToDoItemColumns.REPEAT_WEEK2);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.REPEAT_MONTH,
+		ToDoItemColumns.REPEAT_MONTH);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.REPEAT_END, ToDoSchema.ToDoItemColumns.REPEAT_END);
+	itemProjectionMap.put(ToDoItemColumns.HIDE_DAYS_EARLIER,
+		ToDoSchema.ToDoItemColumns.HIDE_DAYS_EARLIER);
+	itemProjectionMap.put(ToDoSchema.ToDoItemColumns.NOTIFICATION_TIME,
+		ToDoSchema.ToDoItemColumns.NOTIFICATION_TIME);
     }
 
 }

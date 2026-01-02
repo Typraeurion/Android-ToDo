@@ -27,7 +27,7 @@ import android.view.*;
 import android.widget.*;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 /**
  * An extension of the @{link SimpleCursorAdapter} which adds two
@@ -72,7 +72,7 @@ public class CategoryFilterCursorAdapter extends SimpleCursorAdapter {
 	 * but its replacement is not available before then.
 	 */
 	super(context, android.R.layout.simple_spinner_item,
-		c, new String[] { ToDoCategory.NAME },
+		c, new String[] { ToDoCategoryColumns.NAME },
         	new int[] { android.R.id.text1 });
 	this.context = context;
 	inflater = (LayoutInflater)
@@ -83,7 +83,7 @@ public class CategoryFilterCursorAdapter extends SimpleCursorAdapter {
     @TargetApi(11)
     public CategoryFilterCursorAdapter(Context context, Cursor c, int flags) {
 	super(context, android.R.layout.simple_spinner_item,
-		c, new String[] { ToDoCategory.NAME },
+		c, new String[] { ToDoCategoryColumns.NAME },
 		new int[] { android.R.id.text1 }, flags);
 	this.context = context;
 	inflater = (LayoutInflater)

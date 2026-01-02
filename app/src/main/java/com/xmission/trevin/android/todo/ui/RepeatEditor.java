@@ -16,7 +16,7 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.*;
+import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.*;
 
 import java.text.SimpleDateFormat;
 import java.util.*;

@@ -21,8 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 
 import android.app.IntentService;
 import android.content.*;
@@ -63,10 +64,10 @@ public class PasswordChangeService extends IntentService
      * The columns we are interested in from the item table
      */
     private static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItem._ID,
-            ToDoItem.DESCRIPTION,
-            ToDoItem.NOTE,
-            ToDoItem.PRIVATE,
+            ToDoItemColumns._ID,
+            ToDoItemColumns.DESCRIPTION,
+            ToDoItemColumns.NOTE,
+            ToDoItemColumns.PRIVATE,
     };
 
     /** The current mode of operation */
@@ -155,8 +156,8 @@ public class PasswordChangeService extends IntentService
 		}
 		// Decrypt all entries
 		c = resolver.query(
-			ToDoItem.CONTENT_URI, ITEM_PROJECTION,
-			ToDoItem.PRIVATE + " > 1", null, null);
+			ToDoSchema.ToDoItemColumns.CONTENT_URI, ITEM_PROJECTION,
+			ToDoItemColumns.PRIVATE + " > 1", null, null);
 		decrypTotal = c.getCount();
 		Log.d(TAG, ".onHandleIntent: Decrypting "
 			+ decrypTotal + " items");
@@ -166,18 +167,18 @@ public class PasswordChangeService extends IntentService
 		while (c.moveToNext()) {
 		    ContentValues values = new ContentValues();
 		    Uri itemUri = Uri.withAppendedPath(
-			    ToDoItem.CONTENT_URI,
+			    ToDoItemColumns.CONTENT_URI,
 			    Integer.toString(c.getInt(
-				    c.getColumnIndex(ToDoItem._ID))));
-		    values.put(ToDoItem.DESCRIPTION,
+				    c.getColumnIndex(ToDoItemColumns._ID))));
+		    values.put(ToDoItemColumns.DESCRIPTION,
 			    encryptor.decrypt(c.getBlob(
 				    c.getColumnIndex(
-					    ToDoItem.DESCRIPTION))));
-		    if (!c.isNull(c.getColumnIndex(ToDoItem.NOTE)))
-			values.put(ToDoItem.NOTE,
+					    ToDoItemColumns.DESCRIPTION))));
+		    if (!c.isNull(c.getColumnIndex(ToDoItemColumns.NOTE)))
+			values.put(ToDoItemColumns.NOTE,
 				encryptor.decrypt(c.getBlob(
-					c.getColumnIndex(ToDoItem.NOTE))));
-		    values.put(ToDoItem.PRIVATE, 1);
+					c.getColumnIndex(ToDoItemColumns.NOTE))));
+		    values.put(ToDoSchema.ToDoItemColumns.PRIVATE, 1);
 		    resolver.update(itemUri, values, null, null);
 		    numChanged++;
 		    Log.d(TAG, ".onHandleIntent: decrypted row " + numChanged);
@@ -205,32 +206,32 @@ public class PasswordChangeService extends IntentService
 		encryptor.storePassword(resolver);
 
 		// Encrypt all entries
-		c = resolver.query(ToDoItem.CONTENT_URI, ITEM_PROJECTION,
-			ToDoItem.PRIVATE + " = 1", null, null);
+		c = resolver.query(ToDoItemColumns.CONTENT_URI, ITEM_PROJECTION,
+			ToDoItemColumns.PRIVATE + " = 1", null, null);
 		changeTarget = decrypTotal + c.getCount();
 		Log.d(TAG, ".onHandleIntent: Encrypting "
 			+ c.getCount() + " items");
 		while (c.moveToNext()) {
 		    ContentValues values = new ContentValues();
 		    Uri itemUri = Uri.withAppendedPath(
-				ToDoItem.CONTENT_URI,
+				ToDoItemColumns.CONTENT_URI,
 				Integer.toString(c.getInt(
-					c.getColumnIndex(ToDoItem._ID))));
-		    values.put(ToDoItem.DESCRIPTION,
+					c.getColumnIndex(ToDoItemColumns._ID))));
+		    values.put(ToDoItemColumns.DESCRIPTION,
 			    encryptor.encrypt(c.getString(
 				    c.getColumnIndex(
-					    ToDoItem.DESCRIPTION))));
-		    if (!c.isNull(c.getColumnIndex(ToDoItem.NOTE)))
-			values.put(ToDoItem.NOTE,
+					    ToDoItemColumns.DESCRIPTION))));
+		    if (!c.isNull(c.getColumnIndex(ToDoItemColumns.NOTE)))
+			values.put(ToDoItemColumns.NOTE,
 				encryptor.encrypt(c.getString(
-					c.getColumnIndex(ToDoItem.NOTE))));
-		    values.put(ToDoItem.PRIVATE, 2);
+					c.getColumnIndex(ToDoItemColumns.NOTE))));
+		    values.put(ToDoItemColumns.PRIVATE, 2);
 		    // Verify the data types — there have been problems with this
-		    if (!(values.get(ToDoItem.DESCRIPTION) instanceof byte[]) ||
-			    (values.containsKey(ToDoItem.NOTE) &&
-				    !(values.get(ToDoItem.NOTE) instanceof byte[]))) {
+		    if (!(values.get(ToDoItemColumns.DESCRIPTION) instanceof byte[]) ||
+			    (values.containsKey(ToDoItemColumns.NOTE) &&
+				    !(values.get(ToDoItemColumns.NOTE) instanceof byte[]))) {
 			Log.e(TAG, "Error storing encrypted description: expected byte[], got "
-				+ values.get(ToDoItem.DESCRIPTION).getClass().getSimpleName());
+				+ values.get(ToDoItemColumns.DESCRIPTION).getClass().getSimpleName());
 		    } else {
 			resolver.update(itemUri, values, null, null);
 		    }

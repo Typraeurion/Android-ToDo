@@ -34,8 +34,10 @@ import org.xml.sax.SAXException;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
@@ -688,11 +690,11 @@ public class XMLImporterService extends IntentService
         Map<Long,String> categoryIDMap = new HashMap<>();
         Map<String,Long> categoryNameMap = new HashMap<>();
         ContentResolver resolver = getContentResolver();
-        Cursor c = resolver.query(ToDoCategory.CONTENT_URI, new String[] {
-                ToDoCategory._ID, ToDoCategory.NAME }, null, null, null);
+        Cursor c = resolver.query(ToDoCategoryColumns.CONTENT_URI, new String[] {
+                ToDoSchema.ToDoCategoryColumns._ID, ToDoCategoryColumns.NAME }, null, null, null);
         while (c.moveToNext()) {
-            long id = c.getLong(c.getColumnIndex(ToDoCategory._ID));
-            String name = c.getString(c.getColumnIndex(ToDoCategory.NAME));
+            long id = c.getLong(c.getColumnIndex(ToDoCategoryColumns._ID));
+            String name = c.getString(c.getColumnIndex(ToDoCategoryColumns.NAME));
             categoryIDMap.put(id, name);
             categoryNameMap.put(name, id);
         }
@@ -700,7 +702,7 @@ public class XMLImporterService extends IntentService
 
         if (importType == ImportType.CLEAN) {
             Log.d(LOG_TAG, ".mergeCategories: removing all existing categories");
-            resolver.delete(ToDoCategory.CONTENT_URI, null, null);
+            resolver.delete(ToDoCategoryColumns.CONTENT_URI, null, null);
             categoryIDMap.clear();
             categoryNameMap.clear();
         }
@@ -710,8 +712,8 @@ public class XMLImporterService extends IntentService
             CategoryEntry entry = new CategoryEntry();
             entry.name = getText(categorE);
             entry.id = Integer.parseInt(categorE.getAttribute("id"));
-            // Skip the ToDoCategory.UNFILED
-            if (entry.id == ToDoCategory.UNFILED) {
+            // Skip the ToDoCategoryColumns.UNFILED
+            if (entry.id == ToDoCategoryColumns.UNFILED) {
                 importCount++;
                 continue;
             }
@@ -724,9 +726,9 @@ public class XMLImporterService extends IntentService
                 // There are no pre-existing categories
                 Log.d(LOG_TAG, ".mergeCategories: adding " + entry.id
                         + " \"" + entry.name + "\"");
-                values.put(ToDoCategory._ID, entry.id);
-                values.put(ToDoCategory.NAME, entry.name);
-                resolver.insert(ToDoCategory.CONTENT_URI, values);
+                values.put(ToDoCategoryColumns._ID, entry.id);
+                values.put(ToDoCategoryColumns.NAME, entry.name);
+                resolver.insert(ToDoCategoryColumns.CONTENT_URI, values);
                 break;
 
             case REVERT:
@@ -739,13 +741,13 @@ public class XMLImporterService extends IntentService
                             + "; deleting it.");
                     // Change the category of all items using the old ID
                     values.clear();
-                    values.put(ToDoItem.CATEGORY_ID, oldId);
-                    resolver.update(ToDoItem.CONTENT_URI, values,
-                            ToDoItem.CATEGORY_ID + "=" + oldId, null);
+                    values.put(ToDoItemColumns.CATEGORY_ID, oldId);
+                    resolver.update(ToDoItemColumns.CONTENT_URI, values,
+                            ToDoItemColumns.CATEGORY_ID + "=" + oldId, null);
                     values.clear();
-                    values.put(ToDoCategory._ID, oldId);
+                    values.put(ToDoCategoryColumns._ID, oldId);
                     resolver.delete(ContentUris.withAppendedId(
-                            ToDoCategory.CONTENT_URI, oldId), null, null);
+                            ToDoCategoryColumns.CONTENT_URI, oldId), null, null);
                     categoryIDMap.remove(oldId);
                     categoryNameMap.remove(entry.name);
                 }
@@ -754,19 +756,19 @@ public class XMLImporterService extends IntentService
                         Log.d(LOG_TAG, ".mergeCategories: replacing \""
                                 + categoryIDMap.get(entry.id)
                                 + "\" with \"" + entry.name + "\"");
-                        values.remove(ToDoCategory._ID);
-                        values.put(ToDoCategory.NAME, entry.name);
+                        values.remove(ToDoCategoryColumns._ID);
+                        values.put(ToDoCategoryColumns.NAME, entry.name);
                         resolver.update(ContentUris.withAppendedId(
-                                ToDoCategory.CONTENT_URI, entry.id),
+                                ToDoCategoryColumns.CONTENT_URI, entry.id),
                                 values, null, null);
                     }
                 }
                 else {
                     Log.d(LOG_TAG, ".mergeCategories: adding \""
                             + entry.name + "\"");
-                    values.put(ToDoCategory._ID, entry.id);
-                    values.put(ToDoCategory.NAME, entry.name);
-                    resolver.insert(ToDoCategory.CONTENT_URI, values);
+                    values.put(ToDoCategoryColumns._ID, entry.id);
+                    values.put(ToDoCategoryColumns.NAME, entry.name);
+                    resolver.insert(ToDoCategoryColumns.CONTENT_URI, values);
                 }
                 break;
 
@@ -785,16 +787,16 @@ public class XMLImporterService extends IntentService
                             + entry.name + "\"");
                     // Use a new ID if there is a conflict
                     if (categoryIDMap.containsKey(entry.id)) {
-                        values.remove(ToDoCategory._ID);
-                        values.put(ToDoCategory.NAME, entry.name);
+                        values.remove(ToDoCategoryColumns._ID);
+                        values.put(ToDoCategoryColumns.NAME, entry.name);
                         Uri newItem = resolver.insert(
-                                ToDoCategory.CONTENT_URI, values);
+                                ToDoCategoryColumns.CONTENT_URI, values);
                         entry.newID = Long.parseLong(
                                 newItem.getPathSegments().get(1));
                     } else {
-                        values.put(ToDoCategory._ID, entry.id);
-                        values.put(ToDoCategory.NAME, entry.name);
-                        resolver.insert(ToDoCategory.CONTENT_URI, values);
+                        values.put(ToDoCategoryColumns._ID, entry.id);
+                        values.put(ToDoCategoryColumns.NAME, entry.name);
+                        resolver.insert(ToDoCategoryColumns.CONTENT_URI, values);
                     }
                 }
                 break;
@@ -848,22 +850,22 @@ public class XMLImporterService extends IntentService
         try {
             if (importType == ImportType.CLEAN) {
                 Log.d(LOG_TAG, ".mergeToDos: removing all existing To Do items");
-                resolver.delete(ToDoItem.CONTENT_URI, null, null);
+                resolver.delete(ToDoItemColumns.CONTENT_URI, null, null);
             }
 
             final String[] EXISTING_ITEM_PROJECTION = {
-                    ToDoItem._ID, ToDoItem.CATEGORY_ID, ToDoItem.CATEGORY_NAME,
-                    ToDoItem.PRIVATE, ToDoItem.DESCRIPTION,
-                    ToDoItem.CREATE_TIME, ToDoItem.MOD_TIME };
+                    ToDoSchema.ToDoItemColumns._ID, ToDoItemColumns.CATEGORY_ID, ToDoItemColumns.CATEGORY_NAME,
+                    ToDoItemColumns.PRIVATE, ToDoSchema.ToDoItemColumns.DESCRIPTION,
+                    ToDoItemColumns.CREATE_TIME, ToDoItemColumns.MOD_TIME };
 
             // Find the highest available record ID
-            Cursor c = resolver.query(ToDoItem.CONTENT_URI,
+            Cursor c = resolver.query(ToDoItemColumns.CONTENT_URI,
                     EXISTING_ITEM_PROJECTION, null, null,
-                    // The table prefix is required here because
-                    // the provider joins the to-do table with the category table.
-                    ToDoProvider.TODO_TABLE_NAME + "." + ToDoItem._ID + " DESC");
+                    // The table prefix is required here because the
+                    // repository joins the to-do table with the category table.
+                    ToDoRepositoryImpl.TODO_TABLE_NAME + "." + ToDoItemColumns._ID + " DESC");
             if (c.moveToFirst()) {
-                long nextID = c.getLong(c.getColumnIndex(ToDoItem._ID));
+                long nextID = c.getLong(c.getColumnIndex(ToDoItemColumns._ID));
                 if (nextID >= nextFreeRecordID)
                     nextFreeRecordID = nextID + 1;
             }
@@ -875,18 +877,18 @@ public class XMLImporterService extends IntentService
                 Map<String,Element> itemMap = mapChildren(itemE);
                 values.clear();
                 String value = itemE.getAttribute("id");
-                values.put(ToDoItem._ID, Long.parseLong(value));
+                values.put(ToDoItemColumns._ID, Long.parseLong(value));
                 value = itemE.getAttribute("checked");
-                values.put(ToDoItem.CHECKED, Boolean.parseBoolean(value) ? 1 : 0);
+                values.put(ToDoItemColumns.CHECKED, Boolean.parseBoolean(value) ? 1 : 0);
                 value = itemE.getAttribute("category");
                 long categoryID = Integer.parseInt(value);
                 if (categoriesByID.get(categoryID) != null)
                     categoryID = categoriesByID.get(categoryID).newID;
                 else
-                    categoryID = ToDoCategory.UNFILED;
-                values.put(ToDoItem.CATEGORY_ID, (int) categoryID);
+                    categoryID = ToDoCategoryColumns.UNFILED;
+                values.put(ToDoItemColumns.CATEGORY_ID, (int) categoryID);
                 value = itemE.getAttribute("priority");
-                values.put(ToDoItem.PRIORITY, Integer.parseInt(value));
+                values.put(ToDoItemColumns.PRIORITY, Integer.parseInt(value));
 
                 value = itemE.getAttribute("private");
                 int privacy = 0;
@@ -920,10 +922,10 @@ public class XMLImporterService extends IntentService
                     // Re-encrypt if possible — binary in DB
                     if (newCrypt.hasKey()) {
                         encryptedDescription = newCrypt.encrypt(description);
-                        values.put(ToDoItem.DESCRIPTION, encryptedDescription);
+                        values.put(ToDoItemColumns.DESCRIPTION, encryptedDescription);
                         if (itemMap.containsKey("note")) {
                             encryptedNote = newCrypt.encrypt(note);
-                            values.put(ToDoItem.NOTE, encryptedNote);
+                            values.put(ToDoItemColumns.NOTE, encryptedNote);
                         }
                         privacy = 2;
                     } else {
@@ -931,83 +933,83 @@ public class XMLImporterService extends IntentService
                     }
                 }
                 if (privacy < 2) {
-                    values.put(ToDoItem.DESCRIPTION, description);
+                    values.put(ToDoItemColumns.DESCRIPTION, description);
                     if (itemMap.containsKey("note"))
-                        values.put(ToDoItem.NOTE, note);
+                        values.put(ToDoItemColumns.NOTE, note);
                 }
-                values.put(ToDoItem.PRIVATE, privacy);
+                values.put(ToDoItemColumns.PRIVATE, privacy);
 
                 Element child = itemMap.get("created");
                 value = child.getAttribute("time");
                 // Earlier exports did not use the ISO date format,
                 // so we need to check for both. :(
-                values.put(ToDoItem.CREATE_TIME, parseDate(value).getTime());
+                values.put(ToDoItemColumns.CREATE_TIME, parseDate(value).getTime());
                 child = itemMap.get("modified");
                 value = child.getAttribute("time");
-                values.put(ToDoItem.MOD_TIME, parseDate(value).getTime());
+                values.put(ToDoItemColumns.MOD_TIME, parseDate(value).getTime());
                 child = itemMap.get("due");
                 if (child != null) {
                     Map<String,Element> childMap = mapChildren(child);
                     value = child.getAttribute("time");
-                    values.put(ToDoItem.DUE_TIME, parseDate(value).getTime());
+                    values.put(ToDoItemColumns.DUE_TIME, parseDate(value).getTime());
                     Element grandchild = childMap.get("alarm");
                     if (grandchild != null) {
                         value = grandchild.getAttribute("days-earlier");
-                        values.put(ToDoItem.ALARM_DAYS_EARLIER,
+                        values.put(ToDoItemColumns.ALARM_DAYS_EARLIER,
                                 Integer.parseInt(value));
                         value = grandchild.getAttribute("time");
-                        values.put(ToDoItem.ALARM_TIME, Long.parseLong(value));
+                        values.put(ToDoItemColumns.ALARM_TIME, Long.parseLong(value));
                     }
 
                     grandchild = childMap.get("repeat");
                     if (grandchild != null) {
                         value = grandchild.getAttribute("interval");
-                        values.put(ToDoItem.REPEAT_INTERVAL,
+                        values.put(ToDoItemColumns.REPEAT_INTERVAL,
                                 Integer.parseInt(value));
                         value= grandchild.getAttribute("increment");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_INCREMENT,
+                            values.put(ToDoItemColumns.REPEAT_INCREMENT,
                                     Integer.parseInt(value));
                         value = grandchild.getAttribute("week-days");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_WEEK_DAYS,
+                            values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS,
                                     Integer.parseInt(value, 2));
                         value = grandchild.getAttribute("day1");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_DAY,
+                            values.put(ToDoItemColumns.REPEAT_DAY,
                                     Integer.parseInt(value));
                         value = grandchild.getAttribute("day2");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_DAY2,
+                            values.put(ToDoItemColumns.REPEAT_DAY2,
                                     Integer.parseInt(value));
                         value = grandchild.getAttribute("week1");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_WEEK,
+                            values.put(ToDoItemColumns.REPEAT_WEEK,
                                     Integer.parseInt(value));
                         value = grandchild.getAttribute("week2");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_WEEK2,
+                            values.put(ToDoItemColumns.REPEAT_WEEK2,
                                     Integer.parseInt(value));
                         value = grandchild.getAttribute("month");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_MONTH,
+                            values.put(ToDoItemColumns.REPEAT_MONTH,
                                     Integer.parseInt(value));
                         value = grandchild.getAttribute("end");
                         if (!isEmpty(value))
-                            values.put(ToDoItem.REPEAT_END, Long.parseLong(value));
+                            values.put(ToDoItemColumns.REPEAT_END, Long.parseLong(value));
                     }
 
                     grandchild = childMap.get("hide");
                     if (grandchild != null) {
                         value = grandchild.getAttribute("days-earlier");
-                        values.put(ToDoItem.HIDE_DAYS_EARLIER,
+                        values.put(ToDoItemColumns.HIDE_DAYS_EARLIER,
                                 Integer.parseInt(value));
                     }
 
                     grandchild = childMap.get("notification");
                     if (grandchild != null) {
                         value = grandchild.getAttribute("time");
-                        values.put(ToDoItem.NOTIFICATION_TIME,
+                        values.put(ToDoItemColumns.NOTIFICATION_TIME,
                                 parseDate(value).getTime());
                     }
                 }
@@ -1015,42 +1017,42 @@ public class XMLImporterService extends IntentService
                 if (importType != ImportType.CLEAN) {
                     existingRecord.clear();
                     c = resolver.query(ContentUris.withAppendedId(
-                            ToDoItem.CONTENT_URI, values.getAsLong(ToDoItem._ID)),
+                            ToDoItemColumns.CONTENT_URI, values.getAsLong(ToDoItemColumns._ID)),
                             EXISTING_ITEM_PROJECTION, null, null, null);
                     if (c.moveToFirst()) {
                         int oldPrivacy =
-                            c.getInt(c.getColumnIndex(ToDoItem.PRIVATE));
-                        existingRecord.put(ToDoItem.PRIVATE, oldPrivacy);
+                            c.getInt(c.getColumnIndex(ToDoItemColumns.PRIVATE));
+                        existingRecord.put(ToDoItemColumns.PRIVATE, oldPrivacy);
                         if (oldPrivacy < 2) {
-                            existingRecord.put(ToDoItem.DESCRIPTION,
+                            existingRecord.put(ToDoItemColumns.DESCRIPTION,
                                     c.getString(c.getColumnIndex(
-                                            ToDoItem.DESCRIPTION)));
+                                            ToDoItemColumns.DESCRIPTION)));
                         } else {
                             if (newCrypt == null)
                                 newCrypt = StringEncryption.holdGlobalEncryption();
                             byte[] encryptedDescription =
-                                c.getBlob(c.getColumnIndex(ToDoItem.DESCRIPTION));
+                                c.getBlob(c.getColumnIndex(ToDoItemColumns.DESCRIPTION));
                             if (newCrypt.hasKey())
                                 // Decode it
-                                existingRecord.put(ToDoItem.DESCRIPTION,
+                                existingRecord.put(ToDoItemColumns.DESCRIPTION,
                                         newCrypt.decrypt(encryptedDescription));
                             else
                                 /*
                                  * Since we don’t know the description,
                                  * assume it’s different from anything else.
                                  */
-                                existingRecord.put(ToDoItem.DESCRIPTION,
+                                existingRecord.put(ToDoItemColumns.DESCRIPTION,
                                         UUID.nameUUIDFromBytes(
                                                 encryptedDescription).toString());
                         }
-                        existingRecord.put(ToDoItem.CATEGORY_ID,
-                                c.getLong(c.getColumnIndex(ToDoItem.CATEGORY_ID)));
-                        existingRecord.put(ToDoItem.CATEGORY_NAME,
-                                c.getString(c.getColumnIndex(ToDoItem.CATEGORY_NAME)));
-                        existingRecord.put(ToDoItem.CREATE_TIME,
-                                c.getLong(c.getColumnIndex(ToDoItem.CREATE_TIME)));
-                        existingRecord.put(ToDoItem.MOD_TIME,
-                                c.getLong(c.getColumnIndex(ToDoItem.MOD_TIME)));
+                        existingRecord.put(ToDoItemColumns.CATEGORY_ID,
+                                c.getLong(c.getColumnIndex(ToDoItemColumns.CATEGORY_ID)));
+                        existingRecord.put(ToDoItemColumns.CATEGORY_NAME,
+                                c.getString(c.getColumnIndex(ToDoItemColumns.CATEGORY_NAME)));
+                        existingRecord.put(ToDoItemColumns.CREATE_TIME,
+                                c.getLong(c.getColumnIndex(ToDoItemColumns.CREATE_TIME)));
+                        existingRecord.put(ToDoItemColumns.MOD_TIME,
+                                c.getLong(c.getColumnIndex(ToDoItemColumns.MOD_TIME)));
                     }
                     c.close();
                 }
@@ -1064,28 +1066,28 @@ public class XMLImporterService extends IntentService
                 case REVERT:
                     // Overwrite if it’s the same item
                     if (existingRecord.size() > 0) {
-                        if (values.getAsLong(ToDoItem.CREATE_TIME).equals(
-                                existingRecord.getAsLong(ToDoItem.CREATE_TIME)))
+                        if (values.getAsLong(ToDoItemColumns.CREATE_TIME).equals(
+                                existingRecord.getAsLong(ToDoItemColumns.CREATE_TIME)))
                             op = Operation.UPDATE;
                         else
                             // Not the same item!
-                            values.put(ToDoItem._ID, nextFreeRecordID++);
+                            values.put(ToDoItemColumns._ID, nextFreeRecordID++);
                     }
                     break;
 
                 case UPDATE:
                     // Overwrite if it’s the same item and newer
                     if (existingRecord.size() > 0) {
-                        if (values.getAsLong(ToDoItem.CREATE_TIME).equals(
-                                existingRecord.getAsLong(ToDoItem.CREATE_TIME))) {
-                            if (values.getAsLong(ToDoItem.MOD_TIME) >
-                            existingRecord.getAsLong(ToDoItem.MOD_TIME))
+                        if (values.getAsLong(ToDoItemColumns.CREATE_TIME).equals(
+                                existingRecord.getAsLong(ToDoSchema.ToDoItemColumns.CREATE_TIME))) {
+                            if (values.getAsLong(ToDoItemColumns.MOD_TIME) >
+                            existingRecord.getAsLong(ToDoItemColumns.MOD_TIME))
                                 op = Operation.UPDATE;
                             else
                                 op = Operation.SKIP;
                         } else {
                             // Not the same item!
-                            values.put(ToDoItem._ID, nextFreeRecordID++);
+                            values.put(ToDoItemColumns._ID, nextFreeRecordID++);
                         }
                     }
                     break;
@@ -1094,20 +1096,20 @@ public class XMLImporterService extends IntentService
                     // Overwrite if newer and the same category and description;
                     // make a new entry if the category or description differ.
                     if (existingRecord.size() > 0) {
-                        if (values.getAsLong(ToDoItem.CREATE_TIME).equals(
-                                existingRecord.getAsLong(ToDoItem.CREATE_TIME)) &&
-                            existingRecord.getAsString(ToDoItem.CATEGORY_ID)
-                                .equals(values.getAsString(ToDoItem.CATEGORY_ID)) &&
-                            existingRecord.getAsString(ToDoItem.DESCRIPTION)
-                                .equals(values.getAsString(ToDoItem.DESCRIPTION))) {
-                            if (values.getAsLong(ToDoItem.MOD_TIME) >
-                                existingRecord.getAsLong(ToDoItem.MOD_TIME))
+                        if (values.getAsLong(ToDoItemColumns.CREATE_TIME).equals(
+                                existingRecord.getAsLong(ToDoItemColumns.CREATE_TIME)) &&
+                            existingRecord.getAsString(ToDoItemColumns.CATEGORY_ID)
+                                .equals(values.getAsString(ToDoItemColumns.CATEGORY_ID)) &&
+                            existingRecord.getAsString(ToDoItemColumns.DESCRIPTION)
+                                .equals(values.getAsString(ToDoItemColumns.DESCRIPTION))) {
+                            if (values.getAsLong(ToDoItemColumns.MOD_TIME) >
+                                existingRecord.getAsLong(ToDoItemColumns.MOD_TIME))
                                 op = Operation.UPDATE;
                             else
                                 op = Operation.SKIP;
                         } else {
                             // Conflict; change the ID
-                            values.put(ToDoItem._ID, nextFreeRecordID++);
+                            values.put(ToDoItemColumns._ID, nextFreeRecordID++);
                         }
                     }
                     break;
@@ -1115,7 +1117,7 @@ public class XMLImporterService extends IntentService
                 case ADD:
                     // All items are new, but may need a new ID
                     if (existingRecord.size() > 0)
-                        values.put(ToDoItem._ID, nextFreeRecordID++);
+                        values.put(ToDoItemColumns._ID, nextFreeRecordID++);
                     break;
 
                 case TEST:
@@ -1127,29 +1129,29 @@ public class XMLImporterService extends IntentService
                 case INSERT:
                     if (items.size() < 64) {
                         Log.d(LOG_TAG, ".mergeToDos: adding "
-                                + values.getAsLong(ToDoItem._ID) + " \""
-                                + (values.getAsInteger(ToDoItem.PRIVATE) > 0
+                                + values.getAsLong(ToDoItemColumns._ID) + " \""
+                                + (values.getAsInteger(ToDoItemColumns.PRIVATE) > 0
                                         ? "[private]"
-                                        : values.getAsString(ToDoItem.DESCRIPTION))
+                                        : values.getAsString(ToDoSchema.ToDoItemColumns.DESCRIPTION))
                                 + "\"");
                     }
-                    resolver.insert(ToDoItem.CONTENT_URI, values);
+                    resolver.insert(ToDoItemColumns.CONTENT_URI, values);
                     break;
 
                 case UPDATE:
                     if (items.size() < 64) {
                         Log.d(LOG_TAG, ".mergeToDos: replacing existing record "
-                                + values.getAsLong(ToDoItem._ID) + " \""
-                                + ((existingRecord.getAsInteger(ToDoItem.PRIVATE) > 0)
+                                + values.getAsLong(ToDoItemColumns._ID) + " \""
+                                + ((existingRecord.getAsInteger(ToDoItemColumns.PRIVATE) > 0)
                                         ? "[private]"
-                                        : existingRecord.getAsString(ToDoItem.DESCRIPTION))
-                                + (values.getAsInteger(ToDoItem.PRIVATE) > 0
+                                        : existingRecord.getAsString(ToDoItemColumns.DESCRIPTION))
+                                + (values.getAsInteger(ToDoItemColumns.PRIVATE) > 0
                                         ? "[private]"
-                                        : values.getAsString(ToDoItem.DESCRIPTION))
+                                        : values.getAsString(ToDoItemColumns.DESCRIPTION))
                                 + "\"");
                     }
-                    resolver.update(ContentUris.withAppendedId(ToDoItem.CONTENT_URI,
-                            values.getAsLong(ToDoItem._ID)), values, null, null);
+                    resolver.update(ContentUris.withAppendedId(ToDoItemColumns.CONTENT_URI,
+                            values.getAsLong(ToDoItemColumns._ID)), values, null, null);
                     break;
                 }
                 importCount++;

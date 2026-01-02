@@ -19,7 +19,7 @@ package com.xmission.trevin.android.todo.data;
 import android.database.Cursor;
 import androidx.annotation.NonNull;
 
-import com.xmission.trevin.android.todo.provider.ToDo;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -111,27 +111,27 @@ public class AlarmItemInfo implements Comparable<AlarmItemInfo> {
      * @param c the database cursor pointing to the item with the alarm
      */
     public AlarmItemInfo(Cursor c) {
-        id = c.getLong(c.getColumnIndex(ToDo.ToDoItem._ID));
-        lastModified = c.getLong(c.getColumnIndex(ToDo.ToDoItem.MOD_TIME));
-        categoryId = c.getLong(c.getColumnIndex(ToDo.ToDoItem.CATEGORY_ID));
+        id = c.getLong(c.getColumnIndex(ToDoSchema.ToDoItemColumns._ID));
+        lastModified = c.getLong(c.getColumnIndex(ToDoSchema.ToDoItemColumns.MOD_TIME));
+        categoryId = c.getLong(c.getColumnIndex(ToDoSchema.ToDoItemColumns.CATEGORY_ID));
         category = (categoryId <= 0) ? null
-                : c.getString(c.getColumnIndex(ToDo.ToDoItem.CATEGORY_NAME));
-        privacy = c.getInt(c.getColumnIndex(ToDo.ToDoItem.PRIVATE));
+                : c.getString(c.getColumnIndex(ToDoSchema.ToDoItemColumns.CATEGORY_NAME));
+        privacy = c.getInt(c.getColumnIndex(ToDoSchema.ToDoItemColumns.PRIVATE));
         if (privacy <= 1) {
             description =
-                    c.getString(c.getColumnIndex(ToDo.ToDoItem.DESCRIPTION));
+                    c.getString(c.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION));
             encryptedDescription = null;
         } else {
             description = null;
             encryptedDescription =
-                    c.getBlob(c.getColumnIndex(ToDo.ToDoItem.DESCRIPTION));
+                    c.getBlob(c.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION));
         }
-        dueDate = c.getLong(c.getColumnIndex(ToDo.ToDoItem.DUE_TIME));
-        alarmTime = c.getLong(c.getColumnIndex(ToDo.ToDoItem.ALARM_TIME));
+        dueDate = c.getLong(c.getColumnIndex(ToDoSchema.ToDoItemColumns.DUE_TIME));
+        alarmTime = c.getLong(c.getColumnIndex(ToDoSchema.ToDoItemColumns.ALARM_TIME));
         daysEarlier =
-                c.getInt(c.getColumnIndex(ToDo.ToDoItem.ALARM_DAYS_EARLIER));
+                c.getInt(c.getColumnIndex(ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER));
         notificationTime =
-                c.getLong(c.getColumnIndex(ToDo.ToDoItem.NOTIFICATION_TIME));
+                c.getLong(c.getColumnIndex(ToDoSchema.ToDoItemColumns.NOTIFICATION_TIME));
 
         // Set the date of the next alarm.
         Calendar cal = Calendar.getInstance();

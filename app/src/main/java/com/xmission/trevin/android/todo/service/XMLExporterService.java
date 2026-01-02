@@ -34,7 +34,8 @@ import android.widget.Toast;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
@@ -192,7 +193,7 @@ public class XMLExporterService extends IntentService
             PrintStream out = new PrintStream(oStream);
             out.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             out.print("<" + DOCUMENT_TAG + " db-version=\""
-                    + ToDoProvider.DATABASE_VERSION + "\" exported=\"");
+                    + ToDoRepositoryImpl.DATABASE_VERSION + "\" exported=\"");
             out.print(DATE_FORMAT.format(new Date()));
             out.println("\">");
             currentMode = OpMode.SETTINGS;
@@ -310,24 +311,24 @@ public class XMLExporterService extends IntentService
     /** Write out the metadata */
     protected void writeMetadata(PrintStream out) {
         final String[] PROJECTION = {
-                ToDoMetadata._ID,
-                ToDoMetadata.NAME,
-                ToDoMetadata.VALUE,
+                ToDoMetadataColumns._ID,
+                ToDoMetadataColumns.NAME,
+                ToDoMetadataColumns.VALUE,
         };
-        Cursor c = getContentResolver().query(ToDoMetadata.CONTENT_URI,
-                PROJECTION, null, null, ToDoMetadata.NAME);
+        Cursor c = getContentResolver().query(ToDoMetadataColumns.CONTENT_URI,
+                PROJECTION, null, null, ToDoMetadataColumns.NAME);
         try {
             out.println("    <" + METADATA_TAG + ">");
             int count = 0;
             while (c.moveToNext()) {
-                String name = c.getString(c.getColumnIndex(ToDoMetadata.NAME));
+                String name = c.getString(c.getColumnIndex(ToDoMetadataColumns.NAME));
                 // Skip the password if we are not exporting private records
                 if (StringEncryption.METADATA_PASSWORD_HASH[0].equals(name) &&
                         !exportPrivate)
                     continue;
-                int ival = c.getColumnIndex(ToDoMetadata.VALUE);
+                int ival = c.getColumnIndex(ToDoMetadataColumns.VALUE);
                 out.print("\t<item id=\"");
-                out.print(c.getLong(c.getColumnIndex(ToDoMetadata._ID)));
+                out.print(c.getLong(c.getColumnIndex(ToDoMetadataColumns._ID)));
                 out.print("\" name=\"");
                 out.print(escapeXML(name));
                 out.print("\"");
@@ -350,19 +351,19 @@ public class XMLExporterService extends IntentService
     /** Write the category list */
     protected void writeCategories(PrintStream out) {
         final String[] PROJECTION = {
-                ToDoCategory._ID,
-                ToDoCategory.NAME,
+                ToDoCategoryColumns._ID,
+                ToDoCategoryColumns.NAME,
         };
-        Cursor c = getContentResolver().query(ToDoCategory.CONTENT_URI,
-                PROJECTION, null, null, ToDoCategory.NAME);
+        Cursor c = getContentResolver().query(ToDoCategoryColumns.CONTENT_URI,
+                PROJECTION, null, null, ToDoCategoryColumns.NAME);
         totalCount = c.getCount();
         exportCount = 0;
         try {
             out.println("    <" + CATEGORIES_TAG + ">");
             while (c.moveToNext()) {
-                String name = c.getString(c.getColumnIndex(ToDoCategory.NAME));
+                String name = c.getString(c.getColumnIndex(ToDoCategoryColumns.NAME));
                 out.print("\t<category id=\"");
-                out.print(c.getLong(c.getColumnIndex(ToDoCategory._ID)));
+                out.print(c.getLong(c.getColumnIndex(ToDoCategoryColumns._ID)));
                 out.print("\">");
                 out.print(escapeXML(name));
                 out.println("</category>");
@@ -378,53 +379,53 @@ public class XMLExporterService extends IntentService
     /** Write the To Do list */
     protected void writeToDoItems(PrintStream out) {
         final String[] PROJECTION = {
-                ToDoItem._ID,
-                ToDoItem.DESCRIPTION,
-                ToDoItem.CREATE_TIME,
-                ToDoItem.MOD_TIME,
-                ToDoItem.DUE_TIME,
-                ToDoItem.COMPLETED_TIME,
-                ToDoItem.CHECKED,
-                ToDoItem.PRIORITY,
-                ToDoItem.PRIVATE,
-                ToDoItem.CATEGORY_ID,
-                ToDoItem.NOTE,
-                ToDoItem.ALARM_DAYS_EARLIER,
-                ToDoItem.ALARM_TIME,
-                ToDoItem.REPEAT_INTERVAL,
-                ToDoItem.REPEAT_INCREMENT,
-                ToDoItem.REPEAT_WEEK_DAYS,
-                ToDoItem.REPEAT_DAY,
-                ToDoItem.REPEAT_DAY2,
-                ToDoItem.REPEAT_WEEK,
-                ToDoItem.REPEAT_WEEK2,
-                ToDoItem.REPEAT_MONTH,
-                ToDoItem.REPEAT_END,
-                ToDoItem.HIDE_DAYS_EARLIER,
-                ToDoItem.NOTIFICATION_TIME,
+                ToDoItemColumns._ID,
+                ToDoItemColumns.DESCRIPTION,
+                ToDoItemColumns.CREATE_TIME,
+                ToDoItemColumns.MOD_TIME,
+                ToDoItemColumns.DUE_TIME,
+                ToDoItemColumns.COMPLETED_TIME,
+                ToDoItemColumns.CHECKED,
+                ToDoItemColumns.PRIORITY,
+                ToDoItemColumns.PRIVATE,
+                ToDoItemColumns.CATEGORY_ID,
+                ToDoItemColumns.NOTE,
+                ToDoItemColumns.ALARM_DAYS_EARLIER,
+                ToDoItemColumns.ALARM_TIME,
+                ToDoItemColumns.REPEAT_INTERVAL,
+                ToDoItemColumns.REPEAT_INCREMENT,
+                ToDoItemColumns.REPEAT_WEEK_DAYS,
+                ToDoItemColumns.REPEAT_DAY,
+                ToDoItemColumns.REPEAT_DAY2,
+                ToDoItemColumns.REPEAT_WEEK,
+                ToDoItemColumns.REPEAT_WEEK2,
+                ToDoItemColumns.REPEAT_MONTH,
+                ToDoItemColumns.REPEAT_END,
+                ToDoItemColumns.HIDE_DAYS_EARLIER,
+                ToDoItemColumns.NOTIFICATION_TIME,
         };
-        Cursor c = getContentResolver().query(ToDoItem.CONTENT_URI,
+        Cursor c = getContentResolver().query(ToDoItemColumns.CONTENT_URI,
                 PROJECTION, null, null,
-                ToDoProvider.TODO_TABLE_NAME + "." + ToDoItem._ID);
+                ToDoRepositoryImpl.TODO_TABLE_NAME + "." + ToDoItemColumns._ID);
         totalCount = c.getCount();
         exportCount = 0;
 
         try {
             out.println("    <" + ITEMS_TAG + ">");
             while (c.moveToNext()) {
-                int privacy = c.getInt(c.getColumnIndex(ToDoItem.PRIVATE));
+                int privacy = c.getInt(c.getColumnIndex(ToDoItemColumns.PRIVATE));
                 if (!exportPrivate && (privacy > 0))
                     continue;
                 boolean checked = c.getInt(c.getColumnIndex(
-                        ToDoItem.CHECKED)) != 0;
+                        ToDoItemColumns.CHECKED)) != 0;
                 out.print("\t<to-do id=\"");
-                out.print(c.getLong(c.getColumnIndex(ToDoItem._ID)));
+                out.print(c.getLong(c.getColumnIndex(ToDoItemColumns._ID)));
                 out.print("\" checked=\"");
                 out.print(checked);
                 out.print("\" category=\"");
-                out.print(c.getLong(c.getColumnIndex(ToDoItem.CATEGORY_ID)));
+                out.print(c.getLong(c.getColumnIndex(ToDoItemColumns.CATEGORY_ID)));
                 out.print("\" priority=\"");
-                out.print(c.getInt(c.getColumnIndex(ToDoItem.PRIORITY)));
+                out.print(c.getInt(c.getColumnIndex(ToDoItemColumns.PRIORITY)));
                 out.print("\"");
                 if (privacy != 0) {
                     out.print(" private=\"true\"");
@@ -437,7 +438,7 @@ public class XMLExporterService extends IntentService
                 out.println(">");
 
                 out.print("\t    <description>");
-                int i = c.getColumnIndex(ToDoItem.DESCRIPTION);
+                int i = c.getColumnIndex(ToDoItemColumns.DESCRIPTION);
                 if (privacy < 2) {
                     String desc = c.getString(i);
                     out.print(escapeXML(desc));
@@ -449,20 +450,20 @@ public class XMLExporterService extends IntentService
 
                 out.println(String.format("\t    <created time=\"%s\"/>",
                         DATE_FORMAT.format(new Date(c.getLong(
-                                c.getColumnIndex(ToDoItem.CREATE_TIME))))));
+                                c.getColumnIndex(ToDoItemColumns.CREATE_TIME))))));
 
                 out.println(String.format("\t    <modified time=\"%s\"/>",
                         DATE_FORMAT.format(new Date(c.getLong(
-                                c.getColumnIndex(ToDoItem.MOD_TIME))))));
+                                c.getColumnIndex(ToDoItemColumns.MOD_TIME))))));
 
-                i = c.getColumnIndex(ToDoItem.DUE_TIME);
+                i = c.getColumnIndex(ToDoItemColumns.DUE_TIME);
                 if (!c.isNull(i)) {
                     out.println(String.format("\t    <due time=\"%s\">",
                             DATE_FORMAT.format(new Date(c.getLong(i)))));
 
-                    i = c.getColumnIndex(ToDoItem.ALARM_DAYS_EARLIER);
+                    i = c.getColumnIndex(ToDoItemColumns.ALARM_DAYS_EARLIER);
                     if (!c.isNull(i)) {
-                        int j = c.getColumnIndex(ToDoItem.ALARM_TIME);
+                        int j = c.getColumnIndex(ToDoItemColumns.ALARM_TIME);
                         out.print("\t\t<alarm days-earlier=\"");
                         out.print(c.getInt(i));
                         out.print("\" time=\"");
@@ -470,54 +471,54 @@ public class XMLExporterService extends IntentService
                         out.println("\"/>");
                     }
 
-                    i = c.getColumnIndex(ToDoItem.REPEAT_INTERVAL);
+                    i = c.getColumnIndex(ToDoItemColumns.REPEAT_INTERVAL);
                     if (!c.isNull(i)) {
                         out.print("\t\t<repeat interval=\"");
                         out.print(c.getInt(i));
                         out.print('"');
-                        i = c.getColumnIndex(ToDoItem.REPEAT_INCREMENT);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_INCREMENT);
                         if (!c.isNull(i)) {
                             out.print(" increment=\"");
                             out.print(c.getInt(i));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_WEEK_DAYS);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_WEEK_DAYS);
                         if (!c.isNull(i)) {
                             out.print(" week-days=\"");
                             out.print(Integer.toBinaryString(c.getInt(i)));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_DAY);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_DAY);
                         if (!c.isNull(i)) {
                             out.print(" day1=\"");
                             out.print(c.getInt(i));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_DAY2);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_DAY2);
                         if (!c.isNull(i)) {
                             out.print(" day2=\"");
                             out.print(c.getInt(i));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_WEEK);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_WEEK);
                         if (!c.isNull(i)) {
                             out.print(" week1=\"");
                             out.print(c.getInt(i));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_WEEK2);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_WEEK2);
                         if (!c.isNull(i)) {
                             out.print(" week2=\"");
                             out.print(c.getInt(i));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_MONTH);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_MONTH);
                         if (!c.isNull(i)) {
                             out.print(" month=\"");
                             out.print(c.getInt(i));
                             out.print('"');
                         }
-                        i = c.getColumnIndex(ToDoItem.REPEAT_END);
+                        i = c.getColumnIndex(ToDoItemColumns.REPEAT_END);
                         if (!c.isNull(i)) {
                             out.print(" end=\"");
                             out.print(c.getLong(i));
@@ -526,14 +527,14 @@ public class XMLExporterService extends IntentService
                         out.println("/>");
                     }
 
-                    i = c.getColumnIndex(ToDoItem.HIDE_DAYS_EARLIER);
+                    i = c.getColumnIndex(ToDoItemColumns.HIDE_DAYS_EARLIER);
                     if (!c.isNull(i)) {
                         out.print("\t\t<hide days-earlier=\"");
                         out.print(c.getInt(i));
                         out.println("\"/>");
                     }
 
-                    i = c.getColumnIndex(ToDoItem.NOTIFICATION_TIME);
+                    i = c.getColumnIndex(ToDoItemColumns.NOTIFICATION_TIME);
                     if (!c.isNull(i)) {
                         out.print("\t\t<notification time=\"");
                         out.print(DATE_FORMAT.format(new Date(c.getLong(i))));
@@ -543,7 +544,7 @@ public class XMLExporterService extends IntentService
                     out.println("\t    </due>");
                 }
 
-                i = c.getColumnIndex(ToDoItem.NOTE);
+                i = c.getColumnIndex(ToDoItemColumns.NOTE);
                 if (!c.isNull(i)) {
                     out.print("\t    <note>");
                     if (privacy < 2) {
@@ -559,7 +560,7 @@ public class XMLExporterService extends IntentService
                 exportCount++;
             }
             out.println("    </" + ITEMS_TAG + ">");
-            Log.i(LOG_TAG, String.format("Wrote %d ToDo items", exportCount));
+            Log.i(LOG_TAG, String.format("Wrote %d ToDoSchema items", exportCount));
         } finally {
             c.close();
         }

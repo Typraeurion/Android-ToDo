@@ -19,7 +19,7 @@ package com.xmission.trevin.android.todo.ui;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoCategory;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
 
 import android.content.Context;
 import android.util.Log;
@@ -90,8 +90,8 @@ public class CategoryEditorAdapter extends BaseAdapter {
     public long getItemId(int position) {
 	Map<String,Object> entry = data.get(position);
 	if (entry != null) {
-	    if (entry.containsKey(ToDoCategory._ID))
-		return (Long) entry.get(ToDoCategory._ID);
+	    if (entry.containsKey(ToDoSchema.ToDoCategoryColumns._ID))
+		return (Long) entry.get(ToDoSchema.ToDoCategoryColumns._ID);
 	}
 	return -1;
     }
@@ -113,7 +113,7 @@ public class CategoryEditorAdapter extends BaseAdapter {
 
 	EditText text = (EditText) convertView;
 	final Map<String,Object> entry = data.get(position);
-	text.setText((String) entry.get(ToDoCategory.NAME));
+	text.setText((String) entry.get(ToDoSchema.ToDoCategoryColumns.NAME));
 	text.setOnFocusChangeListener(new View.OnFocusChangeListener() {
 	    @Override
 	    public void onFocusChange(View v, boolean hasFocus) {
@@ -121,14 +121,14 @@ public class CategoryEditorAdapter extends BaseAdapter {
 			+ position + "]");
 		if (!hasFocus) {
 		    String newText = ((EditText) v).getText().toString();
-		    entry.put(ToDoCategory.NAME, newText);
+		    entry.put(ToDoSchema.ToDoCategoryColumns.NAME, newText);
 		}
 	    }
 	});
 
 	// If this is a new entry, request focus
-	if ((((String) entry.get(ToDoCategory.NAME)).length() == 0) &&
-		!entry.containsKey(ToDoCategory._ID))
+	if ((((String) entry.get(ToDoSchema.ToDoCategoryColumns.NAME)).length() == 0) &&
+		!entry.containsKey(ToDoSchema.ToDoCategoryColumns._ID))
 	    text.requestFocus();
 
 	return convertView;

@@ -16,11 +16,13 @@
  */
 package com.xmission.trevin.android.todo.data;
 
-import static com.xmission.trevin.android.todo.provider.ToDo.ToDoItem.*;
+import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.*;
 
 import java.util.*;
 
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.data.repeat.RepeatInterval;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -37,6 +39,8 @@ import android.util.SparseArray;
  * has been completed.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated Should be replaced by {@link RepeatInterval}
  */
 public class RepeatSettings implements Cloneable {
 
@@ -110,7 +114,12 @@ public class RepeatSettings implements Cloneable {
 	ALL_WEEK_DAYS = Collections.unmodifiableSortedSet(weekDays);
     }
 
-    /** WeekDays is a multiple-selection bitmap, returning a {@link Set}. */
+    /**
+     * WeekDays is a multiple-selection bitmap, returning a {@link Set}.
+     *
+     * @deprecated replace this with
+     * {@link com.xmission.trevin.android.todo.data.repeat.WeekDays}
+     */
     public enum WeekDays {
 	SUNDAY(REPEAT_SUNDAYS),
 	MONDAY(REPEAT_MONDAYS),
@@ -163,6 +172,9 @@ public class RepeatSettings implements Cloneable {
     /**
      * Which direction to look for the next available date,
      * if the target date falls on an unavailable day of the week.
+     *
+     * @deprecated moving to
+     * {@link com.xmission.trevin.android.todo.data.repeat.WeekdayDirection}
      */
     public enum WeekdayDirection {
 	NEXT(0),
@@ -329,11 +341,11 @@ public class RepeatSettings implements Cloneable {
      * of a {@link Cursor}.
      */
     public RepeatSettings(Cursor c) {
-	int i = c.getColumnIndex(ToDoItem.DUE_TIME);
+	int i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.DUE_TIME);
 	if (!c.isNull(i))
 	    dueDate.setTime(new Date(c.getLong(i)));
 
-	i = c.getColumnIndex(ToDoItem.REPEAT_INTERVAL);
+	i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL);
 	if (c.isNull(i))
 	    return;	// "None" is the default
 
@@ -341,7 +353,7 @@ public class RepeatSettings implements Cloneable {
 	if (intervalType == null)
 	    intervalType = IntervalType.NONE;
 	else if (intervalType != IntervalType.NONE) {
-	    i = c.getColumnIndex(ToDoItem.REPEAT_INCREMENT);
+	    i = c.getColumnIndex(ToDoItemColumns.REPEAT_INCREMENT);
 	    increment = c.isNull(i) ? 1 : c.getInt(i);
 	    if (increment < 1)
 		increment = 1;
@@ -352,7 +364,7 @@ public class RepeatSettings implements Cloneable {
 	 */
 	switch (intervalType) {
 	case SEMI_MONTHLY_ON_DAYS:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_DAY2);
+	    i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_DAY2);
 	    if (c.isNull(i))
 		intervalType = IntervalType.MONTHLY_ON_DATE;
 	    else
@@ -360,7 +372,7 @@ public class RepeatSettings implements Cloneable {
 	    // Fall through
 	case MONTHLY_ON_DAY:
 	case YEARLY_ON_DAY:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_DAY);
+	    i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_DAY);
 	    if (c.isNull(i)) {
 		dayOfWeek[0] = dueDate.get(Calendar.DATE);
 	    } else {
@@ -369,7 +381,7 @@ public class RepeatSettings implements Cloneable {
 	    break;
 
 	case SEMI_MONTHLY_ON_DATES:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_DAY2);
+	    i = c.getColumnIndex(ToDoItemColumns.REPEAT_DAY2);
 	    if (c.isNull(i))
 		intervalType = IntervalType.MONTHLY_ON_DATE;
 	    else
@@ -377,7 +389,7 @@ public class RepeatSettings implements Cloneable {
 	    // Fall through
 	case MONTHLY_ON_DATE:
 	case YEARLY_ON_DATE:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_DAY);
+	    i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_DAY);
 	    if (c.isNull(i)) {
 		date[0] = dueDate.get(Calendar.DATE);
 	    } else {
@@ -396,7 +408,7 @@ public class RepeatSettings implements Cloneable {
 	case MONTH_AFTER:
 	case YEARLY_ON_DATE:
 	case YEAR_AFTER:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_WEEK_DAYS);
+	    i = c.getColumnIndex(ToDoItemColumns.REPEAT_WEEK_DAYS);
 	    int bitmap = c.isNull(i) ? REPEAT_ALL_WEEK : c.getInt(i);
 	    allowedWeekDays = new TreeSet<>();
 	    for (int j = 0; j < 7; j++) {
@@ -407,7 +419,7 @@ public class RepeatSettings implements Cloneable {
 	    break;
 
 	case WEEKLY:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_WEEK_DAYS);
+	    i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS);
 	    fixedWeekDays = new TreeSet<>();
 	    if (c.isNull(i)) {
 		fixedWeekDays.add(dueDate.get(Calendar.DAY_OF_WEEK));
@@ -421,7 +433,7 @@ public class RepeatSettings implements Cloneable {
 	    break;
 
 	case SEMI_MONTHLY_ON_DAYS:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_WEEK2);
+	    i = c.getColumnIndex(ToDoItemColumns.REPEAT_WEEK2);
 	    if (c.isNull(i)) {
 		intervalType = IntervalType.MONTHLY_ON_DAY;
 		dayOfWeek[1] = null;
@@ -431,7 +443,7 @@ public class RepeatSettings implements Cloneable {
 	    // Fall through
 	case MONTHLY_ON_DAY:
 	case YEARLY_ON_DAY:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_WEEK);
+	    i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_WEEK);
 	    if (c.isNull(i)) {
 		week[0] = dueDate.get(Calendar.DAY_OF_WEEK_IN_MONTH);
 	    } else {
@@ -444,7 +456,7 @@ public class RepeatSettings implements Cloneable {
 	switch (intervalType) {
 	case YEARLY_ON_DAY:
 	case YEARLY_ON_DATE:
-	    i = c.getColumnIndex(ToDoItem.REPEAT_MONTH);
+	    i = c.getColumnIndex(ToDoSchema.ToDoItemColumns.REPEAT_MONTH);
 	    if (c.isNull(i)) {
 		month = dueDate.get(Calendar.MONTH);
 	    } else {
@@ -453,7 +465,7 @@ public class RepeatSettings implements Cloneable {
 	    break;
 	}
 
-	i = c.getColumnIndex(ToDoItem.REPEAT_END);
+	i = c.getColumnIndex(ToDoItemColumns.REPEAT_END);
 	if (!c.isNull(i))
 	    end = new Date(c.getLong(i));
     }
@@ -999,22 +1011,22 @@ public class RepeatSettings implements Cloneable {
      * Add these repeat settings to an existing set of {@link ContentValues}.
      */
     public void store(ContentValues values) {
-	values.put(ToDoItem.REPEAT_INTERVAL, intervalType.value);
+	values.put(ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL, intervalType.value);
 
 	if (intervalType == IntervalType.NONE) {
-	    values.putNull(ToDoItem.REPEAT_INCREMENT);
-	    values.putNull(ToDoItem.REPEAT_END);
+	    values.putNull(ToDoItemColumns.REPEAT_INCREMENT);
+	    values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_END);
 	} else {
-	    values.put(ToDoItem.REPEAT_INCREMENT, increment);
+	    values.put(ToDoSchema.ToDoItemColumns.REPEAT_INCREMENT, increment);
 	    if (end == null)
-		values.putNull(ToDoItem.REPEAT_END);
+		values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_END);
 	    else
-		values.put(ToDoItem.REPEAT_END, end.getTime());
+		values.put(ToDoItemColumns.REPEAT_END, end.getTime());
 	}
 
 	switch (intervalType) {
 	default:
-	    values.putNull(ToDoItem.REPEAT_WEEK_DAYS);
+	    values.putNull(ToDoItemColumns.REPEAT_WEEK_DAYS);
 	    break;
 
 	case DAILY:
@@ -1026,65 +1038,65 @@ public class RepeatSettings implements Cloneable {
 	case MONTH_AFTER:
 	case YEARLY_ON_DATE:
 	case YEAR_AFTER:
-	    values.put(ToDoItem.REPEAT_WEEK_DAYS, getWeekdayBitmap());
+	    values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS, getWeekdayBitmap());
 	    break;
 	}
 
 	switch (intervalType) {
 	default:
-	    values.putNull(ToDoItem.REPEAT_DAY);
+	    values.putNull(ToDoItemColumns.REPEAT_DAY);
 	    break;
 
 	case SEMI_MONTHLY_ON_DAYS:
 	case MONTHLY_ON_DAY:
 	case YEARLY_ON_DAY:
-	    values.put(ToDoItem.REPEAT_DAY, dayOfWeek[0]);
+	    values.put(ToDoSchema.ToDoItemColumns.REPEAT_DAY, dayOfWeek[0]);
 	    break;
 
 	case SEMI_MONTHLY_ON_DATES:
 	case MONTHLY_ON_DATE:
 	case YEARLY_ON_DATE:
-	    values.put(ToDoItem.REPEAT_DAY, date[0]);
+	    values.put(ToDoItemColumns.REPEAT_DAY, date[0]);
 	    break;
 	}
 
 	switch (intervalType) {
 	default:
-	    values.putNull(ToDoItem.REPEAT_DAY2);
-	    values.putNull(ToDoItem.REPEAT_WEEK2);
+	    values.putNull(ToDoItemColumns.REPEAT_DAY2);
+	    values.putNull(ToDoItemColumns.REPEAT_WEEK2);
 	    break;
 
 	case SEMI_MONTHLY_ON_DAYS:
-	    values.put(ToDoItem.REPEAT_DAY2, dayOfWeek[1]);
-	    values.put(ToDoItem.REPEAT_WEEK2, week[1]);
+	    values.put(ToDoItemColumns.REPEAT_DAY2, dayOfWeek[1]);
+	    values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK2, week[1]);
 	    break;
 
 	case SEMI_MONTHLY_ON_DATES:
-	    values.put(ToDoItem.REPEAT_DAY2, date[1]);
-	    values.putNull(ToDoItem.REPEAT_WEEK2);
+	    values.put(ToDoSchema.ToDoItemColumns.REPEAT_DAY2, date[1]);
+	    values.putNull(ToDoItemColumns.REPEAT_WEEK2);
 	    break;
 	}
 
 	switch (intervalType) {
 	default:
-	    values.putNull(ToDoItem.REPEAT_WEEK);
+	    values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_WEEK);
 	    break;
 
 	case SEMI_MONTHLY_ON_DAYS:
 	case MONTHLY_ON_DAY:
 	case YEARLY_ON_DAY:
-	    values.put(ToDoItem.REPEAT_WEEK, week[0]);
+	    values.put(ToDoItemColumns.REPEAT_WEEK, week[0]);
 	    break;
 	}
 
 	switch (intervalType) {
 	default:
-	    values.putNull(ToDoItem.REPEAT_MONTH);
+	    values.putNull(ToDoSchema.ToDoItemColumns.REPEAT_MONTH);
 	    break;
 
 	case YEARLY_ON_DAY:
 	case YEARLY_ON_DATE:
-	    values.put(ToDoItem.REPEAT_MONTH, month);
+	    values.put(ToDoSchema.ToDoItemColumns.REPEAT_MONTH, month);
 	    break;
 	}
     }

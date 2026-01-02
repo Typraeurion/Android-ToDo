@@ -23,7 +23,8 @@ import java.util.*;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.AlarmItemInfo;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 import com.xmission.trevin.android.todo.ui.ToDoListActivity;
 import com.xmission.trevin.android.todo.util.StringEncryption;
@@ -112,17 +113,17 @@ public class AlarmService extends IntentService {
      * The columns we are interested in from the item table
      */
     private static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItem._ID,
-            ToDoItem.CATEGORY_ID,
-            ToDoItem.CATEGORY_NAME,
-            ToDoItem.DESCRIPTION,
-            ToDoItem.MOD_TIME,
-            ToDoItem.CHECKED,
-            ToDoItem.DUE_TIME,
-            ToDoItem.ALARM_DAYS_EARLIER,
-            ToDoItem.ALARM_TIME,
-            ToDoItem.PRIVATE,
-            ToDoItem.NOTIFICATION_TIME,
+            ToDoSchema.ToDoItemColumns._ID,
+            ToDoSchema.ToDoItemColumns.CATEGORY_ID,
+            ToDoItemColumns.CATEGORY_NAME,
+            ToDoItemColumns.DESCRIPTION,
+            ToDoSchema.ToDoItemColumns.MOD_TIME,
+            ToDoItemColumns.CHECKED,
+            ToDoSchema.ToDoItemColumns.DUE_TIME,
+            ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER,
+            ToDoSchema.ToDoItemColumns.ALARM_TIME,
+            ToDoSchema.ToDoItemColumns.PRIVATE,
+            ToDoItemColumns.NOTIFICATION_TIME,
     };
 
     /** Our pending alarms in sorted order */
@@ -250,10 +251,10 @@ public class AlarmService extends IntentService {
      */
     private void refreshAlarms() {
 	StringBuilder where = new StringBuilder();
-	where.append(ToDoItem.CHECKED).append(" = 0 AND ");
-	where.append(ToDoItem.DUE_TIME).append(" IS NOT NULL AND ");
-	where.append(ToDoItem.ALARM_DAYS_EARLIER).append(" IS NOT NULL");
-	Cursor c = getContentResolver().query(ToDoItem.CONTENT_URI,
+	where.append(ToDoItemColumns.CHECKED).append(" = 0 AND ");
+	where.append(ToDoSchema.ToDoItemColumns.DUE_TIME).append(" IS NOT NULL AND ");
+	where.append(ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER).append(" IS NOT NULL");
+	Cursor c = getContentResolver().query(ToDoItemColumns.CONTENT_URI,
 		ITEM_PROJECTION, where.toString(), null, null);
         if (c == null)
             return;
@@ -290,7 +291,7 @@ public class AlarmService extends IntentService {
 
 	Intent intent = new Intent(this, ToDoListActivity.class);
 	intent.setAction(Intent.ACTION_MAIN);
-        intent.setData(ToDoItem.CONTENT_URI);
+        intent.setData(ToDoSchema.ToDoItemColumns.CONTENT_URI);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(EXTRA_ITEM_CATEGORY_ID, categoryId);
         intent.putExtra(EXTRA_ITEM_ID, itemId);
@@ -321,7 +322,7 @@ public class AlarmService extends IntentService {
 	int dueItems = 0;
 	Date now = new Date();
 	ContentValues notificationTimeValues = new ContentValues();
-	notificationTimeValues.put(ToDoItem.NOTIFICATION_TIME, now.getTime());
+	notificationTimeValues.put(ToDoItemColumns.NOTIFICATION_TIME, now.getTime());
 	for (AlarmItemInfo item : pendingAlarms) {
 	    if (item.getAlarmDate().before(now)) {
 		// This item's alarm is due.
@@ -329,7 +330,7 @@ public class AlarmService extends IntentService {
                 postNotification(item, now, doVibrate, soundID,
                         showPrivate, showEncrypted, encryptor);
 
-		Uri todoUri = Uri.withAppendedPath(ToDoItem.CONTENT_URI,
+		Uri todoUri = Uri.withAppendedPath(ToDoItemColumns.CONTENT_URI,
 			Long.toString(item.getId()));
 		getContentResolver().update(todoUri,
 			notificationTimeValues, null, null);

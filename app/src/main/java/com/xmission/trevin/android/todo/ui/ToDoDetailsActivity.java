@@ -25,7 +25,7 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.RepeatSettings;
 import com.xmission.trevin.android.todo.data.RepeatSettings.IntervalType;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 import android.app.*;
 import android.content.*;
@@ -64,49 +64,49 @@ public class ToDoDetailsActivity extends Activity {
      * The columns we are interested in from the category table
      */
     private static final String[] CATEGORY_PROJECTION = new String[] {
-            ToDoCategory._ID,
-            ToDoCategory.NAME,
+            ToDoCategoryColumns._ID,
+            ToDoCategoryColumns.NAME,
     };
 
     /**
      * The columns we are interested in from the item table
      */
     private static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItem._ID,
-            ToDoItem.DESCRIPTION,
-            ToDoItem.CHECKED,
-            ToDoItem.NOTE,
-            ToDoItem.ALARM_DAYS_EARLIER,
-            ToDoItem.ALARM_TIME,
-            ToDoItem.HIDE_DAYS_EARLIER,
-            ToDoItem.REPEAT_INTERVAL,
-            ToDoItem.REPEAT_INCREMENT,
-            ToDoItem.REPEAT_WEEK_DAYS,
-            ToDoItem.REPEAT_DAY,
-            ToDoItem.REPEAT_DAY2,
-            ToDoItem.REPEAT_WEEK,
-            ToDoItem.REPEAT_WEEK2,
-            ToDoItem.REPEAT_MONTH,
-            ToDoItem.REPEAT_END,
-            ToDoItem.DUE_TIME,
-            ToDoItem.COMPLETED_TIME,
-            ToDoItem.CATEGORY_ID,
-            ToDoItem.PRIORITY,
-            ToDoItem.PRIVATE,
+            ToDoItemColumns._ID,
+            ToDoItemColumns.DESCRIPTION,
+            ToDoItemColumns.CHECKED,
+            ToDoItemColumns.NOTE,
+            ToDoItemColumns.ALARM_DAYS_EARLIER,
+            ToDoItemColumns.ALARM_TIME,
+            ToDoItemColumns.HIDE_DAYS_EARLIER,
+            ToDoItemColumns.REPEAT_INTERVAL,
+            ToDoItemColumns.REPEAT_INCREMENT,
+            ToDoItemColumns.REPEAT_WEEK_DAYS,
+            ToDoItemColumns.REPEAT_DAY,
+            ToDoItemColumns.REPEAT_DAY2,
+            ToDoItemColumns.REPEAT_WEEK,
+            ToDoItemColumns.REPEAT_WEEK2,
+            ToDoItemColumns.REPEAT_MONTH,
+            ToDoItemColumns.REPEAT_END,
+            ToDoItemColumns.DUE_TIME,
+            ToDoItemColumns.COMPLETED_TIME,
+            ToDoItemColumns.CATEGORY_ID,
+            ToDoItemColumns.PRIORITY,
+            ToDoItemColumns.PRIVATE,
     };
 
     /** These columns are used if we need to decrypt or encrypt the note */
     private static final String[] ITEM_NOTE_PROJECTION = new String[] {
-	ToDoItem._ID,
-	ToDoItem.NOTE,
-	ToDoItem.PRIVATE,
+	ToDoItemColumns._ID,
+	ToDoItemColumns.NOTE,
+	ToDoItemColumns.PRIVATE,
     };
 
     /** The URI by which we were started for the To-Do item */
-    private Uri todoUri = ToDoItem.CONTENT_URI;
+    private Uri todoUri = ToDoItemColumns.CONTENT_URI;
 
     /** The corresponding URI for the categories */
-    private Uri categoryUri = ToDoCategory.CONTENT_URI;
+    private Uri categoryUri = ToDoCategoryColumns.CONTENT_URI;
 
     /** Used to check whether we can post notifications */
     NotificationManager notificationManager;
@@ -272,7 +272,7 @@ public class ToDoDetailsActivity extends Activity {
         // requerying the cursor when needed.
         Cursor categoryCursor = managedQuery(categoryUri,
         	CATEGORY_PROJECTION, null, null,
-                ToDoCategory.DEFAULT_SORT_ORDER);
+                ToDoCategoryColumns.DEFAULT_SORT_ORDER);
 
         // If we are being re-created from a destroyed instance,
         // restore the previous dialog state.
@@ -315,11 +315,11 @@ public class ToDoDetailsActivity extends Activity {
         	throw new SQLiteDoneException();
 
             int isPrivate = itemCursor.getInt(
-        	    itemCursor.getColumnIndex(ToDoItem.PRIVATE));
+        	    itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
             privateCheckBox.setChecked(isPrivate != 0);
 
             encryptor = StringEncryption.holdGlobalEncryption();
-            int i = itemCursor.getColumnIndex(ToDoItem.DESCRIPTION);
+            int i = itemCursor.getColumnIndex(ToDoItemColumns.DESCRIPTION);
             if (isPrivate > 1) {
         	if (encryptor.hasKey()) {
         	    try {
@@ -338,23 +338,23 @@ public class ToDoDetailsActivity extends Activity {
         	toDoDescription.setText(itemCursor.getString(i));
             }
 
-            i = itemCursor.getColumnIndex(ToDoItem.PRIORITY);
+            i = itemCursor.getColumnIndex(ToDoItemColumns.PRIORITY);
             priorityText.setText(Integer.toString(itemCursor.getInt(i)));
 
             // Used to map To Do categories from the database to a spinner
             SimpleCursorAdapter categoryAdapter =
         	new SimpleCursorAdapter(this,
         		android.R.layout.simple_spinner_item,
-        		categoryCursor, new String[] { ToDoCategory.NAME },
+        		categoryCursor, new String[] { ToDoCategoryColumns.NAME },
         		new int[] { android.R.id.text1 });
             categoryAdapter.setDropDownViewResource(
         	    R.layout.simple_spinner_dropdown_item);
             categoryList.setAdapter(categoryAdapter);
             // Select the item's current category
-            i = itemCursor.getColumnIndex(ToDoItem.CATEGORY_ID);
+            i = itemCursor.getColumnIndex(ToDoItemColumns.CATEGORY_ID);
             setCategorySpinnerByID(itemCursor.getLong(i));
 
-            i = itemCursor.getColumnIndex(ToDoItem.COMPLETED_TIME);
+            i = itemCursor.getColumnIndex(ToDoItemColumns.COMPLETED_TIME);
             View lastCompletedTableRow = findViewById(R.id.LastCompletedTableRow);
             if (itemCursor.isNull(i)) {
         	completedDateText.setText("");
@@ -373,7 +373,7 @@ public class ToDoDetailsActivity extends Activity {
              * Today, Tomorrow, Sun-Sat (next 5 days), "In 1 week" (the first 8
              * all prefixed with the short date), "No Date", and "Choose Date..."
              */
-            i = itemCursor.getColumnIndex(ToDoItem.DUE_TIME);
+            i = itemCursor.getColumnIndex(ToDoItemColumns.DUE_TIME);
             if (itemCursor.isNull(i)) {
         	dueDate = null;
             } else {
@@ -382,12 +382,12 @@ public class ToDoDetailsActivity extends Activity {
             updateDueDateButton();
             dueDateButton.setOnClickListener(new DueDateButtonOnClickListener());
 
-            i = itemCursor.getColumnIndex(ToDoItem.ALARM_DAYS_EARLIER);
+            i = itemCursor.getColumnIndex(ToDoItemColumns.ALARM_DAYS_EARLIER);
             if (itemCursor.isNull(i)) {
         	alarmDaysInAdvance = null;
             } else {
         	alarmDaysInAdvance = itemCursor.getInt(i);
-        	i = itemCursor.getColumnIndex(ToDoItem.ALARM_TIME);
+        	i = itemCursor.getColumnIndex(ToDoItemColumns.ALARM_TIME);
         	alarmTime = itemCursor.getLong(i);
             }
             updateAlarmButton();
@@ -401,7 +401,7 @@ public class ToDoDetailsActivity extends Activity {
             repeatButton.setOnClickListener(new RepeatButtonOnClickListener());
             updateRepeatButton();
 
-            i = itemCursor.getColumnIndex(ToDoItem.HIDE_DAYS_EARLIER);
+            i = itemCursor.getColumnIndex(ToDoItemColumns.HIDE_DAYS_EARLIER);
             if (itemCursor.isNull(i))
         	hideDaysInAdvance = null;
             else
@@ -505,8 +505,8 @@ public class ToDoDetailsActivity extends Activity {
 	    }
 	}
 	Log.w(TAG, "No spinner item found for category ID " + id);
-	if (id != ToDoCategory.UNFILED)
-	    setCategorySpinnerByID(ToDoCategory.UNFILED);
+	if (id != ToDoCategoryColumns.UNFILED)
+	    setCategorySpinnerByID(ToDoCategoryColumns.UNFILED);
 	else
 	    categoryList.setSelection(0);
     }
@@ -1185,15 +1185,15 @@ public class ToDoDetailsActivity extends Activity {
 	    if (!itemCursor.moveToFirst())
 		throw new SQLiteDoneException();
 	    int wasPrivate = itemCursor.getInt(
-		    itemCursor.getColumnIndex(ToDoItem.PRIVATE));
+		    itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
 	    String note = null;
 	    if (((wasPrivate > 1) != privateCheckBox.isChecked()) &&
-		    !itemCursor.isNull(itemCursor.getColumnIndex(ToDoItem.NOTE))) {
+		    !itemCursor.isNull(itemCursor.getColumnIndex(ToDoItemColumns.NOTE))) {
 		if (wasPrivate > 1) {
 		    if (encryptor.hasKey()) {
 			try {
 			    note = encryptor.decrypt(itemCursor.getBlob(
-				    itemCursor.getColumnIndex(ToDoItem.NOTE)));
+				    itemCursor.getColumnIndex(ToDoItemColumns.NOTE)));
 			} catch (GeneralSecurityException gsx) {
 			    itemCursor.close();
 			    Toast.makeText(ToDoDetailsActivity.this,
@@ -1206,7 +1206,7 @@ public class ToDoDetailsActivity extends Activity {
 		    }
 		} else {
 		    note = itemCursor.getString(
-			    itemCursor.getColumnIndex(ToDoItem.NOTE));
+			    itemCursor.getColumnIndex(ToDoItemColumns.NOTE));
 		}
 	    }
 	    itemCursor.close();
@@ -1214,17 +1214,17 @@ public class ToDoDetailsActivity extends Activity {
 	    String description = toDoDescription.getText().toString();
 	    if (description.length() > 0) {
 		int privacy = 0;
-		values.put(ToDoItem.DESCRIPTION, description);
+		values.put(ToDoItemColumns.DESCRIPTION, description);
 		if (note != null)
-		    values.put(ToDoItem.NOTE, note);
+		    values.put(ToDoItemColumns.NOTE, note);
 		if (privateCheckBox.isChecked()) {
 		    privacy = 1;
 		    if (encryptor.hasKey()) {
 			try {
-			    values.put(ToDoItem.DESCRIPTION,
+			    values.put(ToDoItemColumns.DESCRIPTION,
 				    encryptor.encrypt(description));
 			    if (note != null)
-				values.put(ToDoItem.NOTE,
+				values.put(ToDoItemColumns.NOTE,
 					encryptor.encrypt(note));
 			    privacy = 2;
 			} catch (GeneralSecurityException gsx) {
@@ -1233,7 +1233,7 @@ public class ToDoDetailsActivity extends Activity {
 			}
 		    }
 		}
-		values.put(ToDoItem.PRIVATE, privacy);
+		values.put(ToDoItemColumns.PRIVATE, privacy);
 	    } else {
 		validationErrors.add(getResources().getString(
 			R.string.ErrorDescriptionBlank));
@@ -1244,35 +1244,35 @@ public class ToDoDetailsActivity extends Activity {
 		priority = Integer.parseInt(priorityText.getText().toString());
 	    } catch (NumberFormatException nfx) {}
 	    if (priority > 0)
-		values.put(ToDoItem.PRIORITY, priority);
+		values.put(ToDoItemColumns.PRIORITY, priority);
 	    else
 		validationErrors.add(getResources().getString(
 			R.string.ErrorPriority));
 
 	    long categoryID = categoryList.getSelectedItemId();
 	    if (categoryID != AdapterView.INVALID_ROW_ID)
-		values.put(ToDoItem.CATEGORY_ID, categoryID);
+		values.put(ToDoItemColumns.CATEGORY_ID, categoryID);
 	    else
 		validationErrors.add(getResources().getString(
 			R.string.ErrorCategoryID));
 
 	    if (dueDate == null)
-		values.putNull(ToDoItem.DUE_TIME);
+		values.putNull(ToDoItemColumns.DUE_TIME);
 	    else
-		values.put(ToDoItem.DUE_TIME, dueDate.getTime());
+		values.put(ToDoItemColumns.DUE_TIME, dueDate.getTime());
 
 	    if ((dueDate == null) || (hideDaysInAdvance == null))
-		values.putNull(ToDoItem.HIDE_DAYS_EARLIER);
+		values.putNull(ToDoItemColumns.HIDE_DAYS_EARLIER);
 	    else
-		values.put(ToDoItem.HIDE_DAYS_EARLIER, hideDaysInAdvance);
+		values.put(ToDoItemColumns.HIDE_DAYS_EARLIER, hideDaysInAdvance);
 
 	    if ((dueDate == null) || (alarmDaysInAdvance == null)) {
-		values.putNull(ToDoItem.ALARM_DAYS_EARLIER);
-		values.putNull(ToDoItem.ALARM_TIME);
-		values.putNull(ToDoItem.NOTIFICATION_TIME);
+		values.putNull(ToDoItemColumns.ALARM_DAYS_EARLIER);
+		values.putNull(ToDoItemColumns.ALARM_TIME);
+		values.putNull(ToDoItemColumns.NOTIFICATION_TIME);
 	    } else {
-		values.put(ToDoItem.ALARM_DAYS_EARLIER, alarmDaysInAdvance);
-		values.put(ToDoItem.ALARM_TIME, alarmTime);
+		values.put(ToDoItemColumns.ALARM_DAYS_EARLIER, alarmDaysInAdvance);
+		values.put(ToDoItemColumns.ALARM_TIME, alarmTime);
 		/*
 		 * We don't overwrite any previous notification time here.
 		 * If the user was previously notified, and subsequently
@@ -1288,7 +1288,7 @@ public class ToDoDetailsActivity extends Activity {
 		repeatSettings.store(values);
 	    }
 
-	    values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 
 	    if (validationErrors.size() > 0) {
 		// Show an alert dialog

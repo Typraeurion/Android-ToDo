@@ -16,7 +16,7 @@
  */
 package com.xmission.trevin.android.todo.provider;
 
-import static com.xmission.trevin.android.todo.provider.ToDoProvider.*;
+import static com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl.*;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -36,6 +36,8 @@ class ToDoDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "ToDoDatabaseHelper";
 
+    static final String DATABASE_NAME = "to_do.db";
+
     /** Resources */
     private Resources res;
 
@@ -49,45 +51,45 @@ class ToDoDatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.d(TAG, getClass().getName() + ".onCreate(" + db + ")");
         db.execSQL("CREATE TABLE " + METADATA_TABLE_NAME + " ("
-                + ToDo.ToDoMetadata._ID + " INTEGER PRIMARY KEY,"
-                + ToDo.ToDoMetadata.NAME + " TEXT UNIQUE,"
-                + ToDo.ToDoMetadata.VALUE + " BLOB);");
+                + ToDoSchema.ToDoMetadataColumns._ID + " INTEGER PRIMARY KEY,"
+                + ToDoSchema.ToDoMetadataColumns.NAME + " TEXT UNIQUE,"
+                + ToDoSchema.ToDoMetadataColumns.VALUE + " BLOB);");
 
         db.execSQL("CREATE TABLE " + CATEGORY_TABLE_NAME + " ("
-                + ToDo.ToDoCategory._ID + " INTEGER PRIMARY KEY,"
-                + ToDo.ToDoCategory.NAME + " TEXT UNIQUE"
+                + ToDoSchema.ToDoCategoryColumns._ID + " INTEGER PRIMARY KEY,"
+                + ToDoSchema.ToDoCategoryColumns.NAME + " TEXT UNIQUE"
                 + ");");
         ContentValues values = new ContentValues();
-        values.put(ToDo.ToDoCategory._ID, ToDo.ToDoCategory.UNFILED);
-        values.put(ToDo.ToDoCategory.NAME,
+        values.put(ToDoSchema.ToDoCategoryColumns._ID, ToDoSchema.ToDoCategoryColumns.UNFILED);
+        values.put(ToDoSchema.ToDoCategoryColumns.NAME,
                 res.getString(R.string.Category_Unfiled));
         db.insert(CATEGORY_TABLE_NAME, null, values);
 
         db.execSQL("CREATE TABLE " + TODO_TABLE_NAME + " ("
-                + ToDo.ToDoItem._ID + " INTEGER PRIMARY KEY,"
-                + ToDo.ToDoItem.DESCRIPTION + " TEXT,"
-                + ToDo.ToDoItem.CREATE_TIME + " INTEGER,"
-                + ToDo.ToDoItem.MOD_TIME + " INTEGER,"
-                + ToDo.ToDoItem.DUE_TIME + " INTEGER,"
-                + ToDo.ToDoItem.COMPLETED_TIME + " INTEGER,"
-                + ToDo.ToDoItem.CHECKED + " INTEGER,"
-                + ToDo.ToDoItem.PRIORITY + " INTEGER,"
-                + ToDo.ToDoItem.PRIVATE + " INTEGER,"
-                + ToDo.ToDoItem.CATEGORY_ID + " INTEGER,"
-                + ToDo.ToDoItem.NOTE + " TEXT,"
-                + ToDo.ToDoItem.ALARM_DAYS_EARLIER + " INTEGER,"
-                + ToDo.ToDoItem.ALARM_TIME + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_INTERVAL + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_INCREMENT + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_WEEK_DAYS + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_DAY + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_DAY2 + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_WEEK + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_WEEK2 + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_MONTH + " INTEGER,"
-                + ToDo.ToDoItem.REPEAT_END + " INTEGER,"
-                + ToDo.ToDoItem.HIDE_DAYS_EARLIER + " INTEGER,"
-                + ToDo.ToDoItem.NOTIFICATION_TIME + " INTEGER"
+                + ToDoSchema.ToDoItemColumns._ID + " INTEGER PRIMARY KEY,"
+                + ToDoSchema.ToDoItemColumns.DESCRIPTION + " TEXT,"
+                + ToDoSchema.ToDoItemColumns.CREATE_TIME + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.MOD_TIME + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.DUE_TIME + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.COMPLETED_TIME + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.CHECKED + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.PRIORITY + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.PRIVATE + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.CATEGORY_ID + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.NOTE + " TEXT,"
+                + ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.ALARM_TIME + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_INCREMENT + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_WEEK_DAYS + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_DAY + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_DAY2 + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_WEEK + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_WEEK2 + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_MONTH + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.REPEAT_END + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.HIDE_DAYS_EARLIER + " INTEGER,"
+                + ToDoSchema.ToDoItemColumns.NOTIFICATION_TIME + " INTEGER"
                 + ");");
     }
 
@@ -97,13 +99,13 @@ class ToDoDatabaseHelper extends SQLiteOpenHelper {
                 + db + "," + oldVersion + "," + newVersion + ")");
         if (oldVersion < 2) {
             db.execSQL("CREATE TABLE " + METADATA_TABLE_NAME + " ("
-                    + ToDo.ToDoMetadata._ID + " INTEGER PRIMARY KEY,"
-                    + ToDo.ToDoMetadata.NAME + " TEXT UNIQUE,"
-                    + ToDo.ToDoMetadata.VALUE + " BLOB);");
+                    + ToDoSchema.ToDoMetadataColumns._ID + " INTEGER PRIMARY KEY,"
+                    + ToDoSchema.ToDoMetadataColumns.NAME + " TEXT UNIQUE,"
+                    + ToDoSchema.ToDoMetadataColumns.VALUE + " BLOB);");
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE " + TODO_TABLE_NAME + " ADD COLUMN "
-                    + ToDo.ToDoItem.NOTIFICATION_TIME + " INTEGER;");
+                    + ToDoSchema.ToDoItemColumns.NOTIFICATION_TIME + " INTEGER;");
         }
     }
 

@@ -28,8 +28,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.xmission.trevin.android.crypto.*;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.provider.ToDo;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoMetadata;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoMetadataColumns;
 
 import android.content.*;
 import android.database.Cursor;
@@ -149,13 +149,13 @@ public class StringEncryption {
     private byte[] key = null;
 
     /** Metadata projection fields */
-    private final static String[] METADATA_PROJECTION = { ToDoMetadata.VALUE };
+    private final static String[] METADATA_PROJECTION = { ToDoMetadataColumns.VALUE };
 
     /** Name of the metadata used to store the hash of the user's password */
     public final static String[] METADATA_PASSWORD_HASH = {
 	    "StringEncryption.HashedPassword" };
 
-    private final static String[] COUNT_PROJECTION = { ToDo.ToDoItem._ID };
+    private final static String[] COUNT_PROJECTION = { ToDoSchema.ToDoItemColumns._ID };
 
     /** @return whether the encryption key has been set */
     public boolean hasKey() { return key != null; }
@@ -233,8 +233,8 @@ public class StringEncryption {
      */
     public boolean hasPassword(ContentResolver resolver) {
 	Cursor c = resolver.query(
-		ToDoMetadata.CONTENT_URI, METADATA_PROJECTION,
-		ToDoMetadata.NAME + " = ?", METADATA_PASSWORD_HASH, null);
+		ToDoMetadataColumns.CONTENT_URI, METADATA_PROJECTION,
+		ToDoMetadataColumns.NAME + " = ?", METADATA_PASSWORD_HASH, null);
 	try {
 	    return c.moveToFirst();
 	} finally {
@@ -251,11 +251,11 @@ public class StringEncryption {
 		throws GeneralSecurityException {
 	byte[] hashedPassword = null;
 	Cursor c = resolver.query(
-		ToDoMetadata.CONTENT_URI, METADATA_PROJECTION,
-		ToDoMetadata.NAME + " = ?", METADATA_PASSWORD_HASH, null);
+		ToDoSchema.ToDoMetadataColumns.CONTENT_URI, METADATA_PROJECTION,
+		ToDoSchema.ToDoMetadataColumns.NAME + " = ?", METADATA_PASSWORD_HASH, null);
 	try {
 	    if (c.moveToFirst()) {
-		hashedPassword = c.getBlob(c.getColumnIndex(ToDoMetadata.VALUE));
+		hashedPassword = c.getBlob(c.getColumnIndex(ToDoMetadataColumns.VALUE));
 	    } else {
 		throw new IllegalStateException(
 			"checkPassword(resolver) called with no password in the database");
@@ -362,9 +362,9 @@ public class StringEncryption {
 	System.arraycopy(hash, 0, hash2, header.length + salt.length, hash.length);
 
 	ContentValues values = new ContentValues();
-	values.put(ToDoMetadata.NAME, METADATA_PASSWORD_HASH[0]);
-	values.put(ToDoMetadata.VALUE, hash2);
-	resolver.insert(ToDoMetadata.CONTENT_URI, values);
+	values.put(ToDoSchema.ToDoMetadataColumns.NAME, METADATA_PASSWORD_HASH[0]);
+	values.put(ToDoSchema.ToDoMetadataColumns.VALUE, hash2);
+	resolver.insert(ToDoMetadataColumns.CONTENT_URI, values);
     }
 
     /**
@@ -374,18 +374,18 @@ public class StringEncryption {
      * before the old password is removed!
      */
     public void removePassword(ContentResolver resolver) {
-	Cursor c = resolver.query(ToDo.ToDoItem.CONTENT_URI, COUNT_PROJECTION,
-		ToDo.ToDoItem.PRIVATE + " > 1", null, null);
+	Cursor c = resolver.query(ToDoSchema.ToDoItemColumns.CONTENT_URI, COUNT_PROJECTION,
+		ToDoSchema.ToDoItemColumns.PRIVATE + " > 1", null, null);
 	try {
 	    if (c.moveToFirst())
 		// There are encrypted records!
 		throw new IllegalStateException(c.getInt(c.getColumnIndex(
-			ToDo.ToDoItem._COUNT)) + " records are still encrypted");
+			ToDoSchema.ToDoItemColumns._COUNT)) + " records are still encrypted");
 	} finally {
 	    c.close();
 	}
-	resolver.delete(ToDoMetadata.CONTENT_URI,
-		ToDoMetadata.NAME + " = ?", METADATA_PASSWORD_HASH);
+	resolver.delete(ToDoMetadataColumns.CONTENT_URI,
+		ToDoMetadataColumns.NAME + " = ?", METADATA_PASSWORD_HASH);
     }
 
     /**

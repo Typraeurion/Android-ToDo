@@ -32,7 +32,7 @@ import java.util.concurrent.Executors;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.*;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 import com.xmission.trevin.android.todo.service.AlarmService;
 import com.xmission.trevin.android.todo.service.PasswordChangeService;
@@ -48,7 +48,6 @@ import android.database.DataSetObserver;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -82,33 +81,33 @@ public class ToDoListActivity extends ListActivity {
      * The columns we are interested in from the category table
      */
     static final String[] CATEGORY_PROJECTION = new String[] {
-            ToDoCategory._ID,
-            ToDoCategory.NAME,
+            ToDoCategoryColumns._ID,
+            ToDoCategoryColumns.NAME,
     };
 
     /**
      * The columns we are interested in from the item table
      */
     static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItem._ID,
-            ToDoItem.DESCRIPTION,
-            ToDoItem.CHECKED,
-            ToDoItem.NOTE,
-            ToDoItem.ALARM_DAYS_EARLIER,
-            ToDoItem.REPEAT_INTERVAL,
-            ToDoItem.DUE_TIME,
-            ToDoItem.COMPLETED_TIME,
-            ToDoItem.CATEGORY_NAME,
-            ToDoItem.PRIVATE,
-            ToDoItem.PRIORITY,
-            ToDoItem.REPEAT_DAY,
-            ToDoItem.REPEAT_DAY2,
-            ToDoItem.REPEAT_END,
-            ToDoItem.REPEAT_INCREMENT,
-            ToDoItem.REPEAT_MONTH,
-            ToDoItem.REPEAT_WEEK,
-            ToDoItem.REPEAT_WEEK2,
-            ToDoItem.REPEAT_WEEK_DAYS,
+            ToDoItemColumns._ID,
+            ToDoItemColumns.DESCRIPTION,
+            ToDoItemColumns.CHECKED,
+            ToDoItemColumns.NOTE,
+            ToDoItemColumns.ALARM_DAYS_EARLIER,
+            ToDoItemColumns.REPEAT_INTERVAL,
+            ToDoItemColumns.DUE_TIME,
+            ToDoItemColumns.COMPLETED_TIME,
+            ToDoItemColumns.CATEGORY_NAME,
+            ToDoItemColumns.PRIVATE,
+            ToDoItemColumns.PRIORITY,
+            ToDoItemColumns.REPEAT_DAY,
+            ToDoItemColumns.REPEAT_DAY2,
+            ToDoItemColumns.REPEAT_END,
+            ToDoItemColumns.REPEAT_INCREMENT,
+            ToDoItemColumns.REPEAT_MONTH,
+            ToDoItemColumns.REPEAT_WEEK,
+            ToDoItemColumns.REPEAT_WEEK2,
+            ToDoItemColumns.REPEAT_WEEK_DAYS,
     };
 
     /** Shared preferences */
@@ -148,10 +147,10 @@ public class ToDoListActivity extends ListActivity {
     public static final String TPREF_SELECTED_CATEGORY = "SelectedCategory";
 
     /** The URI by which we were started for the To-Do items */
-    private Uri todoUri = ToDoItem.CONTENT_URI;
+    private Uri todoUri = ToDoItemColumns.CONTENT_URI;
 
     /** The corresponding URI for the categories */
-    private Uri categoryUri = ToDoCategory.CONTENT_URI;
+    private Uri categoryUri = ToDoCategoryColumns.CONTENT_URI;
 
     /** Category filter spinner */
     Spinner categoryList = null;
@@ -252,10 +251,10 @@ public class ToDoListActivity extends ListActivity {
 	Intent intent = getIntent();
 	if (intent.getData() == null) {
             Log.d(TAG, String.format("No intent data; defaulting to %s",
-                    ToDoItem.CONTENT_URI.toString()));
-	    intent.setData(ToDoItem.CONTENT_URI);
-	    todoUri = ToDoItem.CONTENT_URI;
-	    categoryUri = ToDoCategory.CONTENT_URI;
+                    ToDoItemColumns.CONTENT_URI.toString()));
+	    intent.setData(ToDoItemColumns.CONTENT_URI);
+	    todoUri = ToDoItemColumns.CONTENT_URI;
+	    categoryUri = ToDoCategoryColumns.CONTENT_URI;
 	} else {
             Log.d(TAG, String.format("intent data = %s: %s",
                     intent.getAction(), intent.getDataString()));
@@ -296,7 +295,7 @@ public class ToDoListActivity extends ListActivity {
 
         int selectedSortOrder = prefs.getSortOrder();
         if ((selectedSortOrder < 0) ||
-        	(selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length)) {
+        	(selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length)) {
             prefs.setSortOrder(0);
 	}
 
@@ -315,7 +314,7 @@ public class ToDoListActivity extends ListActivity {
             LoaderManager.enableDebugLogging(true);
         categoryLoaderCallbacks = new CategoryLoaderCallbacks(this,
                 prefs, categoryAdapter, categoryUri);
-        getLoaderManager().initLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
+        getLoaderManager().initLoader(ToDoCategoryColumns.CONTENT_TYPE.hashCode(),
                 null, categoryLoaderCallbacks);
 
         itemAdapter = new ToDoCursorAdapter(
@@ -325,7 +324,7 @@ public class ToDoListActivity extends ListActivity {
         Log.d(TAG, ".onCreate: initializing a To Do item loader manager");
         itemLoaderCallbacks = new ItemLoaderCallbacks(this,
                 prefs, itemAdapter, todoUri);
-        getLoaderManager().initLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+        getLoaderManager().initLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
                 null, itemLoaderCallbacks);
 
         // Inflate our view so we can find our lists
@@ -394,7 +393,7 @@ public class ToDoListActivity extends ListActivity {
 
 	// Register this service's data set observer
 	getContentResolver().registerContentObserver(
-		ToDoItem.CONTENT_URI, true, registeredObserver);
+		ToDoItemColumns.CONTENT_URI, true, registeredObserver);
 
 	Log.d(TAG, ".onCreate finished.");
     }
@@ -404,9 +403,9 @@ public class ToDoListActivity extends ListActivity {
     public void onRestart() {
 	Log.d(TAG, ".onRestart");
 	if (categoryLoaderCallbacks != null) {
-            getLoaderManager().restartLoader(ToDoCategory.CONTENT_TYPE.hashCode(),
+            getLoaderManager().restartLoader(ToDoCategoryColumns.CONTENT_TYPE.hashCode(),
 		    null, categoryLoaderCallbacks);
-	    getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+	    getLoaderManager().restartLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
 		    null, itemLoaderCallbacks);
 	}
 	super.onRestart();
@@ -524,22 +523,22 @@ public class ToDoListActivity extends ListActivity {
     public String generateWhereClause() {
 	StringBuilder whereClause = new StringBuilder();
 	if (!prefs.showChecked()) {
-	    whereClause.append(ToDoItem.CHECKED).append(" = 0")
-		.append(" AND (").append(ToDoItem.HIDE_DAYS_EARLIER)
-		.append(" IS NULL OR (").append(ToDoItem.DUE_TIME).append(" - ")
-		.append(ToDoItem.HIDE_DAYS_EARLIER).append(" * 86400000 < ")
+	    whereClause.append(ToDoItemColumns.CHECKED).append(" = 0")
+		.append(" AND (").append(ToDoItemColumns.HIDE_DAYS_EARLIER)
+		.append(" IS NULL OR (").append(ToDoItemColumns.DUE_TIME).append(" - ")
+		.append(ToDoItemColumns.HIDE_DAYS_EARLIER).append(" * 86400000 < ")
 		.append(System.currentTimeMillis()).append("))");
 	}
 	if (!prefs.showPrivate()) {
 	    if (whereClause.length() > 0)
 		whereClause.append(" AND ");
-	    whereClause.append(ToDoItem.PRIVATE).append(" = 0");
+	    whereClause.append(ToDoItemColumns.PRIVATE).append(" = 0");
 	}
 	long selectedCategory = prefs.getSelectedCategory();
 	if (selectedCategory >= 0) {
 	    if (whereClause.length() > 0)
 		whereClause.append(" AND ");
-	    whereClause.append(ToDoItem.CATEGORY_ID).append(" = ")
+	    whereClause.append(ToDoItemColumns.CATEGORY_ID).append(" = ")
 		.append(selectedCategory);
         }
 	return whereClause.toString();
@@ -552,11 +551,11 @@ public class ToDoListActivity extends ListActivity {
 	    Log.d(TAG, ".NewButtonListener.onClick");
 	    ContentValues values = new ContentValues();
 	    // This is the only time an empty description is allowed
-	    values.put(ToDoItem.DESCRIPTION, "");
+	    values.put(ToDoItemColumns.DESCRIPTION, "");
 	    long selectedCategory = prefs.getSelectedCategory();
 	    if (selectedCategory < 0)
-		selectedCategory = ToDoCategory.UNFILED;
-	    values.put(ToDoItem.CATEGORY_ID, selectedCategory);
+		selectedCategory = ToDoCategoryColumns.UNFILED;
+	    values.put(ToDoItemColumns.CATEGORY_ID, selectedCategory);
 	    Uri itemUri = getContentResolver().insert(todoUri, values);
 
 	    // Immediately bring up the details dialog
@@ -643,13 +642,13 @@ public class ToDoListActivity extends ListActivity {
 
         int selectedSortOrder = prefs.getSortOrder();
         if ((selectedSortOrder < 0) ||
-                (selectedSortOrder >= ToDoItem.USER_SORT_ORDERS.length))
+                (selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length))
             selectedSortOrder = 0;
 
         Log.d(TAG, ".updateListFilter: requerying the data where "
                 + whereClause + " ordered by "
-                + ToDoItem.USER_SORT_ORDERS[selectedSortOrder]);
-        getLoaderManager().restartLoader(ToDoItem.CONTENT_TYPE.hashCode(),
+                + ToDoItemColumns.USER_SORT_ORDERS[selectedSortOrder]);
+        getLoaderManager().restartLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
                 null, itemLoaderCallbacks);
         itemAdapter.notifyDataSetChanged();
     }
@@ -816,8 +815,8 @@ public class ToDoListActivity extends ListActivity {
 		    c.set(Calendar.MINUTE, 59);
 		    c.set(Calendar.SECOND, 59);
 		    ContentValues values = new ContentValues();
-		    values.put(ToDoItem.DUE_TIME, c.getTimeInMillis());
-		    values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+		    values.put(ToDoItemColumns.DUE_TIME, c.getTimeInMillis());
+		    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 		    try {
 			getContentResolver().update(
 				todoItemUri, values, null, null);
@@ -914,7 +913,7 @@ public class ToDoListActivity extends ListActivity {
 		    ITEM_PROJECTION, null, null, null);
 	    if (!itemCursor.moveToFirst())
 		throw new SQLiteDoneException();
-	    int i = itemCursor.getColumnIndex(ToDoItem.DUE_TIME);
+	    int i = itemCursor.getColumnIndex(ToDoItemColumns.DUE_TIME);
 	    Calendar c = Calendar.getInstance();
 	    if (!itemCursor.isNull(i)) {
 		c.setTime(new Date(itemCursor.getLong(i)));
@@ -1059,18 +1058,18 @@ public class ToDoListActivity extends ListActivity {
 		c.set(Calendar.HOUR_OF_DAY, 23);
 		c.set(Calendar.MINUTE, 59);
 		c.set(Calendar.SECOND, 59);
-		values.put(ToDoItem.DUE_TIME, c.getTimeInMillis());
+		values.put(ToDoItemColumns.DUE_TIME, c.getTimeInMillis());
 		break;
 
 	    case 8:	// No date
-		values.putNull(ToDoItem.DUE_TIME);
+		values.putNull(ToDoItemColumns.DUE_TIME);
 		break;
 
 	    case 9:	// Other
 		showDialog(DUEDATE_DIALOG_ID);
 		return;
 	    }
-	    values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 
 	    try {
 		getContentResolver().update(todoItemUri, values, null, null);

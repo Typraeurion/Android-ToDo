@@ -23,8 +23,8 @@ import java.util.*;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.RepeatSettings;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDo.ToDoItem;
 
 import android.app.Activity;
 import android.app.NotificationManager;
@@ -101,7 +101,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
      */
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
-	int itemID = cursor.getInt(cursor.getColumnIndex(ToDoItem._ID));
+	int itemID = cursor.getInt(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns._ID));
 
 	// If this view is already bound to the given row, skip (re-)binding.
 	if (bindingMap.containsKey(view) &&
@@ -140,18 +140,18 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	 * in the database differs from what is already shown.
 	 */
 	checkBox.setChecked(cursor.getInt(
-		cursor.getColumnIndex(ToDoItem.CHECKED)) != 0);
+		cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.CHECKED)) != 0);
 	priorityText.setText(Integer.toString(cursor.getInt(
-		cursor.getColumnIndex(ToDoItem.PRIORITY))));
+		cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.PRIORITY))));
 	priorityText.setVisibility(prefs.showPriority()
 		? View.VISIBLE : View.GONE);
 	String description = context.getString(R.string.PasswordProtected);
-	int privacy = cursor.getInt(cursor.getColumnIndex(ToDoItem.PRIVATE));
+	int privacy = cursor.getInt(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.PRIVATE));
 	if (privacy > 1) {
 	    if (encryptor.hasKey()) {
 		try {
 		    description = encryptor.decrypt(cursor.getBlob(
-			    cursor.getColumnIndex(ToDoItem.DESCRIPTION)));
+			    cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION)));
 		} catch (GeneralSecurityException gsx) {
 		    Log.e(TAG, "Unable to decrypt the description for item "
 			    + itemID, gsx);
@@ -159,7 +159,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	    }
 	} else {
 	    description = cursor.getString(
-		    cursor.getColumnIndex(ToDoItem.DESCRIPTION));
+		    cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION));
 	}
 	editDescription.setText(description);
 	/* // If the description is empty, this is a new item.
@@ -168,19 +168,19 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	if (description.length() == 0)
 	    editDescription.requestFocus(); */
 	noteImage.setVisibility(cursor.isNull(cursor.getColumnIndex(
-		ToDoItem.NOTE)) ? View.GONE : View.VISIBLE);
+		ToDoSchema.ToDoItemColumns.NOTE)) ? View.GONE : View.VISIBLE);
         boolean hasAlarm = !cursor.isNull(cursor.getColumnIndex(
-                ToDoItem.ALARM_DAYS_EARLIER));
+                ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER));
 	alarmImage.setVisibility(hasAlarm ? View.VISIBLE : View.GONE);
 	repeatImage.setVisibility(cursor.getInt(cursor.getColumnIndex(
-		ToDoItem.REPEAT_INTERVAL)) == ToDoItem.REPEAT_NONE
+		ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL)) == ToDoSchema.ToDoItemColumns.REPEAT_NONE
 		? View.GONE : View.VISIBLE);
-	if (cursor.isNull(cursor.getColumnIndex(ToDoItem.DUE_TIME))) {
+	if (cursor.isNull(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DUE_TIME))) {
 	    dueDateText.setText("\u2015");
 	    overdueText.setText("");
 	} else {
 	    Date due = new Date(cursor.getLong(cursor.getColumnIndex(
-		    ToDoItem.DUE_TIME)));
+		    ToDoSchema.ToDoItemColumns.DUE_TIME)));
 	    SimpleDateFormat df = new SimpleDateFormat(
 		    view.getResources().getString(R.string.ListDueDateFormat));
 	    dueDateText.setText(df.format(due));
@@ -189,7 +189,7 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	dueDateText.setVisibility(prefs.showDueDate()
 		? View.VISIBLE : View.GONE);
 	categText.setText(cursor.getString(cursor.getColumnIndex(
-		ToDoItem.CATEGORY_NAME)));
+		ToDoSchema.ToDoItemColumns.CATEGORY_NAME)));
 	categText.setVisibility(prefs.showCategory()
 		? View.VISIBLE : View.GONE);
 
@@ -286,11 +286,11 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	public void onCheckedChanged(CompoundButton checkBox, boolean isChecked) {
 	    Log.d(TAG, ".onCheckedChanged(" + itemUri + "," + isChecked + ")");
 	    ContentValues values = new ContentValues();
-	    values.put(ToDoItem.CHECKED, isChecked ? 1 : 0);
-	    values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+	    values.put(ToDoSchema.ToDoItemColumns.CHECKED, isChecked ? 1 : 0);
+	    values.put(ToDoSchema.ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 	    if (isChecked) {
 		Date completed = new Date();
-		values.put(ToDoItem.COMPLETED_TIME, completed.getTime());
+		values.put(ToDoSchema.ToDoItemColumns.COMPLETED_TIME, completed.getTime());
 		/*
 		 * If the item has a repeat interval,
 		 * see if we need to change the due date
@@ -299,8 +299,8 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 		if (repeat.getIntervalType() != RepeatSettings.IntervalType.NONE) {
 		    Date nextDueDate = repeat.computeNextDueDate(completed);
 		    if (nextDueDate != null) {
-			values.put(ToDoItem.DUE_TIME, nextDueDate.getTime());
-			values.put(ToDoItem.CHECKED, 0);
+			values.put(ToDoSchema.ToDoItemColumns.DUE_TIME, nextDueDate.getTime());
+			values.put(ToDoSchema.ToDoItemColumns.CHECKED, 0);
 		    }
 		}
                 if (hasAlarm) {
@@ -344,10 +344,10 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 	    try {
 		// Check the current text and
 		// skip writing the database if it is the same
-		String[] projection = { ToDoItem.DESCRIPTION };
+		String[] projection = { ToDoItemColumns.DESCRIPTION };
 		Cursor c = contentResolver.query(itemUri, projection, null, null, null);
 		c.moveToFirst();
-		String oldText = c.getString(c.getColumnIndex(ToDoItem.DESCRIPTION));
+		String oldText = c.getString(c.getColumnIndex(ToDoItemColumns.DESCRIPTION));
 		c.close();
 		if (newText.equals(oldText))
 		    return;
@@ -358,8 +358,8 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 
 	    // Update the text and modification time in the database
 	    ContentValues values = new ContentValues();
-	    values.put(ToDoItem.DESCRIPTION, newText);
-	    values.put(ToDoItem.MOD_TIME, System.currentTimeMillis());
+	    values.put(ToDoItemColumns.DESCRIPTION, newText);
+	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
 	    contentResolver.update(itemUri, values, null, null);
 	}
     } */
