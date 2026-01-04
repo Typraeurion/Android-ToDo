@@ -92,23 +92,37 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
     @Override
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
-        // tentatively advance by 1 month to check whether
-        // an adjustment will cross back to the previous month.
-        LocalDate nextMonth = priorDueDate.plusMonths(1);
-        LocalDate candiDate = setDateAndAdjust(nextMonth);
-        if (candiDate.withDayOfMonth(1)
-                .isBefore(nextMonth.withDayOfMonth(1))) {
-            // Confirmed month crossing; increment
-            // 1 month more than the normal increment.
-            Log.d(getClass().getSimpleName(), String.format(
-                    "Adjustment for %s crossed back to %s;"
-                            + " advancing %d months",
-                    nextMonth, candiDate, increment + 1));
-            candiDate = setDateAndAdjust(nextMonth.plusMonths(increment));
-        } else if (increment > 1) {
-            // No month crossing; use the normal increment
-            candiDate = setDateAndAdjust(priorDueDate.plusMonths(increment));
+        LocalDate nextMonth;
+        // If the prior due date is not the target date of the month,
+        // the target date was probably a disallowed day of the week.
+        if (priorDueDate.getDayOfMonth() != date) {
+            // Move to the target date if it's
+            // within a week of the prior due date.
+            LocalDate priorTarget = priorDueDate.withDayOfMonth(
+                    Math.min(date, priorDueDate.lengthOfMonth()));
+            int daysApart = priorTarget.until(priorDueDate).getDays();
+            if (daysApart < -14) {
+                // Target must have been in the previous month
+                Log.d("RepeatMonthlyOnDate", String.format(
+                        "Prior due date appears to be adjusted from the previous"
+                                + " month; adding %d months for the next repeat",
+                        increment - 1));
+                nextMonth = priorDueDate.plusMonths(increment - 1);
+
+            } else if (daysApart > 14) {
+                // Target must have been in the next month
+                Log.d("RepeatMonthlyOnDate", String.format(
+                        "Prior due date appears to be adjusted from the next"
+                                + " month; adding %d months for the next repeat",
+                        increment - 1));
+                nextMonth = priorDueDate.plusMonths(increment + 1);
+            } else {
+                nextMonth = priorDueDate.plusMonths(increment);
+            }
+        } else {
+            nextMonth = priorDueDate.plusMonths(increment);
         }
+        LocalDate candiDate = setDateAndAdjust(nextMonth);
         return checkEndDate(priorDueDate, candiDate);
     }
 

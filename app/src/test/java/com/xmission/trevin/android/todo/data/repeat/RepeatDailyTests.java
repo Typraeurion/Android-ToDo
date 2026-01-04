@@ -130,7 +130,8 @@ public class RepeatDailyTests {
     /**
      * Test an every <i>N</i>-days repeating interval, allowed on all days,
      * with a specified end date.  The new due date should be the same
-     * regardless of when the item was completed.
+     * regardless of when the item was completed until that passes
+     * the end date.
      */
     @Test
     public void testRepeatEveryNDaysWithEnd() {

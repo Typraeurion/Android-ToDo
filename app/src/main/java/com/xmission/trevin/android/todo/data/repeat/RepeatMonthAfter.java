@@ -86,7 +86,7 @@ public class RepeatMonthAfter extends AbstractAdjustableRepeat {
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
         LocalDate nextDueDate = adjustDueDate(
-                priorDueDate.plusMonths(increment));
+                completed.plusMonths(increment));
         return checkEndDate(priorDueDate, nextDueDate);
     }
 
