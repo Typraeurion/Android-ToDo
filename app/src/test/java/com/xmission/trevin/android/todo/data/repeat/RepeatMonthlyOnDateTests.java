@@ -165,8 +165,10 @@ public class RepeatMonthlyOnDateTests {
      * Adjust an expected target date by the available days of the week,
      * using the specified direction.
      */
-    private LocalDate adjustTarget(LocalDate target, Set<WeekDays> allowed,
-                                   WeekdayDirection direction) {
+    public static LocalDate adjustTarget(
+            LocalDate target,
+            Set<WeekDays> allowed,
+            WeekdayDirection direction) {
         if (allowed.contains(WeekDays.fromJavaDay(target.getDayOfWeek())))
             return target;
         LocalDate nextAllowed = target.plusDays(1);

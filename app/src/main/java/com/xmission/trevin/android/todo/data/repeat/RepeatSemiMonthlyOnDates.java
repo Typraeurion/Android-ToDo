@@ -144,78 +144,115 @@ public class RepeatSemiMonthlyOnDates extends AbstractDateRepeat {
         return datesChanged || superChanged;
     }
 
-    private LocalDate setDateAndAdjust(LocalDate base, int d) {
-        LocalDate hardDate = base.withDayOfMonth(
-                Math.min(d, base.lengthOfMonth()));
-        return adjustDueDate(hardDate);
-    }
-
     /**
-     * Compute a potential due date based on one of the dates set for
-     * this repeat interval.  Each date needs the same calculation
-     * before we decide which one to use.  The logic is:
-     * <ol>
-     *     <li>Start from the given {@code tentativeDate}
-     *     in the same month as {@code priorDueDate}.</li>
-     *     <li>Adjust the date based on the available days of the week
-     *     and adjustment direction.</li>
-     *     <li>If the result is not after {@code priorDueDate},
-     *     re-compute it based on the next month after it
-     *     and compare the <i>months</i> before and after
-     *     the day-of-week adjustment.</li>
-     *     <ul>
-     *         <li>If the adjustment put the result in a different
-     *         month, add {@code increment + 1} months to the
-     *         {@code priorDueDate} and then re-compute the new date.</li>
-     *         <li>If the adjustment stays in the same month, add the
-     *         normal {@code increment} months to the {@code priorDueDate}
-     *         and re-compute to get the next due date.</li>
-     *     </ul>
-     * </ol>
-     *
-     * @param tentativeDate the date for which to compute the next due date
-     * @param priorDueDate the due date that this interval is starting from
-     *
-     * @return the next due date based on {@code tentativeDate}
+     * Given a prior due date, find the matching target date.
+     * If the date matches one of our configured dates (allowing
+     * for the number of days in the month), it is returned unchanged.
+     * Otherwise we need to find the most likely date we would have
+     * come from given the search direction for allowed dates.
      */
-    private LocalDate computeNextDueDate(
-            int tentativeDate, LocalDate priorDueDate) {
-        LocalDate candiDate = adjustDueDate(priorDueDate.withDayOfMonth(
-                Math.min(tentativeDate, priorDueDate.lengthOfMonth())));
-        if (candiDate.isAfter(priorDueDate))
-            return candiDate;
-        // If the candidate is before the prior due date,
-        // tentatively advance by 1 month to check whether
-        // an adjustment will cross back to the previous month.
-        LocalDate nextMonth = priorDueDate.plusMonths(1);
-        candiDate = setDateAndAdjust(nextMonth, tentativeDate);
-        if (candiDate.withDayOfMonth(1)
-                .isBefore(nextMonth.withDayOfMonth(1))) {
-            // Confirmed month crossing; increment
-            // 1 month more than the normal increment.
-            Log.d(getClass().getSimpleName(), String.format(
-                    "Adjustment for %s crossed back to %s;"
-                            + " advancing %d months",
-                    nextMonth, candiDate, increment + 1));
-            candiDate = setDateAndAdjust(
-                    nextMonth.plusMonths(increment), tentativeDate);
-        } else if (increment > 1) {
-            // No month crossing; use the normal increment
-            candiDate = setDateAndAdjust(
-                    priorDueDate.plusMonths(increment), tentativeDate);
+    private LocalDate targetDateOf(LocalDate priorDueDate) {
+        int date = priorDueDate.getDayOfMonth();
+        int lastDay = priorDueDate.lengthOfMonth();
+        if ((date == Math.min(this.date, lastDay)) ||
+                (date == Math.min(date2, lastDay)))
+            return priorDueDate;
+        switch (direction) {
+            case NEXT:
+                // Use the closest date preceding the due date
+                if (date > this.date) {
+                    if (date > date2)
+                        return priorDueDate.withDayOfMonth(
+                                Math.max(this.date, date2));
+                    return priorDueDate.withDayOfMonth(this.date);
+                } else {
+                    if (date > date2)
+                        return priorDueDate.withDayOfMonth(date2);
+                    // Target date should be in the prior month
+                    LocalDate targetMonth = priorDueDate.minusMonths(1);
+                    return targetMonth.withDayOfMonth(
+                            Math.min(Math.max(this.date, date2),
+                                    targetMonth.lengthOfMonth()));
+                }
+            case PREVIOUS:
+                // Use the closest date following the due date
+                if (date < this.date) {
+                    if (date < date2)
+                        return priorDueDate.withDayOfMonth(
+                                Math.min(Math.min(this.date, date2),
+                                        lastDay));
+                    return priorDueDate.withDayOfMonth(
+                            Math.min(this.date, lastDay));
+                } else {
+                    if (date < date2)
+                        return priorDueDate.withDayOfMonth(
+                                Math.min(date2, lastDay));
+                    // Target date should be in the next month
+                    LocalDate targetMonth = priorDueDate.plusMonths(1);
+                    lastDay = targetMonth.lengthOfMonth();
+                    return targetMonth.withDayOfMonth(
+                            Math.min(Math.min(this.date, date2), lastDay));
+                }
+            case CLOSEST_OR_NEXT:
+            case CLOSEST_OR_PREVIOUS:
+                // Don't bother checking for ties in this case;
+                // just find the closest date in either direction.
+                // It can't be more than 3 days away.
+                LocalDate target1 = priorDueDate.withDayOfMonth(
+                        Math.min(this.date, lastDay));
+                LocalDate target2 = priorDueDate.withDayOfMonth(
+                        Math.min(date2, lastDay));
+                int delta1 = Math.abs(priorDueDate.until(target1).getDays());
+                if (delta1 > 15) {
+                    if (date < 15)
+                        target1 = target1.minusMonths(1);
+                    else
+                        target1 = target1.plusMonths(1);
+                    lastDay = target1.lengthOfMonth();
+                    target1 = target1.withDayOfMonth(
+                            Math.min(this.date, lastDay));
+                    delta1 = Math.abs(priorDueDate.until(target1).getDays());
+                }
+                int delta2 = Math.abs(priorDueDate.until(target2).getDays());
+                if (delta2 > 15) {
+                    if (date < 15)
+                        target2 = target2.minusMonths(1);
+                    else
+                        target2 = target2.plusMonths(1);
+                    lastDay = target2.lengthOfMonth();
+                    target2 = target2.withDayOfMonth(
+                            Math.min(date2, lastDay));
+                    delta2 = Math.abs(priorDueDate.until(target2).getDays());
+                }
+                return (delta1 <= delta2) ? target1 : target2;
         }
-        return checkEndDate(priorDueDate, candiDate);
+        // Unreachable
+        return priorDueDate;
     }
 
     @Override
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
-        // Compute the next due date from each of the month's dates
-        // independently, including any adjustments for day of the week.
-        LocalDate candiDate1 = computeNextDueDate(date, priorDueDate);
-        LocalDate candiDate2 = computeNextDueDate(date2, priorDueDate);
-        // Return the next due date in order from between these two
-        return candiDate1.isBefore(candiDate2) ? candiDate1 : candiDate2;
+        // Find the actual target date for the prior due date
+        // without consideration of allowed days
+        LocalDate oldTargetDate = targetDateOf(priorDueDate);
+        int lastDay = oldTargetDate.lengthOfMonth();
+        int minDay = Math.min(Math.min(date, date2), lastDay);
+        int maxDay = Math.min(Math.max(date, date2), lastDay);
+        LocalDate newTargetDate;
+        // If it matches the earlier of the dates in this interval,
+        // target the next date.
+        if (oldTargetDate.getDayOfMonth() == minDay) {
+            newTargetDate = oldTargetDate.withDayOfMonth(maxDay);
+        }
+        // If it matches the latter date, advance by our increment months.
+        else {
+            newTargetDate = oldTargetDate.plusMonths(increment);
+            lastDay = newTargetDate.lengthOfMonth();
+            minDay = Math.min(Math.min(date, date2), lastDay);
+            newTargetDate = newTargetDate.withDayOfMonth(minDay);
+        }
+        return checkEndDate(priorDueDate, adjustDueDate(newTargetDate));
     }
 
     @Override

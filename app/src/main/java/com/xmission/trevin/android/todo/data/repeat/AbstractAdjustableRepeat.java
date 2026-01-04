@@ -34,14 +34,14 @@ public abstract class AbstractAdjustableRepeat extends AbstractRepeat {
 
     /** Days of the week on which this event can occur */
     @NonNull
-    private SortedSet<WeekDays> allowedWeekDays = new TreeSet<>();
+    protected SortedSet<WeekDays> allowedWeekDays = new TreeSet<>();
 
     /**
      * The direction to look for the next available day of the week
      * when the target date falls on an unavailable day.
      */
     @NonNull
-    private WeekdayDirection direction;
+    protected WeekdayDirection direction;
 
     /**
      * Initialize this repeat with all days of the week and a default
