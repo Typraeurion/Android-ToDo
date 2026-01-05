@@ -16,14 +16,12 @@
  */
 package com.xmission.trevin.android.todo.data.repeat;
 
-import static com.xmission.trevin.android.todo.data.repeat.RepeatDailyTests.randomDays;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 
 /**
@@ -69,6 +67,25 @@ public class RepeatMonthlyOnDayTests {
     }
 
     /**
+     * Format an ordinal week number for messages.
+     *
+     * @param week the week number &mdash; 0&ndash;3 is the first through
+     *             fourth weeks, 4 is the <i>last</i> week.
+     *
+     * @return the corresponding string &ldquo;1st&rdquo;, &ldquo;2nd&rdquo;
+     * &ldquo;3rd&rdquo;, &ldquo;4th&rdquo;, or &ldquo;last&rdquo;.
+     */
+    public static String ordinalWeek(int week) {
+        switch (week) {
+            case 0: return "1st";
+            case 1: return "2nd";
+            case 2: return "3rd";
+            case 4: return "last";
+            default: return String.format("%dth", week + 1);
+        }
+    }
+
+    /**
      * Test a monthly repeating interval for early in the month (one of
      * the first three weeks), with no specified end date.  The new due date
      * should be the same day of the same week regardless of when the item
@@ -84,8 +101,7 @@ public class RepeatMonthlyOnDayTests {
         // to our start day, but make it explicit here.
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
         int targetWeek = (startDate.getDayOfMonth() - 1) / 7;
-        String stndrd = (targetWeek == 0) ? "st" :
-                (targetWeek == 1) ? "nd" : (targetWeek == 2) ? "rd" : "th";
+        String stndrd = ordinalWeek(targetWeek);
         repeat.setDay(targetDay);
         repeat.setWeek(targetWeek);
         for (int i = 0; i < 15; i++) {
@@ -95,11 +111,10 @@ public class RepeatMonthlyOnDayTests {
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
-                            "Next due date for task due %s (%d%s %s),"
+                            "Next due date for task due %s (%s %s),"
                                     + " completed %s",
-                            startDate.format(DAY_FORMAT),
-                            targetWeek + 1, stndrd, targetDay,
-                            completed.format(DAY_FORMAT)),
+                            startDate.format(DAY_FORMAT), stndrd,
+                            targetDay, completed.format(DAY_FORMAT)),
                     expectedDue, actualDue);
             if (actualDue == null)
                 // Technically unreachable, but the compiler can't tell
@@ -143,7 +158,7 @@ public class RepeatMonthlyOnDayTests {
     /**
      * Test a monthly repeating interval for the <i>last</i> week of the
      * month with no specified end date.  The new due date should always
-     * be in the fourth week.
+     * be in the last week.
      */
     @Test
     public void testRepeatMonthlyLastWeek() {
@@ -191,14 +206,7 @@ public class RepeatMonthlyOnDayTests {
         if ((startDate.getDayOfMonth() > startDate.lengthOfMonth() - 7) &&
                 RAND.nextBoolean())
             targetWeek = 4;
-        String stndrdth;
-        switch (targetWeek) {
-            case 0: stndrdth = "1st"; break;
-            case 1: stndrdth = "2nd"; break;
-            case 2: stndrdth = "3rd"; break;
-            case 4: stndrdth = "last"; break;
-            default: stndrdth = String.format("%dth", targetWeek + 1); break;
-        }
+        String stndrdth = ordinalWeek(targetWeek);
         repeat.setDay(targetDay);
         repeat.setWeek(targetWeek);
         repeat.setEnd(endDate);
@@ -216,6 +224,43 @@ public class RepeatMonthlyOnDayTests {
                             startDate.format(DAY_FORMAT), stndrdth,
                             targetDay, completed.format(DAY_FORMAT),
                             endDate.format(DAY_FORMAT)),
+                    expectedDue, actualDue);
+            if (actualDue == null)
+                break;
+            startDate = actualDue;
+        }
+    }
+
+    /**
+     * Test an every <i>N</i> months repeating interval.
+     */
+    @Test
+    public void testRepeatEveryNMonthsOnDay() {
+        LocalDate startDate = LocalDate.now();
+        WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
+        int targetWeek = (startDate.getDayOfMonth() - 1) / 7;
+        // If we're starting within the last week, randomly switch
+        // from targeting the fourth week to the last week.
+        if ((startDate.getDayOfMonth() > startDate.lengthOfMonth() - 7) &&
+                RAND.nextBoolean())
+            targetWeek = 4;
+        String stndrdth = ordinalWeek(targetWeek);
+        int increment = RAND.nextInt(10) + 2;
+        RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(startDate);
+        repeat.setDay(targetDay);
+        repeat.setWeek(targetWeek);
+        repeat.setIncrement(increment);
+        for (int i = 0; i < 10; i++) {
+            LocalDate completed = startDate.plusDays(RAND.nextInt(100));
+            LocalDate expectedDue = setWeekAndDayForMonth(
+                    startDate.plusMonths(increment), targetWeek, targetDay);
+            LocalDate actualDue = repeat
+                    .computeNextDueDate(startDate, completed);
+            assertEquals(String.format(
+                            "Next due date for task due %s (%s %s),"
+                                    + " completed %s",
+                            startDate.format(DAY_FORMAT), stndrdth,
+                            targetDay, completed.format(DAY_FORMAT)),
                     expectedDue, actualDue);
             if (actualDue == null)
                 // Technically unreachable, but the compiler can't tell

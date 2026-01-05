@@ -88,7 +88,7 @@ public class RepeatYearAfter extends AbstractAdjustableRepeat {
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
         LocalDate nextDueDate = adjustDueDate(
-                priorDueDate.plusYears(increment));
+                completed.plusYears(increment));
         return checkEndDate(priorDueDate, nextDueDate);
     }
 

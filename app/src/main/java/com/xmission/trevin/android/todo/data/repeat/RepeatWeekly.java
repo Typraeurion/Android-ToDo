@@ -61,12 +61,12 @@ public class RepeatWeekly extends AbstractRepeat {
     }
 
     /**
-     * Initialize this repeat with all days of the week for a given due date.
-     * For a weekly task, the due date makes no difference.
+     * Initialize this repeat with the specific day of the week that
+     * the given due date is on.
      */
     public RepeatWeekly(@NonNull LocalDate due) {
-        this(WeekDays.DAYS_BIT_MASK |
-                WeekdayDirection.NEXT.getValue(), due);
+        super(REPEAT_WEEKLY, due);
+        fixedWeekDays.add(WeekDays.fromJavaDay(due.getDayOfWeek()));
     }
 
     /**

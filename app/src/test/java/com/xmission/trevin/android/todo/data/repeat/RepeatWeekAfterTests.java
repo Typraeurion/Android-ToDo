@@ -26,14 +26,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * Tests for the &ldquo;month after&rdquo; repeating interval.
- * This interval always goes a fixed number of months after
+ * Tests for the &ldquo;week after&rdquo; repeating interval.
+ * This interval always goes a fixed number of weeks after
  * the item&rsquo;s last completion date rather than its
  * previous due date.
  *
  * @author Trevin Beattie
  */
-public class RepeatMonthAfterTests {
+public class RepeatWeekAfterTests {
 
     private static final Random RAND = new Random();
 
@@ -44,18 +44,17 @@ public class RepeatMonthAfterTests {
             DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH);
 
     /**
-     * Test a &ldquo;month after&rdquo; repeating interval, allowed on all
+     * Test a &ldquo;week after&rdquo; repeating interval, allowed on all
      * days (the default), with no specified end date.  The new due date
-     * should always be the month after the item was completed, with
-     * possible adjustments for different month lengths.
+     * should always be one week after the item was completed.
      */
     @Test
-    public void testRepeatMonthAfterWithoutRestriction() {
+    public void testRepeatWeekAfterWithoutRestriction() {
         LocalDate startDate = LocalDate.now();
-        RepeatMonthAfter repeat = new RepeatMonthAfter(startDate);
+        RepeatWeekAfter repeat = new RepeatWeekAfter(startDate);
         for (int i = 0; i < 100; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(32));
-            LocalDate expectedDue = completed.plusMonths(1);
+            LocalDate expectedDue = completed.plusWeeks(1);
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
@@ -71,27 +70,25 @@ public class RepeatMonthAfterTests {
     }
 
     /**
-     * Test a &ldquo;month after&rdquo; repeating interval, allowed on all
+     * Test a &ldquo;week after&rdquo; repeating interval, allowed on all
      * days (the default), with a specified end date.  The new due date
-     * should always be the month after the item was completed, with
-     * possible adjustments for different month lengths.
+     * should always be one week after the item was completed.
      */
     @Test
-    public void testRepeatMonthAfterWithEnd() {
+    public void testRepeatWeekAfterWithEnd() {
         LocalDate startDate = LocalDate.now();
-        LocalDate endDate = startDate.plusMonths(RAND.nextInt(30) + 20);
-        RepeatMonthAfter repeat = new RepeatMonthAfter(startDate);
+        LocalDate endDate = startDate.plusMonths(RAND.nextInt(8) + 5);
+        RepeatWeekAfter repeat = new RepeatWeekAfter(startDate);
         repeat.setEnd(endDate);
         for (int i = 0; i < 100; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(32));
-            LocalDate expectedDue = completed.plusMonths(1);
+            LocalDate expectedDue = completed.plusWeeks(1);
             if (expectedDue.isAfter(endDate))
                 expectedDue = null;
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
-                            "Next due date for task due %s,"
-                                    + " completed %s, ending %s",
+                            "Next due date for task due %s, completed %s, ending %s",
                             startDate.format(DAY_FORMAT),
                             completed.format(DAY_FORMAT),
                             endDate.format(DAY_FORMAT)),
@@ -103,25 +100,24 @@ public class RepeatMonthAfterTests {
     }
 
     /**
-     * Test an <i>N</i> months-after repeating interval, allowed on all days,
+     * Test an <i>N</i> weeks-after repeating interval, allowed on all days,
      * with no specified end date.  The new due date should always be
-     * <i>N</i> months after the item was completed, with possible
-     * adjustments for different month lengths.
+     * <i>N</i> weeks after the item was completed.
      */
     @Test
-    public void testRepeatNMonthsAfterWithoutRestriction() {
+    public void testRepeatNWeeksAfterWithoutRestriction() {
         LocalDate startDate = LocalDate.now();
         int increment = RAND.nextInt(100) + 2;
-        RepeatMonthAfter repeat = new RepeatMonthAfter(startDate);
+        RepeatWeekAfter repeat = new RepeatWeekAfter(startDate);
         repeat.setIncrement(increment);
         for (int i = 0; i < 100; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(32));
-            LocalDate expectedDue = completed.plusMonths(increment);
+            LocalDate expectedDue = completed.plusWeeks(increment);
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
-                            "Next due date for task due %s,"
-                                    + " %d months after completion on %s",
+                            "Next due date for task due %s, %d weeks"
+                                    + " after completion on %s",
                             startDate.format(DAY_FORMAT), increment,
                             completed.format(DAY_FORMAT)),
                     expectedDue, actualDue);
@@ -133,28 +129,27 @@ public class RepeatMonthAfterTests {
     }
 
     /**
-     * Test an <i>N</i> months-after repeating interval, allowed on all days,
+     * Test an <i>N</i> weeks-after repeating interval, allowed on all days,
      * with a specified end date.  The new due date should always be
-     * <i>N</i> months after the item was completed, with possible
-     * adjustments for different month lengths.
+     * <i>N</i> weeks after the item was completed.
      */
     @Test
-    public void testRepeatNMonthsAfterWithEnd() {
+    public void testRepeatNWeeksAfterWithEnd() {
         LocalDate startDate = LocalDate.now();
+        LocalDate endDate = startDate.plusMonths(RAND.nextInt(8) + 5);
         int increment = RAND.nextInt(100) + 2;
-        LocalDate endDate = startDate.plusMonths(RAND.nextInt(30) + 20);
-        RepeatMonthAfter repeat = new RepeatMonthAfter(startDate);
+        RepeatWeekAfter repeat = new RepeatWeekAfter(startDate);
         repeat.setIncrement(increment);
         repeat.setEnd(endDate);
         for (int i = 0; i < 100; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(32));
-            LocalDate expectedDue = completed.plusMonths(increment);
+            LocalDate expectedDue = completed.plusWeeks(increment);
             if (expectedDue.isAfter(endDate))
                 expectedDue = null;
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
-                            "Next due date for task due %s, %d months"
+                            "Next due date for task due %s, %d weeks"
                                     + " after completion on %s, ending %s",
                             startDate.format(DAY_FORMAT), increment,
                             completed.format(DAY_FORMAT),
@@ -167,34 +162,34 @@ public class RepeatMonthAfterTests {
     }
 
     /**
-     * Test an <i>N</i> &ldquo;month(s) after&rdquo; repeating interval
-     * allowed on a subset of days of the week.  The new due date should
-     * be on an allowed day roughly <i>N</i> months following the completion
-     * date; the exact day depends on the search direction.  If testing
-     * with an end date and the next due date would be after the end date,
-     * we expect the interval to return {@code null}.
+     * Test an <i>N</i> weeks-after repeating interval allowed on a subset
+     * of days of the week.  The new due date should be on an allowed day
+     * roughly <i>N</i> weeks following the completion date, the exact day
+     * depends on the search direction.  If testing with an end date and
+     * the next due date would be after the end date, we expect the
+     * interval to return {@code null}.
      *
      * @param direction the direction to look for the next allowed day
-     * @param increment the number of months to advance after completion
+     * @param increment the number of weeks to advance after completion
      * @param withEnd whether to stop repeating after an end date
      */
-    private void testRepeatNMonthsAfterWithRestrictions(
+    private void testRepeatNWeeksAfterWithRestrictions(
             WeekdayDirection direction, int increment, boolean withEnd) {
         Set<WeekDays> allowed = randomDays();
         LocalDate startDate = LocalDate.now();
         while (!allowed.contains(WeekDays.fromJavaDay(startDate.getDayOfWeek())))
             startDate = startDate.plusDays(1);
-        RepeatMonthAfter repeat = new RepeatMonthAfter(startDate);
+        RepeatWeekAfter repeat = new RepeatWeekAfter(startDate);
         repeat.setIncrement(increment);
         repeat.setAllowedWeekDays(allowed);
         repeat.setDirection(direction);
         LocalDate endDate = withEnd ? startDate.plusMonths(
-                RAND.nextInt(30) + 20) : null;
+                RAND.nextInt(8) + 5) : null;
         if (withEnd)
             repeat.setEnd(endDate);
         for (int i = 0; i < 100; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(32));
-            LocalDate expectedDue = completed.plusMonths(increment);
+            LocalDate expectedDue = completed.plusWeeks(increment);
             if (!allowed.contains(WeekDays.fromJavaDay(
                     expectedDue.getDayOfWeek()))) {
                 // Look for both the next and previous days, and count
@@ -234,7 +229,7 @@ public class RepeatMonthAfterTests {
                     .append(startDate.format(DAY_FORMAT)).append(", ");
             message.append(direction).append(' ').append(allowed);
             message.append(' ').append(increment)
-                    .append((increment > 1) ? " months" : " month");
+                    .append((increment > 1) ? " weeks" : " week");
             message.append(" after completion on ")
                     .append(completed.format(DAY_FORMAT));
             if (withEnd)
@@ -248,77 +243,77 @@ public class RepeatMonthAfterTests {
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysNext() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatWeekAfterRestrictedByDaysNext() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.NEXT, 1, false);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysPrevious() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeaotWeekAfterRestrictedByDaysPrevious() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.PREVIOUS, 1, false);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysClosestOrNext() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatWeekAfterRestrictedByDaysClosestOrNext() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.CLOSEST_OR_NEXT, 1, false);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysClosestOrPrevious() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatWeekAfterRestrictedByDaysClosestOrPrevious() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.CLOSEST_OR_PREVIOUS, 1, false);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysWithEndNext() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatWeekAfterRestrictedByDaysWithEndNext() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.NEXT, 1, true);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysWithEndPrevious() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeaotWeekAfterRestrictedByDaysWithEndPrevious() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.PREVIOUS, 1, true);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysWithEndClosestOrNext() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatWeekAfterRestrictedByDaysWithEndClosestOrNext() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.CLOSEST_OR_NEXT, 1, true);
     }
 
     @Test
-    public void testRepeatMonthAfterRestrictedByDaysWithEndClosestOrPrevious() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatWeekAfterRestrictedByDaysWithEndClosestOrPrevious() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.CLOSEST_OR_PREVIOUS, 1, true);
     }
 
     @Test
-    public void testRepeatNMonthsAfterRestrictedByDaysNext() {
-        testRepeatNMonthsAfterWithRestrictions(
-                WeekdayDirection.NEXT, RAND.nextInt(10) + 2, false);
+    public void testRepeatNWeeksAfterRestrictedByDaysNext() {
+        testRepeatNWeeksAfterWithRestrictions(
+                WeekdayDirection.NEXT, RAND.nextInt(50) + 2, false);
     }
 
     @Test
-    public void testRepeatNMonthsAfterRestrictedByDaysPrevious() {
-        testRepeatNMonthsAfterWithRestrictions(
-                WeekdayDirection.PREVIOUS, RAND.nextInt(10) + 2, false);
+    public void testRepeatNWeeksAfterRestrictedByDaysPrevious() {
+        testRepeatNWeeksAfterWithRestrictions(
+                WeekdayDirection.PREVIOUS, RAND.nextInt(50) + 2, false);
     }
 
     @Test
-    public void testRepeatNMonthsAfterRestrictedByDaysClosestOrNext() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatNWeeksAfterRestrictedByDaysClosestOrNext() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.CLOSEST_OR_NEXT,
-                RAND.nextInt(10) + 2, false);
+                RAND.nextInt(50) + 2, false);
     }
 
     @Test
-    public void testRepeatNMonthsAfterRestrictedByDaysClosestOrPrevious() {
-        testRepeatNMonthsAfterWithRestrictions(
+    public void testRepeatNWeeksAfterRestrictedByDaysClosestOrPrevious() {
+        testRepeatNWeeksAfterWithRestrictions(
                 WeekdayDirection.CLOSEST_OR_PREVIOUS,
-                RAND.nextInt(10) + 2, false);
+                        RAND.nextInt(50) + 2, false);
     }
 
 }
