@@ -29,6 +29,7 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -88,9 +89,11 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             ToDoItemColumns.PRIORITY,
             ToDoItemColumns.PRIVATE,
             ToDoItemColumns.CATEGORY_ID,
+            ToDoItemColumns.CATEGORY_NAME,
             ToDoItemColumns.NOTE,
             ToDoItemColumns.ALARM_DAYS_EARLIER,
             ToDoItemColumns.ALARM_TIME,
+            ToDoItemColumns.NOTIFICATION_TIME,
             ToDoItemColumns.REPEAT_INTERVAL,
             ToDoItemColumns.REPEAT_INCREMENT,
             ToDoItemColumns.REPEAT_WEEK_DAYS,
@@ -381,7 +384,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             throw new IllegalArgumentException("Category name cannot by empty");
         ContentValues values = new ContentValues();
         values.put(ToDoCategoryColumns.NAME, categoryName);
-        long id = getDb().insert(CATEGORY_TABLE_NAME, null, values);
         try {
             long rowId = getDb().insertOrThrow(
                     CATEGORY_TABLE_NAME, null, values);
@@ -918,7 +920,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      * @return the number of milliseconds from the Epoch to that date
      * (or {@code null} if {@code date} was {@code null}).
      */
-    private static Long dateToMillis(LocalDate date) {
+    @Nullable
+    private static Long dateToMillis(@Nullable LocalDate date) {
         if (date == null)
             return null;
         return date.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli();
@@ -933,7 +936,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      * @return the number of milliseconds since midnight to that time
      * (or {@code null} if {@code time} was {@code null}).
      */
-    private static Long timeToMillis(LocalTime time) {
+    @Nullable
+    private static Long timeToMillis(@Nullable LocalTime time) {
         if (time == null)
             return null;
         return time.toNanoOfDay() / 1000000L;
@@ -955,7 +959,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      * (if {@code private} > 1).
      */
     private ContentValues todoToContentValues(ToDoItem item) {
-        if (item.getPrivate() <= 1) {
+        if (!item.isEncrypted()) {
             if (TextUtils.isEmpty(item.getDescription()))
                 throw new IllegalArgumentException("Description cannot be empty");
             if ((item.getEncryptedNote() != null) &&
@@ -971,19 +975,27 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                             (item.getEncryptedNote().length == 0)))
                 throw new IllegalArgumentException("Note must be encrypted");
         }
-        if (item.getCategoryId() == null)
-            item.setCategoryId(ToDoCategory.UNFILED);
         if (item.getCreateTime() == null)
             item.setCreateTimeNow();
         if (item.getModTime() == null)
             item.setModTimeNow();
         ContentValues values = new ContentValues();
-        values.put(ToDoItemColumns.CREATE_TIME, item.getCreateTime());
-        values.put(ToDoItemColumns.MOD_TIME, item.getModTime());
+        values.put(ToDoItemColumns.CREATE_TIME,
+                item.getCreateTime().toEpochMilli());
+        values.put(ToDoItemColumns.MOD_TIME,
+                item.getModTime().toEpochMilli());
         values.put(ToDoItemColumns.PRIVATE, item.getPrivate());
         values.put(ToDoItemColumns.CATEGORY_ID, item.getCategoryId());
-        values.put(ToDoItemColumns.DUE_TIME, item.getDue());
-        values.put(ToDoItemColumns.COMPLETED_TIME, item.getCompleted());
+        if (item.getDue() == null)
+            values.putNull(ToDoItemColumns.DUE_TIME);
+        else
+            values.put(ToDoItemColumns.DUE_TIME, item.getDue().atStartOfDay(
+                    ZoneOffset.UTC).toInstant().toEpochMilli());
+        if (item.getCompleted() == null)
+            values.putNull(ToDoItemColumns.COMPLETED_TIME);
+        else
+            values.put(ToDoItemColumns.COMPLETED_TIME,
+                    item.getCompleted().toEpochMilli());
         // SQLite has no boolean type, so this is stored as 0 or 1.
         values.put(ToDoItemColumns.CHECKED, item.isChecked() ? 1 : 0);
         values.put(ToDoItemColumns.PRIORITY, item.getPriority());

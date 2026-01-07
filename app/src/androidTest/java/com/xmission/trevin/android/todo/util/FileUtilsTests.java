@@ -20,8 +20,8 @@ import static org.junit.Assert.*;
 
 import android.content.Context;
 import android.os.Environment;
-import android.support.test.InstrumentationRegistry;
-import android.support.test.runner.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
@@ -47,7 +47,8 @@ public class FileUtilsTests {
     @Before
     public void initialize() {
         if (testContext == null)
-            testContext = InstrumentationRegistry.getTargetContext();
+            testContext = InstrumentationRegistry.getInstrumentation()
+                    .getTargetContext();
     }
 
     /** Test getting the default storage directory */

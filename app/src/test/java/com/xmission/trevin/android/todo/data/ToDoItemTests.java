@@ -55,8 +55,8 @@ public class ToDoItemTests {
      */
     private static ToDoItem newEmptyItem() {
         ToDoItem item = new ToDoItem();
-        item.setCreateTime(0);
-        item.setModTime(0);
+        item.setCreateTime(Instant.ofEpochMilli(0));
+        item.setModTime(Instant.ofEpochMilli(0));
         return item;
     }
 
@@ -85,10 +85,13 @@ public class ToDoItemTests {
                 RAND.nextInt(16) + 8));
         item.setEncryptedDescription(new byte[RAND.nextInt(64) + 32]);
         RAND.nextBytes(item.getEncryptedDescription());
-        item.setCreateTime(RAND.nextLong());
-        item.setModTime(RAND.nextLong());
-        item.setDue(RAND.nextLong());
-        item.setCompleted(RAND.nextLong());
+        item.setCreateTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
+        item.setModTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
+        item.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
+        item.setCompleted(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         item.setChecked(!EMPTY_ITEM.isChecked()); // We can only toggle a boolean
         item.setPriority(RAND.nextInt(10) + 2); // Default is 1
         item.setPrivate(RAND.nextInt(5) + 1); // Default is 0
@@ -321,7 +324,8 @@ public class ToDoItemTests {
     @Test
     public void testCreateTimeToString() {
         ToDoItem itemWithCreateTime = newEmptyItem();
-        itemWithCreateTime.setCreateTime(RAND.nextLong());
+        itemWithCreateTime.setCreateTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         assertNotEquals("Items with or without create time",
                 EMPTY_ITEM.toString(), itemWithCreateTime.toString());
     }
@@ -329,12 +333,14 @@ public class ToDoItemTests {
     @Test
     public void testCreateTimeHashCode() {
         ToDoItem itemWithCreateTime = newEmptyItem();
-        itemWithCreateTime.setCreateTime(RAND.nextLong());
+        itemWithCreateTime.setCreateTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         assertNotEquals("Item hash codes with or without create time",
                 EMPTY_ITEM.hashCode(), itemWithCreateTime.hashCode());
         ToDoItem item2 = newEmptyItem();
         do {
-            item2.setCreateTime(RAND.nextLong());
+            item2.setCreateTime(Instant.ofEpochSecond(
+                    RAND.nextLong() % 3155760000L + 946684800L));
         } while (item2.getCreateTime() == itemWithCreateTime.getCreateTime());
         assertNotEquals("Item hash codes with different create times",
                 itemWithCreateTime.hashCode(), item2.hashCode());
@@ -343,7 +349,8 @@ public class ToDoItemTests {
     @Test
     public void testCreateTimeEquals() {
         ToDoItem itemWithCreateTime = newEmptyItem();
-        itemWithCreateTime.setCreateTime(RAND.nextLong());
+        itemWithCreateTime.setCreateTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         assertTrue("Items with a create time do not compare equal",
                 itemWithCreateTime.equals(itemWithCreateTime));
         assertFalse("Items with or without a create time compare equal",
@@ -353,7 +360,8 @@ public class ToDoItemTests {
         assertTrue("Items with same create time do not compare equal",
                 itemWithCreateTime.equals(item2));
         do {
-            item2.setCreateTime(RAND.nextLong());
+            item2.setCreateTime(Instant.ofEpochSecond(
+                    RAND.nextLong() % 3155760000L + 946684800L));
         } while (item2.getCreateTime() == itemWithCreateTime.getCreateTime());
         assertFalse("Items with different create times compare equal",
                 itemWithCreateTime.equals(item2));
@@ -362,7 +370,8 @@ public class ToDoItemTests {
     @Test
     public void testCreateTimeClone() {
         ToDoItem itemWithCreateTime = newEmptyItem();
-        itemWithCreateTime.setCreateTime(RAND.nextLong());
+        itemWithCreateTime.setCreateTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         ToDoItem clone = itemWithCreateTime.clone();
         assertEquals("Clone of item create time",
                 itemWithCreateTime.getCreateTime(), clone.getCreateTime());
@@ -371,7 +380,8 @@ public class ToDoItemTests {
     @Test
     public void testModTimeToString() {
         ToDoItem itemWithModTime = newEmptyItem();
-        itemWithModTime.setModTime(RAND.nextLong());
+        itemWithModTime.setModTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         assertNotEquals("Items with or without modification time",
                 EMPTY_ITEM.toString(), itemWithModTime.toString());
     }
@@ -379,12 +389,14 @@ public class ToDoItemTests {
     @Test
     public void testModTimeHashCode() {
         ToDoItem itemWithModTime = newEmptyItem();
-        itemWithModTime.setModTime(RAND.nextLong());
+        itemWithModTime.setModTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         assertNotEquals("Item hash codes with or without modification time",
                 EMPTY_ITEM.hashCode(), itemWithModTime.hashCode());
         ToDoItem item2 = newEmptyItem();
         do {
-            item2.setModTime(RAND.nextLong());
+            item2.setModTime(Instant.ofEpochSecond(
+                    RAND.nextLong() % 3155760000L + 946684800L));
         } while (item2.getModTime() == itemWithModTime.getModTime());
         assertNotEquals("Item hash codes with different modification times",
                 itemWithModTime.hashCode(), item2.hashCode());
@@ -393,7 +405,8 @@ public class ToDoItemTests {
     @Test
     public void testModTimeEquals() {
         ToDoItem itemWithModTime = newEmptyItem();
-        itemWithModTime.setModTime(RAND.nextLong());
+        itemWithModTime.setModTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         assertTrue("Items with a modification time do not compare equal",
                 itemWithModTime.equals(itemWithModTime));
         assertFalse("Items with or without a modification time compare equal",
@@ -403,7 +416,8 @@ public class ToDoItemTests {
         assertTrue("Items with same modification time do not compare equal",
                 itemWithModTime.equals(item2));
         do {
-            item2.setModTime(RAND.nextLong());
+            item2.setModTime(Instant.ofEpochSecond(
+                    RAND.nextLong() % 3155760000L + 946684800L));
         } while (item2.getModTime() == itemWithModTime.getModTime());
         assertFalse("Items with different modification times compare equal",
                 itemWithModTime.equals(item2));
@@ -412,7 +426,8 @@ public class ToDoItemTests {
     @Test
     public void testModTimeClone() {
         ToDoItem itemWithModTime = newEmptyItem();
-        itemWithModTime.setModTime(RAND.nextLong());
+        itemWithModTime.setModTime(Instant.ofEpochSecond(
+                RAND.nextLong() % 3155760000L + 946684800L));
         ToDoItem clone = itemWithModTime.clone();
         assertEquals("Clone of item modification time",
                 itemWithModTime.getModTime(), clone.getModTime());
@@ -421,7 +436,7 @@ public class ToDoItemTests {
     @Test
     public void testDueToString() {
         ToDoItem itemWithDue = newEmptyItem();
-        itemWithDue.setDue(RAND.nextLong());
+        itemWithDue.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
         assertNotEquals("Items with or without due time",
                 EMPTY_ITEM.toString(), itemWithDue.toString());
     }
@@ -429,12 +444,12 @@ public class ToDoItemTests {
     @Test
     public void testDueHashCode() {
         ToDoItem itemWithDue = newEmptyItem();
-        itemWithDue.setDue(RAND.nextLong());
+        itemWithDue.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
         assertNotEquals("Item hash codes with or without due time",
                 EMPTY_ITEM.hashCode(), itemWithDue.hashCode());
         ToDoItem item2 = newEmptyItem();
         do {
-            item2.setDue(RAND.nextLong());
+            item2.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
         } while (item2.getDue() == itemWithDue.getDue());
         assertNotEquals("Item hash codes with different due times",
                 itemWithDue.hashCode(), item2.hashCode());
@@ -443,7 +458,7 @@ public class ToDoItemTests {
     @Test
     public void testDueEquals() {
         ToDoItem itemWithDue = newEmptyItem();
-        itemWithDue.setDue(RAND.nextLong());
+        itemWithDue.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
         assertTrue("Items with a due time do not compare equal",
                 itemWithDue.equals(itemWithDue));
         assertFalse("Items with or without due time compare equal",
@@ -453,7 +468,7 @@ public class ToDoItemTests {
         assertTrue("Items with the same due time do not compare equal",
                 itemWithDue.equals(item2));
         do {
-            item2.setDue(RAND.nextLong());
+            item2.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
         } while (item2.getDue() == itemWithDue.getDue());
         assertFalse("Items with different due times compare equal",
                 itemWithDue.equals(item2));
@@ -462,7 +477,7 @@ public class ToDoItemTests {
     @Test
     public void testDueClone() {
         ToDoItem itemWithDue = newEmptyItem();
-        itemWithDue.setDue(RAND.nextLong());
+        itemWithDue.setDue(LocalDate.ofEpochDay(RAND.nextInt(36525) + 10957));
         ToDoItem clone = itemWithDue.clone();
         assertEquals("Clone of item due time",
                 itemWithDue.getDue(), clone.getDue());
@@ -471,7 +486,8 @@ public class ToDoItemTests {
     @Test
     public void testCompletedToString() {
         ToDoItem itemWithCompleted = newEmptyItem();
-        itemWithCompleted.setCompleted(RAND.nextLong());
+        itemWithCompleted.setCompleted(Instant.ofEpochSecond(
+                        RAND.nextLong() % 3155760000L + 946684800L));
         assertNotEquals("Items with or without completed time",
                 EMPTY_ITEM.toString(), itemWithCompleted.toString());
     }
@@ -479,12 +495,14 @@ public class ToDoItemTests {
     @Test
     public void testCompletedHashCode() {
         ToDoItem itemWithCompleted = newEmptyItem();
-        itemWithCompleted.setCompleted(RAND.nextLong());
+        itemWithCompleted.setCompleted(Instant.ofEpochSecond(
+                        RAND.nextLong() % 3155760000L + 946684800L));
         assertNotEquals("Item hash codes with or without completed time",
                 EMPTY_ITEM.hashCode(), itemWithCompleted.hashCode());
         ToDoItem item2 = newEmptyItem();
         do {
-            item2.setCompleted(RAND.nextLong());
+            item2.setCompleted(Instant.ofEpochSecond(
+                            RAND.nextLong() % 3155760000L + 946684800L));
         } while (item2.getCompleted() == itemWithCompleted.getCompleted());
         assertNotEquals("Item hash codes with different completed times",
                 itemWithCompleted.hashCode(), item2.hashCode());
@@ -493,7 +511,8 @@ public class ToDoItemTests {
     @Test
     public void testCompletedEquals() {
         ToDoItem itemWithCompleted = newEmptyItem();
-        itemWithCompleted.setCompleted(RAND.nextLong());
+        itemWithCompleted.setCompleted(Instant.ofEpochSecond(
+                        RAND.nextLong() % 3155760000L + 946684800L));
         assertTrue("Items with a completed time do not compare equal",
                 itemWithCompleted.equals(itemWithCompleted));
         assertFalse("Item with or without completed time compare equal",
@@ -503,7 +522,8 @@ public class ToDoItemTests {
         assertTrue("Items with same completed time do not compare equal",
                 itemWithCompleted.equals(item2));
         do {
-            item2.setCompleted(RAND.nextLong());
+            item2.setCompleted(Instant.ofEpochSecond(
+                            RAND.nextLong() % 3155760000L + 946684800L));
         } while (item2.getCompleted() == itemWithCompleted.getCompleted());
         assertFalse("Items with different completed times compare equal",
                 itemWithCompleted.equals(item2));
@@ -512,7 +532,8 @@ public class ToDoItemTests {
     @Test
     public void testCompletedClone() {
         ToDoItem itemWithCompleted = newEmptyItem();
-        itemWithCompleted.setCompleted(RAND.nextLong());
+        itemWithCompleted.setCompleted(Instant.ofEpochSecond(
+                        RAND.nextLong() % 3155760000L + 946684800L));
         ToDoItem clone = itemWithCompleted.clone();
         assertEquals("Clone of item completed time",
                 itemWithCompleted.getCompleted(), clone.getCompleted());

@@ -24,8 +24,9 @@ import androidx.annotation.NonNull;
 import com.xmission.trevin.android.todo.data.repeat.RepeatInterval;
 
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Date;
 
 /**
  * Data object corresponding to the &ldquo;todo&rdquo; table in the database
@@ -45,13 +46,18 @@ public class ToDoItem implements Cloneable, Serializable {
     // Ignore for storage
     private byte[] encryptedDescription;
     /** Creation timestamp of this item */
-    private long created = System.currentTimeMillis();
+    @NonNull
+    private Instant created = Instant.now();
     /** Modification timestamp of this item */
-    private long modified = System.currentTimeMillis();
-    /** The date this item is due (optional, milliseconds since the Epoch) */
-    private Long due;
+    @NonNull
+    private Instant modified = Instant.now();
+    /**
+     * The date this item is due (optional,
+     * stored as milliseconds since the Epoch)
+     */
+    private LocalDate due;
     /** The date this item was last checked off (optional timestamp) */
-    private Long completed;
+    private Instant completed;
     private boolean checked;
     private int priority = 1;
     // The actual name of this column is "private", but that's a reserved word
@@ -147,7 +153,8 @@ public class ToDoItem implements Cloneable, Serializable {
      *
      * @return the note creation time
      */
-    public Long getCreateTime() {
+    @NonNull
+    public Instant getCreateTime() {
         return created;
     }
 
@@ -157,7 +164,9 @@ public class ToDoItem implements Cloneable, Serializable {
      *
      * @param timestamp the creation time to set
      */
-    public void setCreateTime(long timestamp) {
+    public void setCreateTime(@NonNull Instant timestamp) {
+        if (timestamp == null)
+            throw new IllegalArgumentException("Create time cannot be null");
         created = timestamp;
     }
 
@@ -166,7 +175,7 @@ public class ToDoItem implements Cloneable, Serializable {
      * to the current time.
      */
     public void setCreateTimeNow() {
-        created = System.currentTimeMillis();
+        created = Instant.now();
     }
 
     /**
@@ -175,7 +184,8 @@ public class ToDoItem implements Cloneable, Serializable {
      *
      * @return the note creation time
      */
-    public Long getModTime() {
+    @NonNull
+    public Instant getModTime() {
         return modified;
     }
 
@@ -185,7 +195,10 @@ public class ToDoItem implements Cloneable, Serializable {
      *
      * @param timestamp the creation time to set
      */
-    public void setModTime(long timestamp) {
+    public void setModTime(@NonNull Instant timestamp) {
+        if (timestamp == null)
+            throw new IllegalArgumentException(
+                    "Modification time cannot be null");
         modified = timestamp;
     }
 
@@ -194,49 +207,45 @@ public class ToDoItem implements Cloneable, Serializable {
      * to the current time.
      */
     public void setModTimeNow() {
-        modified = System.currentTimeMillis();
+        modified = Instant.now();
     }
 
     /**
-     * Get the due date of the To Do item
-     * in milliseconds since the Epoch.
+     * Get the due date of the To Do item.
      *
      * @return the due date, or {@code null} if no due date is set
      */
-    public Long getDue() {
+    public LocalDate getDue() {
         return due;
     }
 
     /**
-     * Set (or clear) the due date of the To Do item
-     * in milliseconds since the epoch.
+     * Set (or clear) the due date of the To Do item.
      *
-     * @param timestamp the due date to set, or {@code null}
+     * @param date the due date to set, or {@code null}
      * to clear the due date
      */
-    public void setDue(Long timestamp) {
-        due = timestamp;
+    public void setDue(LocalDate date) {
+        due = date;
     }
 
     /**
-     * Get the time this item was last checked off
-     * in milliseconds since the Epoch.
+     * Get the time this item was last checked off.
      *
      * @return the completion time, or {@code null} if the item
      * has not been completed
      */
-    public Long getCompleted() {
+    public Instant getCompleted() {
         return completed;
     }
 
     /**
-     * Set (or clear) the time this To Do item was last checked off
-     * in milliseconds since the epoch.
+     * Set (or clear) the time this To Do item was last checked off.
      *
      * @param timestamp the completion time to set, or {@code null}
      * to clear the completion time
      */
-    public void setCompleted(Long timestamp) {
+    public void setCompleted(Instant timestamp) {
         completed = timestamp;
     }
 
@@ -245,7 +254,7 @@ public class ToDoItem implements Cloneable, Serializable {
      * to the current time.
      */
     public void setCompletedNow() {
-        completed = System.currentTimeMillis();
+        completed = Instant.now();
     }
 
     /**
@@ -329,7 +338,7 @@ public class ToDoItem implements Cloneable, Serializable {
      *
      * @return the category ID
      */
-    public Long getCategoryId() {
+    public long getCategoryId() {
         return categoryId;
     }
 
@@ -482,15 +491,15 @@ public class ToDoItem implements Cloneable, Serializable {
             sb.append(DESCRIPTION).append("=null");
         }
         sb.append(", ").append(CREATE_TIME).append('=')
-                .append(new Date(created));
+                .append(created);
         sb.append(", ").append(MOD_TIME).append('=')
-                .append(new Date(modified));
+                .append(modified);
         if (due != null)
             sb.append(", ").append(DUE_TIME).append('=')
-                    .append(new Date(due));
+                    .append(due);
         if (completed != null)
             sb.append(", ").append(COMPLETED_TIME).append('=')
-                    .append(new Date(completed));
+                    .append(completed);
         sb.append(", ").append(CHECKED).append('=')
                 .append(checked);
         sb.append(", ").append(PRIORITY).append('=')
@@ -511,7 +520,7 @@ public class ToDoItem implements Cloneable, Serializable {
             else
                 sb.append('"').append(note.substring(0, 77));
         } else if (encryptedNote != null) {
-            sb.append(NOTE).append("=[Encrypted]");
+            sb.append(", ").append(NOTE).append("=[Encrypted]");
         }
         if (alarm != null)
             sb.append(", alarm=").append(alarm);
@@ -536,9 +545,9 @@ public class ToDoItem implements Cloneable, Serializable {
         if (encryptedDescription != null)
             hash += Arrays.hashCode(encryptedDescription);
         hash *= 31;
-        hash += Long.hashCode(created);
+        hash += created.hashCode();
         hash *= 31;
-        hash += Long.hashCode(modified);
+        hash += modified.hashCode();
         hash *= 31;
         if (due != null)
             hash += due.hashCode();
@@ -595,9 +604,9 @@ public class ToDoItem implements Cloneable, Serializable {
         if ((encryptedDescription != null) && !Arrays.equals(
                 encryptedDescription, other.encryptedDescription))
             return false;
-        if (created != other.created)
+        if (!created.equals(other.created))
             return false;
-        if (modified != other.modified)
+        if (!modified.equals(other.modified))
             return false;
         if ((due == null) != (other.due == null))
             return false;

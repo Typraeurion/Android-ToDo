@@ -44,6 +44,7 @@ android {
         testInstrumentationRunner "com.xmission.trevin.android.todo.util.MultiDexJUnitRunner"
 
         multiDexEnabled = true
+        multiDexKeepProguard file('multidex-config.pro')
     }
 
     // Java 1.8 compatibility is recommended for backward
@@ -59,7 +60,10 @@ android {
 
     buildTypes {
         debug {
+            minifyEnabled = false
             testCoverageEnabled = true
+            enableAndroidTestCoverage = true
+            enableUnitTestCoverage = true
         }
         release {
             // Minifying entails removing unused code and resources,
@@ -85,16 +89,20 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    // DO NOT UPGRADE THIS!  Version 2.1.5 has a bug resulting in
+    // NoClassDefFoundError: j$.util.DesugarCollections
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 
     implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'androidx.core:core:1.7.0'
+    implementation 'androidx.multidex:multidex:2.0.0'
 
-    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
+    androidTestImplementation 'androidx.test:runner:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation('androidx.test.espresso:espresso-core:3.4.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     androidTestImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'com.android.support:multidex:1.0.3'
     androidTestImplementation('org.apache.commons:commons-lang3:3.5')
 
     testImplementation 'junit:junit:4.13.2'

@@ -177,13 +177,17 @@ public class ToDoCursorImpl implements ToDoCursor {
         if (idColumn >= 0)
             item.setId(dbCursor.getLong(idColumn));
         if (createTimeColumn >= 0)
-            item.setCreateTime(dbCursor.getLong(createTimeColumn));
+            item.setCreateTime(Instant.ofEpochMilli(
+                    dbCursor.getLong(createTimeColumn)));
         if (modTimeColumn >= 0)
-            item.setModTime(dbCursor.getLong(modTimeColumn));
-        if (dueColumn >= 0)
-            item.setDue(dbCursor.getLong(dueColumn));
-        if (completedColumn >= 0)
-            item.setCompleted(dbCursor.getLong(completedColumn));
+            item.setModTime(Instant.ofEpochMilli(
+                    dbCursor.getLong(modTimeColumn)));
+        if ((dueColumn >= 0) && !dbCursor.isNull(dueColumn))
+            item.setDue(LocalDate.ofInstant(Instant.ofEpochMilli(
+                    dbCursor.getLong(dueColumn)), ZoneOffset.UTC));
+        if ((completedColumn >= 0) && !dbCursor.isNull(completedColumn))
+            item.setCompleted(Instant.ofEpochMilli(
+                    dbCursor.getLong(completedColumn)));
         if (checkedColumn >= 0)
             item.setChecked(dbCursor.getInt(checkedColumn) != 0);
         if (priorityColumn >= 0)
