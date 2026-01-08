@@ -56,7 +56,7 @@ public class StringEncryption {
      * Classes should not instantiate StringEncryption directly to use;
      * encryption in general; instead, first call
      * {@link #holdGlobalEncryption()} and then when finished
-     *call either {@link #releaseGlobalEncryption(ContextWrapper)}
+     *call either {@link #releaseGlobalEncryption(Context)}
      * if calling from the UI thread, or
      * {@link #releaseGlobalEncryption()} if called outside of the UI.
      * <p>
@@ -93,7 +93,7 @@ public class StringEncryption {
      * <b>Do not</b> call this from a service; it will cause a
      * CalledFromWrongThreadException!
      */
-    public static void releaseGlobalEncryption(ContextWrapper context) {
+    public static void releaseGlobalEncryption(Context context) {
 	Log.d(LOG_TAG, ".releaseGlobalEncryption(" + globalReferences + ","
 		+ globalEncryption + ")");
 	if (--globalReferences <= 0) {

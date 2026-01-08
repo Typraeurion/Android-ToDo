@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2026 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,14 @@
 package com.xmission.trevin.android.todo.receiver;
 
 import android.content.*;
-import android.os.Build;
 import android.util.Log;
 
-import com.xmission.trevin.android.todo.service.AlarmService;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.OutOfQuotaPolicy;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
+
+import com.xmission.trevin.android.todo.service.AlarmWorker;
 
 /**
  * Pass system broadcast events to the AlarmService.
@@ -31,26 +35,20 @@ public class AlarmInitReceiver extends BroadcastReceiver {
 
     private static final String TAG = "AlarmInitReceiver";
 
+    private WorkManager workManager;
+
     @Override
     public void onReceive(Context context, Intent intent) {
-	Log.d(TAG, "onReceive(action=" + intent.getAction()
-		+ ", package=" + intent.getPackage()
-		+ ", data=" + intent.getDataString() + ")");
-	Intent alarmIntent = new Intent(context, AlarmService.class);
-	alarmIntent.setAction(intent.getAction());
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            context.startService(alarmIntent);
-        } else {
-            /*
-             * Since API 26, Android does not permit starting a service
-             * in the background. (#*&@!!)  Instead we have to start
-             * the service in the foreground, AND the service has to
-             * provide a foreground notification!!
-             *
-             * On top of that, as of API 31 apps are not allowed to
-             * start foreground services either. >:^(
-             */
-            context.startForegroundService(alarmIntent);
-        }
+        Log.d(TAG, "onReceive(action=" + intent.getAction()
+                + ", package=" + intent.getPackage()
+                + ", data=" + intent.getDataString() + ")");
+        if (workManager == null)
+            workManager = WorkManager.getInstance(context);
+        WorkRequest req = new OneTimeWorkRequest
+                .Builder(AlarmWorker.class)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .addTag(intent.getAction())
+                .build();
+        workManager.enqueue(req);
     }
 }

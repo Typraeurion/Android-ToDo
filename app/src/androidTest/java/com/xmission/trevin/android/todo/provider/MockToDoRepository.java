@@ -26,6 +26,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.AlarmInfo;
+import com.xmission.trevin.android.todo.data.ToDoAlarm;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
@@ -34,6 +36,7 @@ import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -980,6 +983,18 @@ public class MockToDoRepository implements ToDoRepository {
     }
 
     @Override
+    public SortedSet<AlarmInfo> getPendingAlarms(ZoneId timeZone) {
+        Log.d(TAG, ".getPendingAlarms()");
+        SortedSet<AlarmInfo> alarms = new TreeSet<>();
+        for (ToDoItem item : itemTable.values()) {
+            AlarmInfo alarm = new AlarmInfo(item);
+            alarm.setTimeZone(timeZone);
+            alarms.add(alarm);
+        }
+        return alarms;
+    }
+
+    @Override
     public long[] getPrivateItemIds() {
         Log.d(TAG, ".getPrivateItemIds");
         long[] ids = new long[countPrivateItems()];
@@ -1099,6 +1114,31 @@ public class MockToDoRepository implements ToDoRepository {
         if (transactionLevel <= 0)
             notifyObservers();
         return item;
+    }
+
+    @Override
+    public synchronized void updateAlarmNotificationTime(
+            long itemId, @NonNull Instant notificationTime) {
+        Log.d(TAG, String.format(".updateAlarmNotificationTime(%d, %s)",
+                itemId, notificationTime));
+        if (notificationTime == null)
+            throw new IllegalArgumentException(
+                    "Notification time cannot be null");
+        if (!itemTable.containsKey(itemId))
+            return;
+        ToDoAlarm alarm = itemTable.get(itemId).getAlarm();
+        if (alarm == null) {
+            /*
+             * It's possible the user disabled the alarm after it went off.
+             * Normally the database should ignore notification time
+             * updates after the alarm is cleared, but that should be
+             * invisible since we don't return the notification time
+             * without an alarm and the next time the alarm is set
+             * should clear the notification time anyway.
+             */
+            return;
+        }
+        alarm.setNotificationTime(notificationTime);
     }
 
     @Override

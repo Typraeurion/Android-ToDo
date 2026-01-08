@@ -26,6 +26,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.AlarmInfo;
 import com.xmission.trevin.android.todo.data.ToDoAlarm;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
@@ -48,6 +49,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -1001,6 +1004,66 @@ public class ToDoRepositoryTests {
     }
 
     /**
+     * Test setting the last notification time of an alarm.
+     */
+    @Test
+    public void testUpdateAlarmNotificationTime() {
+        ToDoItem expectedToDo = new ToDoItem();
+        expectedToDo.setCategoryId(ToDoCategory.UNFILED);
+        expectedToDo.setPrivate(0);
+        expectedToDo.setCreateTimeNow();
+        expectedToDo.setModTime(expectedToDo.getCreateTime());
+        int targetLen = RAND.nextInt(20) + 8;
+        expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
+
+        ToDoAlarm alarm = new ToDoAlarm();
+        alarm.setTime(LocalTime.ofSecondOfDay(RAND.nextInt(86400)));
+        alarm.setAlarmDaysEarlier(RAND.nextInt(31) + 1);
+        expectedToDo.setAlarm(alarm);
+
+        TestObserver observer = new TestObserver();
+        repo.registerDataSetObserver(observer);
+
+        try {
+            ToDoItem returnToDo = repo.insertItem(expectedToDo);
+            assertNotNull("No item returned from insert", returnToDo);
+            assertNotNull("No ID returned with inserted item",
+                    returnToDo.getId());
+            observer.assertChanged("Observer not called after insert");
+            long itemId = returnToDo.getId();
+
+            try {
+                returnToDo = repo.getItemById(itemId);
+                assertNotNull("Failed to read back item " + itemId,
+                        returnToDo);
+                expectedToDo.setId(itemId);
+                expectedToDo.setCategoryName(testContext
+                        .getString(R.string.Category_Unfiled));
+                assertEquals("Item read back from the repository after insert",
+                        expectedToDo, returnToDo);
+
+                observer.reset();
+                Instant expectedInstant = Instant.ofEpochMilli(
+                        RAND.nextLong() % 3155760000L + 946684800L);
+                repo.updateAlarmNotificationTime(itemId, expectedInstant);
+                alarm.setNotificationTime(expectedInstant);
+                returnToDo = repo.getItemById(itemId);
+                assertNotNull(String.format("Failed to read back item %d"
+                                + " after updating last notification time",
+                        itemId), returnToDo);
+                assertEquals("Item read back from the repository after update",
+                        expectedToDo, returnToDo);
+            } finally {
+                observer.reset();
+                repo.deleteItem(itemId);
+            }
+        } finally {
+            observer.waitToClear();
+            repo.unregisterDataSetObserver(observer);
+        }
+    }
+
+    /**
      * Test that when an item&rsquo;s category is deleted,
      * the item is reassigned to the &ldquo;Unfiled&rdquo; category.
      */
@@ -1256,6 +1319,70 @@ public class ToDoRepositoryTests {
     }
 
     /**
+     * Run the assertion part of the test for
+     * {@link ToDoRepository#getPendingAlarms(ZoneId)}.  This relies on
+     * the database being pre-populated with test items with or without
+     * alarms.  As the database may contain other items not created by
+     * the test, we need to allow for these in verifying the results.
+     *
+     * @param expectedItems a Collection of the To Do items for which
+     *                      we expect the repository to return alarms.
+     * @throws AssertionError if any part of the test failed
+     */
+    private void runGetPendingAlarmsTest(Map<Long,ToDoItem> expectedItems) {
+        SortedSet<AlarmInfo> expectedAlarms = new TreeSet<>();
+        ZoneId timeZone = ZoneOffset.ofHours(RAND.nextInt(24) - 12);
+        for (ToDoItem item : expectedItems.values()) {
+            AlarmInfo alarm = new AlarmInfo(item);
+            alarm.setTimeZone(timeZone);
+            expectedAlarms.add(alarm);
+        }
+
+        SortedSet<AlarmInfo> allAlarms = repo.getPendingAlarms(timeZone);
+        // Check for alarms which shouldn't be in the results;
+        // ignore any alarms which are valid but not in the test set.
+        SortedSet<AlarmInfo> actualAlarms = new TreeSet<>();
+        List<String> errors = new ArrayList<>();
+        for (AlarmInfo alarm : allAlarms) {
+            if (expectedItems.containsKey(alarm.getId())) {
+                actualAlarms.add(alarm);
+                continue;
+            }
+            // Look up the original To Do item
+            ToDoItem unexpected = repo.getItemById(alarm.getId());
+            if (unexpected == null) {
+                errors.add(String.format("Repository returned alarm #%d"
+                        + " but has no matching To Do item", alarm.getId()));
+                continue;
+            }
+            if (unexpected.isChecked())
+                errors.add(String.format("Repository returned alarm for item"
+                        + " %d which is marked done", alarm.getId()));
+            if (unexpected.getDue() == null)
+                errors.add(String.format("Repository returned alarm for item"
+                        + " %d which has no due date", alarm.getId()));
+            if (unexpected.getAlarm() == null)
+                errors.add(String.format("Repository return alarm for item"
+                        + " %d which has no alarm", alarm.getId()));
+        }
+
+        try {
+            assertEquals("Set of pending alarms",
+                    expectedAlarms, actualAlarms);
+        } catch (AssertionError ae) {
+            errors.add(ae.getMessage());
+        }
+
+        if (errors.isEmpty())
+            return;
+
+        if (errors.size() == 1)
+            throw new AssertionError(errors.get(0));
+        throw new AssertionError("Multiple failures:\n"
+                + StringUtils.join(errors, "\n"));
+    }
+
+    /**
      * Run tests for getting To Do items with a variety of selection
      * parameters.  In order to avoid a lot of time-consuming inserts and
      * deletes, we&rsquo;ll populate the database with test items just
@@ -1291,6 +1418,22 @@ public class ToDoRepositoryTests {
                     RAND.nextBytes(encrypted);
                     item.setEncryptedDescription(encrypted);
                 }
+                ToDoAlarm alarm = new ToDoAlarm();
+                alarm.setTime(LocalTime.ofSecondOfDay(RAND.nextInt(86400)));
+                alarm.setAlarmDaysEarlier(RAND.nextInt(10));
+                if (RAND.nextBoolean())
+                    alarm.setNotificationTime(Instant.now().minusSeconds
+                            (RAND.nextInt(7*86400)));
+                // There are three conditions for the getPendingAlarms query;
+                // about half of the items should satisfy all three,
+                // the rest should miss one or more.
+                int alarmCheck =RAND.nextInt(15) + 1;
+                item.setChecked((alarmCheck & 0x9) == 1);
+                if ((alarmCheck & 0xa) != 2)
+                    item.setDue(LocalDate.now().plusDays(
+                            RAND.nextInt(15) - 7));
+                if ((alarmCheck & 0xc) != 4)
+                    item.setAlarm(alarm);
                 item.setCreateTime(Instant.now()
                         // Make sure items have a variety of
                         // "creation" times for sorting purposes
@@ -1351,6 +1494,15 @@ public class ToDoRepositoryTests {
                     "lower(" + ToDoSchema.ToDoItemColumns.CATEGORY_NAME
                             + "), " + ToDoSchema.ToDoItemColumns.CREATE_TIME,
                     expectedItems);
+
+            // Fifth, get all items with a pending alarm
+            expectedItems.clear();
+            for (ToDoItem item : testToDos) {
+                if (!item.isChecked() && (item.getDue() != null) &&
+                        (item.getAlarm() != null))
+                    expectedItems.put(item.getId(), item);
+            }
+            runGetPendingAlarmsTest(expectedItems);
         }
         finally {
             for (ToDoItem item : testToDos)

@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -337,6 +338,43 @@ public class ToDoPreferencesTests
         runSetBooleanPreferenceTest("Show Category",
                 TPREF_SHOW_CATEGORY, "setShowCategory",
                 false, (b) -> toDoPrefs.setShowCategory(b));
+    }
+
+    @Test
+    public void testGetLocalTimeZoneDefault() {
+        assertTrue("Use local time zone", toDoPrefs.useLocalTimeZone());
+        assertEquals("Time zone",
+                ZoneId.systemDefault(), toDoPrefs.getTimeZone());
+    }
+
+    @Test
+    public void testSetLocalTimeZone() {
+        toDoPrefs.setTimeZoneLocal();
+        assertFalse("setTimeZoneLocal did not close the editor!",
+                mockPrefs.isEditorOpen());
+        assertEquals("Use local time zone", true,
+                mockPrefs.getPreference(TPREF_LOCAL_TIME_ZONE));
+    }
+
+    @Test
+    public void testGetFixedTimeZone() {
+        mockPrefs.initializePreference(TPREF_LOCAL_TIME_ZONE, false);
+        ZoneId expectedZone = ZoneId.of("Pacific/Pago_Pago");
+        mockPrefs.initializePreference(
+                TPREF_FIXED_TIME_ZONE, expectedZone.getId());
+        assertEquals("Time zone", expectedZone, toDoPrefs.getTimeZone());
+    }
+
+    @Test
+    public void testSetFixedTimeZone() {
+        String expectedZone = "Antarctica/South_Pole";
+        toDoPrefs.setTimeZone(ZoneId.of(expectedZone));
+        assertFalse("setTimeZone did not close the editor!",
+                mockPrefs.isEditorOpen());
+        assertEquals("Use local time zone", false,
+                mockPrefs.getPreference(TPREF_LOCAL_TIME_ZONE));
+        assertEquals("Fixed time zone", expectedZone,
+                mockPrefs.getPreference(TPREF_FIXED_TIME_ZONE));
     }
 
     @Test
@@ -727,6 +765,62 @@ public class ToDoPreferencesTests
     public void testShowCategoryIgnored() {
         runListenerNotCalledTest(TPREF_SHOW_CATEGORY, "setShowCategory",
                 () -> toDoPrefs.setShowCategory(RAND.nextBoolean()));
+    }
+
+    @Test
+    public void testLocalTimeZoneListener() {
+        runListenerCalledTest(TPREF_LOCAL_TIME_ZONE, "setTimeZoneLocal",
+                () -> toDoPrefs.setTimeZoneLocal());
+    }
+
+    @Test
+    public void testLocalTimeZoneIgnored() {
+        runListenerNotCalledTest(TPREF_LOCAL_TIME_ZONE, "setTimeZoneLocal",
+                () -> toDoPrefs.setTimeZoneLocal());
+    }
+
+    /**
+     * When the user sets a fixed time zone, we update two preferences;
+     * listeners for both of them should be called.  This one tests the
+     * {@link ToDoPreferences#TPREF_LOCAL_TIME_ZONE} listener.
+     */
+    @Test
+    public void testFixedTimeZoneLocalBooleanListener() {
+        runListenerCalledTest(TPREF_LOCAL_TIME_ZONE, "setTimeZone",
+                () -> toDoPrefs.setTimeZone(ZoneId.of("Africa/Algiers")));
+    }
+
+    /**
+     * When the user sets a fixed time zone, we update two preferences;
+     * listeners for both of them should be called.  This one tests the
+     * {@link ToDoPreferences#TPREF_FIXED_TIME_ZONE} listener.
+     */
+    @Test
+    public void testFixedTimeZoneIdListener() {
+        runListenerCalledTest(TPREF_FIXED_TIME_ZONE, "setTimeZone",
+                () -> toDoPrefs.setTimeZone(ZoneId.of("Africa/Algiers")));
+    }
+
+    /**
+     * When the user sets a fixed time zone, we update two preferences;
+     * listeners for both of them should be called.  This one tests that
+     * no listeners other than those for
+     * {@link ToDoPreferences#TPREF_LOCAL_TIME_ZONE} or
+     * {@link ToDoPreferences#TPREF_FIXED_TIME_ZONE} are called.
+     */
+    @Test
+    public void testFixedTimeZoneIgnored() {
+        List<String> otherPrefs = new ArrayList<>(TPREF_KEYS.length - 2);
+        for (String key : TPREF_KEYS) {
+            if (!key.equals(TPREF_LOCAL_TIME_ZONE) &&
+                    !key.equals(TPREF_FIXED_TIME_ZONE))
+                otherPrefs.add(key);
+        }
+        toDoPrefs.registerOnToDoPreferenceChangeListener(this,
+                otherPrefs.toArray(new String[otherPrefs.size()]));
+        toDoPrefs.setTimeZone(ZoneId.of("Canada/Central"));
+        assertFalse("Unassociated listener was called for setTimeZone",
+                listenerWasCalled);
     }
 
     @Test

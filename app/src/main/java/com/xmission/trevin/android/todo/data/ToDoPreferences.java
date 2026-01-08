@@ -20,6 +20,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import java.time.DateTimeException;
+import java.time.ZoneId;
+import java.time.zone.ZoneRulesException;
 import java.util.*;
 
 /**
@@ -61,6 +64,12 @@ public class ToDoPreferences
 
     /** The category index for &ldquo;All&rdquo; categories */
     public static final int ALL_CATEGORIES = -1;
+
+    /** Label for the preferences option "Use Device Time Zone" */
+    public static final String TPREF_LOCAL_TIME_ZONE = "UseLocalTimeZone";
+
+    /** Label for the preferences option "Fixed Time Zone" */
+    public static final String TPREF_FIXED_TIME_ZONE = "FixedTimeZone";
 
     /** Label for the preferences option "Alarm vibrate" */
     public static final String TPREF_NOTIFICATION_VIBRATE = "NotificationVibrate";
@@ -258,6 +267,23 @@ public class ToDoPreferences
         }
 
         /**
+         * Set the preferences to use the device&rsquo;s configured time zone
+         */
+        public Editor setTimeZoneLocal() {
+            actualEditor.putBoolean(TPREF_LOCAL_TIME_ZONE, true);
+            return this;
+        }
+
+        /**
+         * Set the preferences to use a fixed time zone.
+         */
+        public Editor setTimeZone(ZoneId timeZone) {
+            actualEditor.putBoolean(TPREF_LOCAL_TIME_ZONE, false);
+            actualEditor.putString(TPREF_FIXED_TIME_ZONE, timeZone.getId());
+            return this;
+        }
+
+        /**
          * Change whether to vibrate the device for an alarm.
          * (Only applies to Nougat and earlier.)
          *
@@ -383,6 +409,8 @@ public class ToDoPreferences
         listeners.put(TPREF_SHOW_PRIVATE, new LinkedList<>());
         listeners.put(TPREF_SHOW_ENCRYPTED, new LinkedList<>());
         listeners.put(TPREF_SHOW_CATEGORY, new LinkedList<>());
+        listeners.put(TPREF_LOCAL_TIME_ZONE, new LinkedList<>());
+        listeners.put(TPREF_FIXED_TIME_ZONE, new LinkedList<>());
         listeners.put(TPREF_NOTIFICATION_VIBRATE, new LinkedList<>());
         listeners.put(TPREF_NOTIFICATION_SOUND, new LinkedList<>());
         listeners.put(TPREF_SELECTED_CATEGORY, new LinkedList<>());
@@ -544,6 +572,54 @@ public class ToDoPreferences
      */
     public void setShowCategory(boolean show) {
         edit().setShowCategory(show).finish();
+    }
+
+    /**
+     * @return whether to use the device&rsquo;s configured time zone
+     * (default {@code true})
+     */
+    public boolean useLocalTimeZone() {
+        return prefs.getBoolean(TPREF_LOCAL_TIME_ZONE, true);
+    }
+
+    /**
+     * Set the preferences to use the device&rsquo;s configured time zone
+     */
+    public void setTimeZoneLocal() {
+        edit().setTimeZoneLocal().finish();
+    }
+
+    /**
+     * @return the time zone to use for dates and alarm times.
+     * If the &ldquo;Use Device Time Zone&rdquo; preference is
+     * {@code true}, this will return the system default zone;
+     * otherwise it returns the zone specified in the
+     * &ldquo;Fixed Time Zone&rdquo; preference if one has
+     * been set.  If one has not been set, defaults back to
+     * the system default zone (but this shouldn&rsquo;t happen
+     * because &ldquo;Use Device Time Zone&rdquo; defaults to
+     * {@code true} and the fixed zone is set at the same time
+     * as the former is changed to {@code false}.)
+     */
+    public ZoneId getTimeZone() {
+        String id = prefs.getString(TPREF_FIXED_TIME_ZONE, null);
+        if (id != null) try {
+            return ZoneId.of(id);
+        } catch (ZoneRulesException e) {
+            Log.w(TAG, "Unknown time zone set in preferences: " + id);
+            // Fall through to the default
+        } catch (DateTimeException e) {
+            Log.w(TAG, "Invalid time zone ID set in preferences: " + id);
+            // Fall through to the default
+        }
+        return ZoneId.systemDefault();
+    }
+
+    /**
+     * Set the preferences to use a fixed time zone.
+     */
+    public void setTimeZone(ZoneId timeZone) {
+        edit().setTimeZone(timeZone).finish();
     }
 
     /**

@@ -183,8 +183,7 @@ public class ToDoCursorImpl implements ToDoCursor {
             item.setModTime(Instant.ofEpochMilli(
                     dbCursor.getLong(modTimeColumn)));
         if ((dueColumn >= 0) && !dbCursor.isNull(dueColumn))
-            item.setDue(LocalDate.ofInstant(Instant.ofEpochMilli(
-                    dbCursor.getLong(dueColumn)), ZoneOffset.UTC));
+            item.setDue(millisToDate(dbCursor.getLong(dueColumn)));
         if ((completedColumn >= 0) && !dbCursor.isNull(completedColumn))
             item.setCompleted(Instant.ofEpochMilli(
                     dbCursor.getLong(completedColumn)));

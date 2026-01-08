@@ -31,12 +31,15 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.AlarmInfo;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
@@ -78,6 +81,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             ToDoMetadataColumns.VALUE
     };
 
+    /** All fields from the note + category table join */
     private static final String[] ITEM_FIELDS = new String[] {
             ToDoItemColumns._ID,
             ToDoItemColumns.DESCRIPTION,
@@ -124,6 +128,41 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                 CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns.NAME
                 + " AS " + ToDoItemColumns.CATEGORY_NAME);
         ITEM_PROJECTION_MAP = Collections.unmodifiableMap(m);
+    }
+
+    /** Subset of the item fields used in the alarm service query */
+    private static final String[] ALARM_ITEM_FIELDS = new String[] {
+            ToDoItemColumns._ID,
+            ToDoItemColumns.CATEGORY_ID,
+            ToDoItemColumns.CATEGORY_NAME,
+            ToDoItemColumns.DESCRIPTION,
+            ToDoItemColumns.MOD_TIME,
+            ToDoItemColumns.CHECKED,
+            ToDoItemColumns.DUE_TIME,
+            ToDoItemColumns.ALARM_DAYS_EARLIER,
+            ToDoItemColumns.ALARM_TIME,
+            ToDoItemColumns.NOTIFICATION_TIME,
+            ToDoItemColumns.PRIVATE
+    };
+
+    /**
+     * Projection fields which are available in an alarm query.
+     * This must be used in todo queries to disambiguate columns
+     * that are joined with the category table.
+     */
+    private static final Map<String,String> ALARM_ITEM_PROJECTION_MAP;
+
+    static {
+        Map<String,String> m = new HashMap<>();
+        for (String field : ALARM_ITEM_FIELDS)
+            m.put(field, field);
+        // Overrides
+        m.put(ToDoItemColumns._ID,
+                TODO_TABLE_NAME + "." + ToDoItemColumns._ID);
+        m.put(ToDoItemColumns.CATEGORY_NAME,
+                CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns.NAME
+                + " AS " + ToDoItemColumns.CATEGORY_NAME);
+        ALARM_ITEM_PROJECTION_MAP = Collections.unmodifiableMap(m);
     }
 
     /** Singleton instance of this repository */
@@ -863,6 +902,34 @@ public class ToDoRepositoryImpl implements ToDoRepository {
     }
 
     @Override
+    public SortedSet<AlarmInfo> getPendingAlarms(ZoneId timeZone) {
+        Log.d(TAG, ".getPendingAlarms()");
+        SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+        qb.setTables(TODO_TABLE_NAME + " JOIN " + CATEGORY_TABLE_NAME
+                + " ON (" + TODO_TABLE_NAME + "." + ToDoItemColumns.CATEGORY_ID
+                + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns._ID + ")");
+        qb.setProjectionMap(ALARM_ITEM_PROJECTION_MAP);
+        StringBuilder where = new StringBuilder()
+                .append(ToDoItemColumns.CHECKED).append(" = 0 AND ")
+                .append(ToDoItemColumns.DUE_TIME).append(" IS NOT NULL AND ")
+                .append(ToDoItemColumns.ALARM_TIME).append(" IS NOT NULL AND ")
+                .append(ToDoItemColumns.ALARM_DAYS_EARLIER).append(" IS NOT NULL");
+        Cursor c = qb.query(getDb(), ALARM_ITEM_FIELDS, where.toString(),
+                null, null, null, null);
+        try {
+            SortedSet<AlarmInfo> alarms = new TreeSet<>();
+            AlarmInfoCursor ac = new AlarmInfoCursor(c, timeZone);
+            while (ac.moveToNext()) {
+                AlarmInfo item = ac.getItem();
+                alarms.add(item);
+            }
+            return alarms;
+        } finally {
+            c.close();
+        }
+    }
+
+    @Override
     public long[] getPrivateItemIds() {
         Log.d(TAG, ".getPrivateItemIds()");
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -1150,6 +1217,35 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             return item;
         } catch (SQLException e) {
             Log.e(TAG, "Failed to update " + item, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateAlarmNotificationTime(
+            long itemId, @NonNull Instant notificationTime)
+            throws IllegalArgumentException {
+        Log.d(TAG, String.format(".updateAlarmNotificationTime(%d, %s)",
+                itemId, notificationTime));
+        if (notificationTime == null)
+            throw new IllegalArgumentException(
+                    "Notification time cannot be null");
+        ContentValues values = new ContentValues();
+        values.put(ToDoItemColumns.NOTIFICATION_TIME,
+                notificationTime.toEpochMilli());
+        try {
+            SQLiteDatabase db = getDb();
+            boolean inTransaction = db.inTransaction();
+            int count = db.update(TODO_TABLE_NAME, values,
+                    ToDoItemColumns._ID + " = ?"
+                    // In case the alarm was cleared before this call
+                    + " AND " + ToDoItemColumns.ALARM_TIME + " IS NOT NULL",
+                    new String[] { Long.toString(itemId) });
+            if ((count > 0) && !inTransaction)
+                notifyObservers();
+        } catch (SQLException e) {
+            Log.e(TAG, "Failed to update alarm notification time for item "
+                    + itemId, e);
             throw e;
         }
     }

@@ -21,13 +21,18 @@ import android.database.DataSetObserver;
 import android.database.SQLException;
 import androidx.annotation.NonNull;
 
+import com.xmission.trevin.android.todo.data.AlarmInfo;
+import com.xmission.trevin.android.todo.data.AlarmItemInfo;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.service.PasswordChangeService;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.SortedSet;
 
 /**
  * Higher-level interface to the SQLite database for the To Do app.
@@ -301,6 +306,17 @@ public interface ToDoRepository {
                         boolean includeEncrypted, String sortOrder);
 
     /**
+     * Read the alarm info out of all To Do items which have an alarm set
+     * and have not been checked off.
+     *
+     * @param timeZone the zone for which to calculate alarm times
+     *
+     * @return a {@link SortedSet} of {@link AlarmItemInfo} objects
+     * for the pending To Do items
+     */
+    SortedSet<AlarmInfo> getPendingAlarms(ZoneId timeZone);
+
+    /**
      * Get a list of ID&rsquo;s of private To Do items.  This is exclusively
      * meant for use by the {@link PasswordChangeService} to select items
      * whose encryption needs changing.
@@ -362,6 +378,19 @@ public interface ToDoRepository {
      */
     ToDoItem updateItem(@NonNull ToDoItem item)
         throws IllegalArgumentException, SQLException;
+
+    /**
+     * Change the last notification time of a To Do item.
+     * This is a convenience method for the alarm service
+     * which doesn&rsquo;t need to touch any of the other
+     * item fields when notification of the alarm has been
+     * posted.
+     *
+     * @param itemId the ID of the item to update
+     * @param notificationTime the new notification time
+     */
+    void updateAlarmNotificationTime(
+            long itemId, @NonNull Instant notificationTime);
 
     /**
      * Delete a To Do item.

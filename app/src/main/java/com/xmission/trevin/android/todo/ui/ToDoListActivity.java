@@ -16,8 +16,8 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.service.AlarmService.EXTRA_ITEM_CATEGORY_ID;
-import static com.xmission.trevin.android.todo.service.AlarmService.EXTRA_ITEM_ID;
+import static com.xmission.trevin.android.todo.service.AlarmWorker.EXTRA_ITEM_CATEGORY_ID;
+import static com.xmission.trevin.android.todo.service.AlarmWorker.EXTRA_ITEM_ID;
 
 import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
@@ -28,13 +28,15 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.service.AlarmWorker;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
-import com.xmission.trevin.android.todo.service.AlarmService;
+//import com.xmission.trevin.android.todo.service.AlarmService;
 import com.xmission.trevin.android.todo.service.PasswordChangeService;
 import com.xmission.trevin.android.todo.service.ProgressReportingService;
 
@@ -56,6 +58,12 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+
+import androidx.work.Constraints;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
 
 /**
  * Displays a list of To Do items.  Will display items from the {@link Uri}
@@ -206,6 +214,7 @@ public class ToDoListActivity extends ListActivity {
      * update any alarms and update UI elements
      * related to setting or clearing the password.
      */
+    // FIXME: Replace this with a DataSetObserver
     private class ToDoContentObserver extends ContentObserver {
 	public ToDoContentObserver() {
 	    super(new Handler());
@@ -219,10 +228,17 @@ public class ToDoListActivity extends ListActivity {
 	@Override
 	public void onChange(boolean selfChange) {
 	    Log.d(TAG, "ContentObserver.onChange()");
-	    Intent alarmIntent =
-		new Intent(ToDoListActivity.this, AlarmService.class);
-	    alarmIntent.setAction(Intent.ACTION_EDIT);
-	    startService(alarmIntent);
+            OneTimeWorkRequest req = new OneTimeWorkRequest
+                    .Builder(AlarmWorker.class)
+                    .setConstraints(new Constraints.Builder()
+                            .setRequiresDeviceIdle(true)
+                            .build())
+                    // Delay a minute to allow contents to settle
+                    .setInitialDelay(1, TimeUnit.MINUTES)
+                    .addTag("ChangeObserver")
+                    .build();
+            workManager.enqueueUniqueWork("AlarmChangeWork",
+                    ExistingWorkPolicy.REPLACE, req);
             checkForPassword.run();
 	}
     }
@@ -237,6 +253,8 @@ public class ToDoListActivity extends ListActivity {
 
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
+
+    private WorkManager workManager;
 
     /** Called when the activity is first created. */
     @Override
@@ -298,6 +316,8 @@ public class ToDoListActivity extends ListActivity {
         	(selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length)) {
             prefs.setSortOrder(0);
 	}
+
+        workManager = WorkManager.getInstance(this);
 
         // To Do: When we switch from Content Resolver to a direct repository,
         // replace this with checkForPassword on a separate thread.
@@ -385,12 +405,6 @@ public class ToDoListActivity extends ListActivity {
 	    }
 	});
 
-	// In case this is the first time being run after installation
-	// or upgrade, start up the alarm service.
-	Intent alarmIntent = new Intent(this, AlarmService.class);
-	alarmIntent.setAction(Intent.ACTION_MAIN);
-	startService(alarmIntent);
-
 	// Register this service's data set observer
 	getContentResolver().registerContentObserver(
 		ToDoItemColumns.CONTENT_URI, true, registeredObserver);
@@ -451,7 +465,7 @@ public class ToDoListActivity extends ListActivity {
      * @param intent the {link Intent} by which this activity was called
      */
     private void showItemFromIntent(Intent intent) {
-        if (intent.hasExtra(AlarmService.EXTRA_ITEM_ID)) {
+        if (intent.hasExtra(EXTRA_ITEM_ID)) {
             long categoryId = intent.getLongExtra(EXTRA_ITEM_CATEGORY_ID, -1);
             long itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
             if ((categoryId >= 0) && (itemId >= 0))
