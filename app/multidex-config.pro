@@ -6,9 +6,18 @@
 -keep class android.support.multidex.** { *; }
 -keep class androidx.multidex.** { *; }
 
+# Keep everything referenced from the main application class
+# which installs MultiDex
+-keep class com.xmission.trevin.android.todo.ToDoApplication { *; }
+-keep class com.xmission.trevin.android.todo.service.AlarmWorker { *; }
+-keep class android.app.NotificationChannel { *; }
+-keep class android.app.NotificationManager { *; }
+-keep class android.os.Build { *; }
+-keep class android.util.Log { *; }
+-keep class androidx.startup.** { *; }
+-keep class androidx.work.** { *; }
+
 # Keep the Java 8+ desugaring library classes (j$)
 ## These are essential for the application to run on API < 21
 -keep class j$.** { *; }
 -keep interface j$.** { *; }
-
--keep class com.xmission.trevin.android.todo.ToDoApplication { *; }

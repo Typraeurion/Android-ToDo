@@ -78,7 +78,7 @@
         </activity>
 
         <provider android:name=".provider.ToDoProvider"
-                  android:authorities="com.xmission.trevin.android.todo.provider.ToDoSchema"
+                  android:authorities="com.xmission.trevin.android.todo.provider.ToDo"
                   android:exported="false">
         </provider>
 

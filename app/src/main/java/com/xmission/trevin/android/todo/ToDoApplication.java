@@ -16,22 +16,18 @@
  */
 package com.xmission.trevin.android.todo;
 
-import static com.xmission.trevin.android.todo.service.AlarmWorker.ALMOST_DUE_CHANNEL_ID;
-import static com.xmission.trevin.android.todo.service.AlarmWorker.OVERDUE_CHANNEL_ID;
-import static com.xmission.trevin.android.todo.service.AlarmWorker.SILENT_CHANNEL_ID;
-
-import android.app.Application;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
+//import android.app.Application;
 import android.os.Build;
 import android.util.Log;
 
-import androidx.multidex.MultiDex;
+import androidx.multidex.MultiDexApplication;
+
+import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 
 /**
  * Perform one-time initialization tasks for the To Do application.
  */
-public class ToDoApplication extends Application {
+public class ToDoApplication extends MultiDexApplication {
 
     private static final String TAG = "ToDoApplication";
 
@@ -42,33 +38,16 @@ public class ToDoApplication extends Application {
 
         // Initialize MultiDex so that the "desugaring" library can
         // give us access to the java.time.* classes on older API's.
-        MultiDex.install(this);
+        //MultiDex.install(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Oreo and up must use channels to send notifications
-            NotificationManager notificationManager = (NotificationManager)
-                    getSystemService(NOTIFICATION_SERVICE);
-            NotificationChannel almostDueChannel = new NotificationChannel(
-                    ALMOST_DUE_CHANNEL_ID,
-                    getString(R.string.NotificationChannelDueName),
-                    NotificationManager.IMPORTANCE_DEFAULT);
-            almostDueChannel.setDescription(getString(
-                    R.string.NotificationChannelDueDescription));
-            NotificationChannel overdueChannel = new NotificationChannel(
-                    OVERDUE_CHANNEL_ID,
-                    getString(R.string.NotificationChannelOverdueName),
-                    NotificationManager.IMPORTANCE_HIGH);
-            overdueChannel.setDescription(getString(
-                    R.string.NotificationChannelOverdueDescription));
-            NotificationChannel silentChannel = new NotificationChannel(
-                    SILENT_CHANNEL_ID,
-                    getString(R.string.NotificationChannelSilentName),
-                    NotificationManager.IMPORTANCE_NONE);
-            silentChannel.setDescription(getString(
-                    R.string.NotificationChannelSilentDescription));
-            notificationManager.createNotificationChannel(almostDueChannel);
-            notificationManager.createNotificationChannel(overdueChannel);
-            notificationManager.createNotificationChannel(silentChannel);
+            /*
+             * Oreo and up must use channels to send notifications;
+             * we have to set this up in a separate class because
+             * Dalvik will refuse to load the application when it
+             * can&rsquo;t find the {@link NotificationChannel} class.
+             */
+            AlarmInitReceiver.onCreate(this);
         }
     }
 

@@ -18,7 +18,12 @@ package com.xmission.trevin.android.todo.data;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.time.DateTimeException;
 import java.time.ZoneId;
@@ -100,6 +105,12 @@ public class ToDoPreferences
 
     /** The actual shared preferences we&rsquo;re relaying through */
     private final SharedPreferences prefs;
+
+    /**
+     * Handler for calling back observers; all observer calls
+     * <i>must</i> be done on the main UI thread.
+     */
+    private final Handler uiHandler;
 
     /**
      * Flag indicating how to merge items from the XML file
@@ -390,16 +401,28 @@ public class ToDoPreferences
     /**
      * Instantiate To Do preferences for a calling context.
      */
-    private ToDoPreferences(Context context) {
+    private ToDoPreferences(@NonNull Context context) {
         this(context.getSharedPreferences(
-                TODO_PREFERENCES, Context.MODE_PRIVATE));
+                TODO_PREFERENCES, Context.MODE_PRIVATE),
+                new Handler(Looper.getMainLooper()));
     }
 
     /**
      * Instantiate To Do preferences with a given {@link SharedPreferences}
-     * object.  This is made public for testing.
+     * object.  There are two paths by which this can be called:
+     * from the {@link Context} constructor it runs on the Android
+     * system and uses the system&rsquo;s shared preferences and
+     * a {@link Handler} for making calls to the UI thread.
+     * From {@link #getInstance} with a {@code null} context it is
+     * assumed to be running from stand-alone unit tests.
+     *
+     * @param otherPrefs the shared preferences to wrap
+     * @param handler the handler for making observer callbacks on
+     * the UI thread, or {@code null} to make callbacks on the same
+     * thread.
      */
-    private ToDoPreferences(SharedPreferences otherPrefs) {
+    private ToDoPreferences(@NonNull SharedPreferences otherPrefs,
+                            @Nullable Handler handler) {
         prefs = otherPrefs;
         listeners = new HashMap<>();
         listeners.put(TPREF_SORT_ORDER, new LinkedList<>());
@@ -420,6 +443,7 @@ public class ToDoPreferences
         listeners.put(TPREF_IMPORT_TYPE, new LinkedList<>());
         listeners.put(TPREF_IMPORT_PRIVATE, new LinkedList<>());
         prefs.registerOnSharedPreferenceChangeListener(this);
+        uiHandler = new Handler(Looper.getMainLooper());
     }
 
     /**
@@ -439,7 +463,7 @@ public class ToDoPreferences
                     "Attempt to replace previously set %s with %s",
                     instance.prefs, prefs));
         }
-        instance = new ToDoPreferences(prefs);
+        instance = new ToDoPreferences(prefs, null);
     }
 
     /**
@@ -831,16 +855,35 @@ public class ToDoPreferences
 
     /**
      * When a shared preference has been changed, notify any registered
-     * listener for that preference.
+     * listener for that preference.  This ensures callbacks are done
+     * on the UI thread if we&rsquo;re running in an Android context.
      */
     public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
         Log.d(TAG, String.format(".onSharedPreferenceChanged(%s)", key));
         if (listeners.containsKey(key)) {
-            for (OnToDoPreferenceChangeListener listener : listeners.get(key)) {
-                listener.onToDoPreferenceChanged(this);
-            }
+            ListenerCallbackRunner runner =
+                    new ListenerCallbackRunner(listeners.get(key));
+            if (uiHandler == null)
+                runner.run();
+            else uiHandler.post(runner);
         } else {
             Log.w(TAG, "Received change notice for unhandled preference: " + key);
+        }
+    }
+
+    /**
+     * Call back the {@code onToDoPreferenceChanged} method of all
+     * given listeners.
+     */
+    private class ListenerCallbackRunner implements Runnable {
+        private final List<OnToDoPreferenceChangeListener> listeners;
+        ListenerCallbackRunner(List<OnToDoPreferenceChangeListener> listeners) {
+            this.listeners = listeners;
+        }
+        @Override
+        public void run() {
+            for (OnToDoPreferenceChangeListener listener : listeners)
+                listener.onToDoPreferenceChanged(ToDoPreferences.this);
         }
     }
 

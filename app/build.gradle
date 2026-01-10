@@ -105,6 +105,7 @@ dependencies {
     androidTestImplementation('androidx.test.espresso:espresso-core:3.4.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+    androidTestImplementation 'androidx.work:work-testing:2.7.1'
     androidTestImplementation 'junit:junit:4.13.2'
     androidTestImplementation('org.apache.commons:commons-lang3:3.5')
 

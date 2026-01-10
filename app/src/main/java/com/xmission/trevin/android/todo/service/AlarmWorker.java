@@ -116,17 +116,17 @@ public class AlarmWorker extends Worker {
      */
     private static final int FG_NOTIFICATION_ID = -379110754;
 
-    private Context context;
-    private AlarmManager alarmManager;
-    private NotificationManager notificationManager;
+    private final Context context;
+    private final AlarmManager alarmManager;
+    private final NotificationManager notificationManager;
 
     /** Shared preferences */
-    private ToDoPreferences prefs;
+    private final ToDoPreferences prefs;
 
-    private ToDoRepository repository;
+    private final ToDoRepository repository;
 
     /** The name of the app; used for the title of notifications */
-    private String appName;
+    private final String appName;
 
     /**
      * Initialize the AlarmWorker using the standard system services
@@ -153,6 +153,15 @@ public class AlarmWorker extends Worker {
      * Initialize the AlarmWorker using designated services and
      * app class instances.  This is intended for testing purposes
      * to provide mock services.
+     *
+     * @param context the application context.
+     * @param params Parameters to set up the internal state of this worker.
+     * @param alarmManager the service used to schedule the next time
+     *                this worker should run.
+     * @param notificationManager the service used to show notifications
+     *                of items whose alarms have triggered.
+     * @param prefs the shared preferences object.
+     * @param repository the To Do data repository.
      */
     public AlarmWorker(@NonNull Context context,
                        @NonNull WorkerParameters params,
@@ -182,8 +191,9 @@ public class AlarmWorker extends Worker {
      * worker should run.
      */
     @Override
+    @NonNull
     public Result doWork() {
-        Log.d(TAG, ".doWork()");
+        Log.d(TAG, ".doWork");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             // If the user has disabled notifications, don't bother.
             if (!notificationManager.areNotificationsEnabled()) {

@@ -88,7 +88,7 @@ public class MockToDoRepository implements ToDoRepository {
     private MockToDoRepository() {}
 
     /** @return the singleton instance of the To Do repository */
-    public static ToDoRepository getInstance() {
+    public static MockToDoRepository getInstance() {
         if (instance == null) {
             instance = new MockToDoRepository();
         }

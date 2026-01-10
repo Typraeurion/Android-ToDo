@@ -37,8 +37,9 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
 //import com.xmission.trevin.android.todo.service.AlarmService;
-import com.xmission.trevin.android.todo.service.PasswordChangeService;
-import com.xmission.trevin.android.todo.service.ProgressReportingService;
+//import com.xmission.trevin.android.todo.service.PasswordChangeService;
+import com.xmission.trevin.android.todo.service.PasswordChangeWorker;
+//import com.xmission.trevin.android.todo.service.ProgressReportingService;
 
 import android.annotation.SuppressLint;
 import android.app.*;
@@ -52,16 +53,21 @@ import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
-import android.os.RemoteException;
+//import android.os.IBinder;
+//import android.os.RemoteException;
 import android.text.InputType;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
 
+import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
 import androidx.work.Constraints;
+import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
@@ -200,11 +206,20 @@ public class ToDoListActivity extends ListActivity {
      */
     EditText[] passwordChangeEditText = new EditText[3];
 
-    /** Progress reporting service */
-    ProgressReportingService progressService = null;
+    /*
+     * Progress reporting service
+     * @deprecated replace with the {@link PasswordChangeProgressObserver}
+     */
+    // ProgressReportingService progressService = null;
 
     /** Progress dialog */
     ProgressDialog progressDialog = null;
+
+    /** Live data for the progress dialog */
+    LiveData<WorkInfo> progressLiveData = null;
+
+    /** Progress observer */
+    PasswordChangeProgressObserver progressObserver = null;
 
     /** Encryption for private records */
     StringEncryption encryptor;
@@ -526,6 +541,11 @@ public class ToDoListActivity extends ListActivity {
     public void onDestroy() {
 	getContentResolver().unregisterContentObserver(registeredObserver);
 	StringEncryption.releaseGlobalEncryption(this);
+        if (progressObserver != null) {
+            progressLiveData.removeObserver(progressObserver);
+            progressObserver = null;
+            progressLiveData = null;
+        }
 	super.onDestroy();
     }
 
@@ -968,56 +988,21 @@ public class ToDoListActivity extends ListActivity {
 	    passwordChangeEditText[2].setText("");
 	    return;
 
-	case PROGRESS_DIALOG_ID:
-	    if (progressService != null) {
-		Log.d(TAG, ".onPrepareDialog(PROGRESS_DIALOG_ID):"
-			+ " Initializing the progress dialog at "
-			+ progressService.getCurrentMode() + " "
-			+ progressService.getChangedCount() + "/"
-			+ progressService.getMaxCount());
-		final String oldMessage = progressService.getCurrentMode();
-		final int oldMax = progressService.getMaxCount();
-		progressDialog.setMessage(oldMessage);
-		if (oldMax > 0) {
-		    progressDialog.setIndeterminate(false);
-		    progressDialog.setMax(oldMax);
-		    progressDialog.setProgress(progressService.getChangedCount());
-		} else {
-		    progressDialog.setIndeterminate(true);
-		}
+            case PROGRESS_DIALOG_ID:
+                if (progressObserver != null) {
+                    Log.d(TAG, ".onPrepareDialog(PROGRESS_DIALOG_ID):"
+                            + " Initializing the progress dialog at "
+                            + getString(R.string.ProgressMessageStart) + " 0/1");
+                    progressDialog.setMessage(getString(R.string.ProgressMessageStart));
+                    progressDialog.setIndeterminate(true);
 
-		// Set up a callback to update the dialog
-		final Handler progressHandler = new Handler();
-		progressHandler.postDelayed(new Runnable() {
-		    @Override
-		    public void run() {
-			if (progressService != null) {
-			    String newMessage = progressService.getCurrentMode();
-			    int newMax = progressService.getMaxCount();
-			    int newProgress = progressService.getChangedCount();
-			    Log.d(TAG, ".onPrepareDialog(PROGRESS_DIALOG_ID).Runnable:"
-				    + " Updating the progress dialog to "
-				    + newMessage + " " + newProgress + "/" + newMax);
-			    if (oldMessage.equals(newMessage) &&
-				    ((oldMax > 0) == (newMax > 0))) {
-				progressDialog.setMax(newMax);
-				progressDialog.setProgress(newProgress);
-				progressHandler.postDelayed(this, 100);
-			    } else {
-				// Work around a bug in ProgressDialog.setMessage
-				progressDialog.dismiss();
-				showDialog(PROGRESS_DIALOG_ID);
-			    }
-			}
-		    }
-		}, 250);
-	    } else {
-		Log.d(TAG, ".onPrepareDialog(PROGRESS_DIALOG_ID):"
-			+ " Password service has disappeared;"
-			+ " dismissing the progress dialog");
-		progressDialog.dismiss();
-	    }
-	}
+                } else {
+                    Log.d(TAG, ".onPrepareDialog(PROGRESS_DIALOG_ID):"
+                            + " Password observer has disappeared;"
+                            + " dismissing the progress dialog");
+                    progressDialog.dismiss();
+                }
+        }
     }
 
     /**
@@ -1167,129 +1152,185 @@ public class ToDoListActivity extends ListActivity {
         }
     };
     class PasswordChangeOnClickListener
-		implements DialogInterface.OnClickListener {
-	@Override
-	public void onClick(DialogInterface dialog, int which) {
-	    Log.d(TAG, "PasswordChangeOnClickListener.onClick(" + which + ")");
-	    switch (which) {
-	    case DialogInterface.BUTTON_NEGATIVE:
-		dialog.dismiss();
-		return;
+            implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            Log.d(TAG, "PasswordChangeOnClickListener.onClick(" + which + ")");
+            switch (which) {
+                case DialogInterface.BUTTON_NEGATIVE:
+                    dialog.dismiss();
+                    return;
 
-	    case DialogInterface.BUTTON_POSITIVE:
-		Intent passwordChangeIntent = new Intent(ToDoListActivity.this,
-			PasswordChangeService.class);
-		char[] newPassword =
-		    new char[passwordChangeEditText[1].length()];
-		passwordChangeEditText[1].getText().getChars(
-			0, newPassword.length, newPassword, 0);
-		char[] confirmedPassword =
-		    new char[passwordChangeEditText[2].length()];
-		passwordChangeEditText[2].getText().getChars(
-			0, confirmedPassword.length, confirmedPassword, 0);
-		if (!Arrays.equals(newPassword, confirmedPassword)) {
-		    Arrays.fill(confirmedPassword, (char) 0);
-		    Arrays.fill(newPassword, (char) 0);
-		    AlertDialog.Builder builder =
-			new AlertDialog.Builder(ToDoListActivity.this);
-		    builder.setIcon(android.R.drawable.ic_dialog_alert);
-		    builder.setMessage(R.string.ErrorPasswordMismatch);
-		    builder.setNeutralButton(R.string.ConfirmationButtonOK,
-			    new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-			    dialog.dismiss();
-                            passwordChangeDialog.show();
-			}
-		    });
-		    builder.show();
-		    return;
-		}
-		Arrays.fill(confirmedPassword, (char) 0);
-		if (newPassword.length > 0)
-		    passwordChangeIntent.putExtra(
-			    PasswordChangeService.EXTRA_NEW_PASSWORD,
-			    newPassword);
+                case DialogInterface.BUTTON_POSITIVE:
+                    // Intent passwordChangeIntent = new Intent(ToDoListActivity.this,
+                    //        PasswordChangeService.class);
+                    char[] newPassword =
+                            new char[passwordChangeEditText[1].length()];
+                    passwordChangeEditText[1].getText().getChars(
+                            0, newPassword.length, newPassword, 0);
+                    char[] confirmedPassword =
+                            new char[passwordChangeEditText[2].length()];
+                    passwordChangeEditText[2].getText().getChars(
+                            0, confirmedPassword.length, confirmedPassword, 0);
+                    if (!Arrays.equals(newPassword, confirmedPassword)) {
+                        Arrays.fill(confirmedPassword, (char) 0);
+                        Arrays.fill(newPassword, (char) 0);
+                        AlertDialog.Builder builder =
+                                new AlertDialog.Builder(ToDoListActivity.this);
+                        builder.setIcon(android.R.drawable.ic_dialog_alert);
+                        builder.setMessage(R.string.ErrorPasswordMismatch);
+                        builder.setNeutralButton(R.string.ConfirmationButtonOK,
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog,
+                                                        int which) {
+                                        dialog.dismiss();
+                                        passwordChangeDialog.show();
+                                    }
+                                });
+                        builder.show();
+                        return;
+                    }
+                    Arrays.fill(confirmedPassword, (char) 0);
+                    Data.Builder inputDataBuilder = new Data.Builder();
+                    if (newPassword.length > 0)
+                        // passwordChangeIntent.putExtra(
+                        //    PasswordChangeService.EXTRA_NEW_PASSWORD,
+                        //        newPassword);
+                        inputDataBuilder = inputDataBuilder.putString(
+                                PasswordChangeWorker.DATA_NEW_PASSWORD,
+                                new String(newPassword));
 
-		if (encryptor.hasPassword(getContentResolver())) {
-		    char[] oldPassword =
-			new char[passwordChangeEditText[0].length()];
-		    passwordChangeEditText[0].getText().getChars(
-			    0, oldPassword.length, oldPassword, 0);
-		    StringEncryption oldEncryptor = new StringEncryption();
-		    oldEncryptor.setPassword(oldPassword);
-		    try {
-			if (!oldEncryptor.checkPassword(getContentResolver())) {
-			    Arrays.fill(newPassword, (char) 0);
-			    Arrays.fill(oldPassword, (char) 0);
-			    AlertDialog.Builder builder =
-				new AlertDialog.Builder(ToDoListActivity.this);
-			    builder.setIcon(android.R.drawable.ic_dialog_alert);
-			    builder.setMessage(R.string.ToastBadPassword);
-			    builder.setNeutralButton(R.string.ConfirmationButtonCancel,
-				    new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-				    dialog.dismiss();
-				}
-			    });
-			    builder.show();
-			    return;
-			}
-		    } catch (GeneralSecurityException gsx) {
-			Arrays.fill(newPassword, (char) 0);
-			Arrays.fill(oldPassword, (char) 0);
-			new AlertDialog.Builder(ToDoListActivity.this)
-			.setMessage(gsx.getMessage())
-			.setIcon(android.R.drawable.ic_dialog_alert)
-			.setNeutralButton(R.string.ConfirmationButtonCancel,
-				new DialogInterface.OnClickListener() {
-			    @Override
-			    public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-			    }
-			}).create().show();
-			return;
-		    }
-		    passwordChangeIntent.putExtra(
-			    PasswordChangeService.EXTRA_OLD_PASSWORD, oldPassword);
-		}
+                    if (encryptor.hasPassword(getContentResolver())) {
+                        char[] oldPassword =
+                                new char[passwordChangeEditText[0].length()];
+                        passwordChangeEditText[0].getText().getChars(
+                                0, oldPassword.length, oldPassword, 0);
+                        StringEncryption oldEncryptor = new StringEncryption();
+                        oldEncryptor.setPassword(oldPassword);
+                        try {
+                            if (!oldEncryptor.checkPassword(
+                                    getContentResolver())) {
+                                Arrays.fill(newPassword, (char) 0);
+                                Arrays.fill(oldPassword, (char) 0);
+                                AlertDialog.Builder builder =
+                                        new AlertDialog.Builder(
+                                                ToDoListActivity.this);
+                                builder.setIcon(android.R.drawable.ic_dialog_alert);
+                                builder.setMessage(R.string.ToastBadPassword);
+                                builder.setNeutralButton(R.string.ConfirmationButtonCancel,
+                                        new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog,
+                                                                int which) {
+                                                dialog.dismiss();
+                                            }
+                                        });
+                                builder.show();
+                                return;
+                            }
+                        } catch (GeneralSecurityException gsx) {
+                            Arrays.fill(newPassword, (char) 0);
+                            Arrays.fill(oldPassword, (char) 0);
+                            new AlertDialog.Builder(ToDoListActivity.this)
+                                    .setMessage(gsx.getMessage())
+                                    .setIcon(android.R.drawable.ic_dialog_alert)
+                                    .setNeutralButton(R.string.ConfirmationButtonCancel,
+                                            new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    dialog.dismiss();
+                                                }
+                                            }).create().show();
+                            return;
+                        }
+                        inputDataBuilder = inputDataBuilder.putString(
+                                PasswordChangeWorker.DATA_OLD_PASSWORD,
+                                new String(oldPassword));
+                        // passwordChangeIntent.putExtra(
+                        //        PasswordChangeService.EXTRA_OLD_PASSWORD, oldPassword);
+                    }
+                    WorkRequest changeRequest = new OneTimeWorkRequest
+                            .Builder(PasswordChangeWorker.class)
+                            .setInputData(inputDataBuilder.build())
+                            .addTag("PasswordChange")
+                            .build();
+                    workManager.enqueue(changeRequest);
 
-		passwordChangeIntent.setAction(
-			PasswordChangeService.ACTION_CHANGE_PASSWORD);
-		dialog.dismiss();
-		Log.d(TAG, "PasswordChangeOnClickListener.onClick:"
-			+ " starting the password change service");
-		startService(passwordChangeIntent);
-		// Bind to the service
-		Log.d(TAG, "PasswordChangeOnClickListener.onClick:"
-			+ " binding to the password change service");
-		bindService(passwordChangeIntent,
-			new PasswordChangeServiceConnection(), 0);
-		return;
-	    }
-	}
+                    // Sanity checks
+                    if ((progressLiveData != null) && (progressObserver != null))
+                        progressLiveData.removeObserver(progressObserver);
+
+                    showDialog(PROGRESS_DIALOG_ID);
+                    progressObserver = new PasswordChangeProgressObserver();
+                    progressLiveData = workManager.getWorkInfoByIdLiveData(
+                            changeRequest.getId());
+                    progressLiveData.observeForever(progressObserver);
+
+                    // passwordChangeIntent.setAction(
+                    //        PasswordChangeService.ACTION_CHANGE_PASSWORD);
+                    dialog.dismiss();
+                    //Log.d(TAG, "PasswordChangeOnClickListener.onClick:"
+                    //        + " starting the password change service");
+                    // startService(passwordChangeIntent);
+                    // Bind to the service
+                    //Log.d(TAG, "PasswordChangeOnClickListener.onClick:"
+                    //        + " binding to the password change service");
+                    // bindService(passwordChangeIntent,
+                    //        new PasswordChangeServiceConnection(), 0);
+                    return;
+            }
+        }
     }
 
-    class PasswordChangeServiceConnection implements ServiceConnection {
-	public void onServiceConnected(ComponentName name, IBinder service) {
-	    try {
-		Log.d(TAG, ".onServiceConnected(" + name.getShortClassName()
-			+ "," + service.getInterfaceDescriptor() + ")");
-	    } catch (RemoteException rx) {}
-	    PasswordChangeService.PasswordBinder pbinder =
-		(PasswordChangeService.PasswordBinder) service;
-	    progressService = pbinder.getService();
-	    showDialog(PROGRESS_DIALOG_ID);
-	}
+//    class PasswordChangeServiceConnection implements ServiceConnection {
+//	public void onServiceConnected(ComponentName name, IBinder service) {
+//	    try {
+//		Log.d(TAG, ".onServiceConnected(" + name.getShortClassName()
+//			+ "," + service.getInterfaceDescriptor() + ")");
+//	    } catch (RemoteException rx) {}
+//	    PasswordChangeService.PasswordBinder pbinder =
+//		(PasswordChangeService.PasswordBinder) service;
+//	    progressService = pbinder.getService();
+//	    showDialog(PROGRESS_DIALOG_ID);
+//	}
+//
+//	/** Called when a connection to the service has been lost */
+//	public void onServiceDisconnected(ComponentName name) {
+//	    Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
+//	    if (progressDialog != null)
+//		progressDialog.dismiss();
+//	    progressService = null;
+//	    unbindService(this);
+//	}
+//    }
 
-	/** Called when a connection to the service has been lost */
-	public void onServiceDisconnected(ComponentName name) {
-	    Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
-	    if (progressDialog != null)
-		progressDialog.dismiss();
-	    progressService = null;
-	    unbindService(this);
-	}
+    private class PasswordChangeProgressObserver implements Observer<WorkInfo> {
+        @Override
+        public void onChanged(@NonNull WorkInfo workInfo) {
+            if (progressDialog == null)
+                return;
+            if (workInfo.getState().isFinished()) {
+                progressDialog.dismiss();
+                progressLiveData.removeObserver(progressObserver);
+                progressObserver = null;
+                progressLiveData = null;
+                return;
+            }
+            Data progress = workInfo.getProgress();
+            int max = progress.getInt(
+                    PasswordChangeWorker.PROGRESS_MAX_COUNT, 0);
+            if (max <= 0) {
+                progressDialog.setIndeterminate(true);
+            } else {
+                progressDialog.setIndeterminate(false);
+                progressDialog.setMax(max);
+                progressDialog.setProgress(progress.getInt(
+                        PasswordChangeWorker.PROGRESS_CHANGED_COUNT, 0));
+            }
+            progressDialog.setMessage(progress.getString(
+                    PasswordChangeWorker.PROGRESS_CURRENT_MODE));
+        }
     }
+
 }

@@ -323,7 +323,7 @@ public class XMLExporterService extends IntentService
             while (c.moveToNext()) {
                 String name = c.getString(c.getColumnIndex(ToDoMetadataColumns.NAME));
                 // Skip the password if we are not exporting private records
-                if (StringEncryption.METADATA_PASSWORD_HASH[0].equals(name) &&
+                if (StringEncryption.METADATA_PASSWORD_HASH.equals(name) &&
                         !exportPrivate)
                     continue;
                 int ival = c.getColumnIndex(ToDoMetadataColumns.VALUE);

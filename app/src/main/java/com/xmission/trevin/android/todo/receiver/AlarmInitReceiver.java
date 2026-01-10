@@ -16,7 +16,15 @@
  */
 package com.xmission.trevin.android.todo.receiver;
 
+import static android.content.Context.NOTIFICATION_SERVICE;
+import static com.xmission.trevin.android.todo.service.AlarmWorker.ALMOST_DUE_CHANNEL_ID;
+import static com.xmission.trevin.android.todo.service.AlarmWorker.OVERDUE_CHANNEL_ID;
+import static com.xmission.trevin.android.todo.service.AlarmWorker.SILENT_CHANNEL_ID;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.*;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.work.OneTimeWorkRequest;
@@ -24,6 +32,8 @@ import androidx.work.OutOfQuotaPolicy;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
+import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.ToDoApplication;
 import com.xmission.trevin.android.todo.service.AlarmWorker;
 
 /**
@@ -37,9 +47,47 @@ public class AlarmInitReceiver extends BroadcastReceiver {
 
     private WorkManager workManager;
 
+    /**
+     * Initialize the notification channels if needed.
+     * {@link BroadcastReceiver}s don&rsquo;t inherently have an
+     * {@code onCreate} method, but this is called from
+     * {@link ToDoApplication#onCreate()} because on older devices
+     * Dalvik will refuse to load the application when it can&rsquo;t
+     * find the {@link NotificationChannel} class.
+     */
+    public static void onCreate(Context context) {
+        Log.d(TAG, ".onCreate");
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+            return;
+        // Oreo and up must use channels to send notifications
+        NotificationManager notificationManager = (NotificationManager)
+                context.getSystemService(NOTIFICATION_SERVICE);
+        NotificationChannel almostDueChannel = new NotificationChannel(
+                ALMOST_DUE_CHANNEL_ID,
+                context.getString(R.string.NotificationChannelDueName),
+                NotificationManager.IMPORTANCE_DEFAULT);
+        almostDueChannel.setDescription(context.getString(
+                R.string.NotificationChannelDueDescription));
+        NotificationChannel overdueChannel = new NotificationChannel(
+                OVERDUE_CHANNEL_ID,
+                context.getString(R.string.NotificationChannelOverdueName),
+                NotificationManager.IMPORTANCE_HIGH);
+        overdueChannel.setDescription(context.getString(
+                R.string.NotificationChannelOverdueDescription));
+        NotificationChannel silentChannel = new NotificationChannel(
+                SILENT_CHANNEL_ID,
+                context.getString(R.string.NotificationChannelSilentName),
+                NotificationManager.IMPORTANCE_NONE);
+        silentChannel.setDescription(context.getString(
+                R.string.NotificationChannelSilentDescription));
+        notificationManager.createNotificationChannel(almostDueChannel);
+        notificationManager.createNotificationChannel(overdueChannel);
+        notificationManager.createNotificationChannel(silentChannel);
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d(TAG, "onReceive(action=" + intent.getAction()
+        Log.d(TAG, ".onReceive(action=" + intent.getAction()
                 + ", package=" + intent.getPackage()
                 + ", data=" + intent.getDataString() + ")");
         if (workManager == null)

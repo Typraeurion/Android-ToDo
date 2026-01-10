@@ -38,6 +38,8 @@ import android.widget.Toast;
  * when the user sets or changes the password.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated to be replaced by {@link PasswordChangeWorker}
  */
 public class PasswordChangeService extends IntentService
 	implements ProgressReportingService {
