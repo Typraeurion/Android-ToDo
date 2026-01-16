@@ -27,7 +27,6 @@ import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
-import com.xmission.trevin.android.todo.provider.ToDoProvider;
 
 import android.app.IntentService;
 import android.content.*;
@@ -47,6 +46,8 @@ import android.widget.Toast;
  * This class imports To Do data from a Palm database (todo.dat).
  *
  * @author Trevin Beattie
+ *
+ * @deprecated to be replaced by {@link PalmImportWorker}
  */
 public class PalmImporterService extends IntentService implements
         ProgressReportingService {
@@ -642,14 +643,6 @@ public class PalmImporterService extends IntentService implements
 		"todo.dat");
     } */
 
-    /** Set the location of the todo.dat file
-     * @deprecated use the Intent instead */
-    public void setDataFile(File filePath) {
-	if (filePath == null)
-	    throw new NullPointerException();
-	dataFile = filePath;
-    }
-
     /**
      * @return the number of items read from the Palm database,
      * or 0 if no items have (successfully) bean read.
@@ -662,8 +655,7 @@ public class PalmImporterService extends IntentService implements
     }
 
     /**
-     * Read the data file.  The file location must
-     * have been previously set with {@link #setDataFile(File)}.
+     * Read the data file.
      *
      * @return the number of records in the database
      * if the data file is readable and valid.
@@ -987,7 +979,7 @@ public class PalmImporterService extends IntentService implements
 		    break;
 		}
 	    }
-	}	
+	}
 	return entry;
     }
 

@@ -18,7 +18,6 @@ package com.xmission.trevin.android.todo.service;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoItem;
-import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.util.StringEncryption;
@@ -116,21 +115,18 @@ public class PasswordChangeWorker extends Worker {
      *
      * @param context the application context.
      * @param params Parameters to set up the internal state of this worker.
-     * @param prefs the shared preferences object.
      * @param repository the To Do data repository.
      *
      * @throws IllegalArgumentException if the input data is invalid.
      */
     public PasswordChangeWorker(@NonNull Context context,
                                 @NonNull WorkerParameters params,
-                       @NonNull ToDoPreferences prefs,
                        @NonNull ToDoRepository repository)
             throws IllegalArgumentException {
         super(context, params);
         Log.d(TAG, String.format(
-                "Custom initialization for (%s, %s, %s)",
+                "Custom initialization for (%s, %s)",
                 context.getClass().getName(),
-                prefs.getClass().getName(),
                 repository.getClass().getName()));
         this.context = context;
         this.repository = repository;
@@ -197,9 +193,9 @@ public class PasswordChangeWorker extends Worker {
                 if (!globalEncryption.hasPassword(repository)) {
                     showToast(badPasswordMessage);
                     return Result.failure(new Data.Builder()
-                            .put("Error", "Old password provided but"
+                            .putString("Error", "Old password provided but"
                                     + " no password has been set")
-                            .put("message", badPasswordMessage)
+                            .putString("message", badPasswordMessage)
                             .build());
                 }
                 oldCrypt = new StringEncryption();
@@ -207,17 +203,18 @@ public class PasswordChangeWorker extends Worker {
                 if (!oldCrypt.checkPassword(repository)) {
                     showToast(badPasswordMessage);
                     return Result.failure(new Data.Builder()
-                            .put("Error", "Old password does not match"
+                            .putString("Error", "Old password does not match"
                                     + " hash in the database")
-                            .put("message", badPasswordMessage)
+                            .putString("message", badPasswordMessage)
                             .build());
                 }
             } else {
                 if (globalEncryption.hasPassword(repository)) {
                     showToast(badPasswordMessage);
                     return Result.failure(new Data.Builder()
-                            .put("Error", "Current password was not provided")
-                            .put("message", badPasswordMessage)
+                            .putString("Error",
+                                    "Current password was not provided")
+                            .putString("message", badPasswordMessage)
                             .build());
                 }
             }
@@ -253,8 +250,8 @@ public class PasswordChangeWorker extends Worker {
             Log.e(TAG, "Error changing the password!", e);
             showToast(e.getMessage());
             return Result.failure(new Data.Builder()
-                    .put("Exception", e.getClass().getCanonicalName())
-                    .put("message", e.getMessage())
+                    .putString("Exception", e.getClass().getCanonicalName())
+                    .putString("message", e.getMessage())
                     .build());
         }
 
@@ -275,6 +272,7 @@ public class PasswordChangeWorker extends Worker {
     private class PasswordChangeTransactionRunner implements Runnable {
         final StringEncryption oldEncryption;
         final StringEncryption newEncryption;
+        final String progressMode;
         /**
          * @param oldCrypt encryption object which has been configured
          * with the old password, or {@code null} if there was no
@@ -290,6 +288,16 @@ public class PasswordChangeWorker extends Worker {
                 @Nullable StringEncryption newCrypt) {
             oldEncryption = oldCrypt;
             newEncryption = newCrypt;
+
+            if ((oldEncryption == null) && (newEncryption != null))
+                progressMode = context.getString(
+                        R.string.ProgressMessageEncrypting);
+            else if ((oldEncryption != null) && (newEncryption == null))
+                progressMode = context.getString(
+                        R.string.ProgressMessageDecrypting);
+            else
+                progressMode = context.getString(
+                        R.string.ProgressMessageReencrypting);
         }
         @Override
         public void run() throws SQLException {
@@ -343,8 +351,7 @@ public class PasswordChangeWorker extends Worker {
                     now = System.nanoTime();
                     if (now >= lastProgressUpdate + 250000000L) {
                         Data progressData = new Data.Builder()
-                                .putString(PROGRESS_CURRENT_MODE,
-                                        context.getString(R.string.ProgressMessageFinish))
+                                .putString(PROGRESS_CURRENT_MODE, progressMode)
                                 .putInt(PROGRESS_MAX_COUNT, changeTarget)
                                 .putInt(PROGRESS_CHANGED_COUNT, numChanged)
                                 .build();

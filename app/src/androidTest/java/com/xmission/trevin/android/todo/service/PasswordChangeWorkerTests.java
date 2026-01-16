@@ -48,6 +48,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * Unit tests for setting, changing, and removing a password.
+ */
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public class PasswordChangeWorkerTests {
