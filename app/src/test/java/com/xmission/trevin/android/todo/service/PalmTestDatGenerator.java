@@ -117,11 +117,11 @@ public class PalmTestDatGenerator {
     private static void writeCategories(DataOutputStream outStream,
                                         List<CategoryEntry> categories)
             throws IOException {
-        outStream.writeInt(categories.size());
+        writeInteger(outStream, categories.size());
         for (CategoryEntry category : categories) {
-            outStream.writeInt(category.index);
-            outStream.writeInt(category.ID);
-            outStream.writeInt(category.dirty);
+            writeInteger(outStream, category.index);
+            writeInteger(outStream, category.ID);
+            writeInteger(outStream, category.dirty);
             writeString(outStream, category.longName);
             writeString(outStream, category.shortName);
         }
@@ -326,9 +326,11 @@ public class PalmTestDatGenerator {
         }
         if (useTD20) {
             writeShort(outStream, -1);
-            writeString(outStream, repeat.typeName);
+            writeShort(outStream, 1);
+            writeLongString(outStream, repeat.typeName);
         } else {
             writeShort(outStream, 0);
+            fail("Repeats are not supported in Palm To Do database version 1");
         }
         writeInteger(outStream, repeat.type);
         writeInteger(outStream, repeat.interval);
@@ -356,7 +358,6 @@ public class PalmTestDatGenerator {
             default:
                 fail("Unknown repeat type: " + repeat.type);
         }
-        fail("Not yet implemented");
     }
 
     /**
@@ -459,7 +460,7 @@ public class PalmTestDatGenerator {
     private static void writeLongString(DataOutputStream outStream, String s)
         throws IOException {
         byte[] data = s.getBytes(DAT_ENCODING);
-        outStream.writeShort(data.length);
+        writeShort(outStream, data.length);
         outStream.write(data);
     }
 
@@ -478,8 +479,28 @@ public class PalmTestDatGenerator {
     }
 
     /**
-     * Template for writing test data: generates a file with
-     * a very simple To Do record.  This is used to test file header parsing.
+     * Generate a file with no To Do records.
+     * The importer should fail with the message
+     * &ldquo;No records were imported&rdquo;.
+     */
+    //Test
+    public void generateEmptyFile() throws IOException {
+
+        File testFile = File.createTempFile("Palm-empty-v1-", ".dat");
+
+        writeDatFile(testFile, false, false, "/dev/null",
+                Collections.emptyList(), Collections.emptyList());
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Empty V1 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a file with a very simple To Do record.
+     * This is used to test file header parsing.
      */
     //Test
     public void generateMinimalV1File() throws IOException {
@@ -578,10 +599,318 @@ public class PalmTestDatGenerator {
     }
 
     /**
-     * Generate a V1 file exclusively containing a category list.
-     * This is used to test various modes of importing categories.
+     * Generate a V1 file with all supported fields in a To Do record.
+     * This is used to test {@link PalmImportWorker.ToDoEntry} parsing.
      */
-    @Test
+    //Test
+    public void generateMaximalV1File() throws IOException {
+
+        File testFile = File.createTempFile("Palm-maximal_v1-", ".dat");
+
+        CategoryEntry category = new CategoryEntry();
+        category.index = 1;
+        category.ID = 96;
+        category.longName = "Animals of the Jungle";
+        category.shortName = "Animals";
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = Integer.MAX_VALUE - 1;
+        todo.status = ToDoEntry.STATUS_ARCHIVE | ToDoEntry.STATUS_PENDING |
+                ToDoEntry.STATUS_UPDATE | ToDoEntry.STATUS_ADD;
+        todo.description = "Do all the things";
+        todo.dueDate = LocalDate.of(2026, 1, 20)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.completed = true;
+        todo.priority = 1000;
+        todo.isPrivate = true;
+        todo.categoryIndex = category.index;
+        todo.note = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                + "  Pellentesque tristique blandit mollis.  Morbi in urna"
+                + " eget justo porta elementum vitae ac magna.  Morbi blandit"
+                + " sem a eleifend porta.  Aenean vehicula sagittis libero,"
+                + " vestibulum viverra erat porttitor eget.  Proin in"
+                + " placerat arcu.  Suspendisse euismod quis orci vitae"
+                + " tristique.  Phasellus eget mattis dui.  Nam nec volutpat"
+                + " lacus.  Aliquam consequat aliquet nunc, nec iaculis"
+                + " lectus placerat ut.  Donec nec dictum ligula.  Nulla eu"
+                + " luctus justo.\r\n";
+
+        writeDatFile(testFile, false, false,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.singletonList(category),
+                Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Maximal V1 file written to "
+                + testFile.getAbsolutePath());
+
+    };
+
+    /**
+     * Generate a V2 file with most of the supported scalar fields
+     * in a To Do record.  This does not include the repeat entry.
+     * This is used to test {@link PalmImportWorker.ToDoEntry} parsing.
+     */
+    //Test
+    public void testV2FileWithAlarm() throws IOException {
+
+        File testFile = File.createTempFile("Palm-alarm_SGv2-", ".dat");
+
+        CategoryEntry category = new CategoryEntry();
+        category.index = 1;
+        category.ID = 1985;
+        category.longName = "Amazing Stories";
+        category.shortName = "Stories";
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = Integer.MAX_VALUE - 2;
+        todo.status = ToDoEntry.STATUS_ARCHIVE | ToDoEntry.STATUS_PENDING |
+                ToDoEntry.STATUS_UPDATE | ToDoEntry.STATUS_ADD;
+        todo.categoryIndex = category.index;
+        todo.isPrivate = true;
+        todo.description = "Do all the things";
+        todo.dueDate = LocalDate.of(2026, 1, 20)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.completed = true;
+        todo.priority = 1000;
+        todo.note = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                + "  Sed et nisl odio.  Maecenas viverra venenatis orci, at"
+                + " maximus orci malesuada sit amet.  Nulla molestie eget"
+                + " mauris eget venenatis.  Praesent laoreet vel massa"
+                + " vestibulum sodales.  Donec elementum nisi non nulla"
+                + " feugiat dignissim.  Proin eros lorem, mattis at neque id,"
+                + " rhoncus pharetra tellus.  Proin rhoncus sed velit ut"
+                + " sagittis.  Integer massa diam, aliquam vitae ex eget,"
+                + " commodo bibendum metus.  Orci varius natoque penatibus et"
+                + " magnis dis parturient montes, nascetur ridiculus mus."
+                + "  Phasellus eu libero nisl.\r\n";
+        todo.completionDate = LocalDate.of(2026, 1, 15)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.hasAlarm = true;
+        todo.alarmTime = LocalDate.of(1971, 1, 1)
+                .atTime(5, 43, 21).toEpochSecond(ZoneOffset.UTC);
+        todo.alarmDaysInAdvance = 6;
+
+        writeDatFile(testFile, true, true,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.singletonList(category),
+                Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Alarming PalmSG-wrapped V2 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a V2 file with a To Do item with a day-of-week repeating
+     * interval.  This is used to test {@link PalmImportWorker.RepeatEvent}
+     * parsing.
+     */
+    //Test
+    public void testV2FileWithRepeatOnDay() throws IOException {
+
+        File testFile = File.createTempFile(
+                "Palm-repeat_on_day_SGv2-", ".dat");
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = 11;
+        todo.categoryIndex = UNFILED.index;
+        todo.description = "Every Eighth Saturday";
+        todo.dueDate = LocalDate.of(2026, 1, 24)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.priority = 101;
+        todo.repeatAfterCompleted = true;
+        todo.completionDate = LocalDate.of(2026, 1, 17)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat = new RepeatEvent();
+        todo.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_DAY;
+        todo.repeat.type = RepeatEvent.TYPE_REPEAT_BY_DAY;
+        todo.repeat.interval = 8;
+        todo.repeat.repeatUntil = LocalDate.of(2099, 12, 31)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat.dayOfWeek = 6;
+
+        writeDatFile(testFile, true, true,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.emptyList(), Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Repeat on Day PalmSG-wrapped V2 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a V2 file with a To Do item with a weekly repeating interval.
+     * This is used to test {@link PalmImportWorker.RepeatEvent} parsing.
+     */
+    //Test
+    public void testV2FileWithRepeatByWeek() throws IOException {
+
+        File testFile = File.createTempFile(
+                "Palm-repeat_by_week_SGv2-", ".dat");
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = 12;
+        todo.categoryIndex = UNFILED.index;
+        todo.description = "Every Other Day";
+        todo.dueDate = LocalDate.of(2026, 1, 20)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.priority = 102;
+        todo.repeatAfterCompleted = true;
+        todo.completionDate = LocalDate.of(2026, 1, 18)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat = new RepeatEvent();
+        todo.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_WEEK;
+        todo.repeat.type = RepeatEvent.TYPE_REPEAT_BY_WEEK;
+        todo.repeat.interval = 2;
+        todo.repeat.repeatUntil = LocalDate.of(2099, 12, 31)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat.dayOfWeekBitmap = 0x7f;
+
+        writeDatFile(testFile, true, true,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.emptyList(), Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Repeat Weekly PalmSG-wrapped V2 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a V2 file with a To Do item with a monthly repeating interval
+     * by day and week.  This is used to test
+     * {@link PalmImportWorker.RepeatEvent} parsing.
+     */
+    //Test
+    public void testV2FileWithRepeatByMonthOnDayOfWeek() throws IOException {
+
+        File testFile = File.createTempFile(
+                "Palm-repeat_monthly_on_day_SGv2-", ".dat");
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = 13;
+        todo.categoryIndex = UNFILED.index;
+        todo.description = "Every Seven Months on the Last Friday";
+        todo.dueDate = LocalDate.of(2026, 2, 13)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.priority = 103;
+        todo.repeatAfterCompleted = true;
+        todo.completionDate = LocalDate.of(2026, 1, 13)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat = new RepeatEvent();
+        todo.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_MONTH_DAY;
+        todo.repeat.type = RepeatEvent.TYPE_REPEAT_BY_MONTH_DAY;
+        todo.repeat.interval = 7;
+        todo.repeat.repeatUntil = LocalDate.of(2099, 12, 31)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat.dayOfWeek = 5;
+        todo.repeat.weekOfMonth = 4;
+
+        writeDatFile(testFile, true, true,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.emptyList(), Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Monthly PalmSG-wrapped V2 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a V2 file with a To Do item with a monthly repeating interval
+     * by date.  This is used to test {@link PalmImportWorker.RepeatEvent}
+     * parsing.
+     */
+    //Test
+    public void testV2FileWithRepeatByMonthOnDate() throws IOException {
+
+        File testFile = File.createTempFile(
+                "Palm-repeat_monthly_on_date_SGv2-", ".dat");
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = 14;
+        todo.categoryIndex = UNFILED.index;
+        todo.description = "Every Thirteen Months on the 13th";
+        todo.dueDate = LocalDate.of(2026, 2, 13)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.priority = 104;
+        todo.repeatAfterCompleted = true;
+        todo.completionDate = LocalDate.of(2026, 1, 13)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat = new RepeatEvent();
+        todo.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_MONTH_DATE;
+        todo.repeat.type = RepeatEvent.TYPE_REPEAT_BY_MONTH_DATE;
+        todo.repeat.interval = 13;
+        todo.repeat.repeatUntil = LocalDate.of(2099, 12, 31)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat.dateOfMonth = 13;
+
+        writeDatFile(testFile, true, true,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.emptyList(), Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Monthly PalmSG-wrapped V2 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a V2 file with a To Do item with a yearly repeating interval.
+     * This is used to test {@link PalmImportWorker.RepeatEvent} parsing.
+     */
+    //Test
+    public void testV2FileWithRepeatByYear() throws IOException {
+
+        File testFile = File.createTempFile(
+                "Palm-repeat_yearly_SGv2-", ".dat");
+
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = 15;
+        todo.categoryIndex = UNFILED.index;
+        todo.description = "Every Hundred Years on May 1";
+        todo.dueDate = LocalDate.of(2100, 5, 1)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.priority = 105;
+        todo.repeatAfterCompleted = true;
+        todo.completionDate = LocalDate.of(2000, 5, 1)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat = new RepeatEvent();
+        todo.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_YEAR;
+        todo.repeat.type = RepeatEvent.TYPE_REPEAT_BY_YEAR;
+        todo.repeat.interval = 100;
+        todo.repeat.repeatUntil = LocalDate.of(2099, 12, 31)
+                .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
+        todo.repeat.dateOfMonth = 1;
+        todo.repeat.monthOfYear = 4;
+
+        writeDatFile(testFile, true, true,
+                "C:\\Program Files\\Palm\\User\\todo\\todo.dat",
+                Collections.emptyList(), Collections.singletonList(todo));
+
+        assertTrue("No data was written", testFile.length() > 0);
+
+        System.out.println("Yearly PalmSG-wrapped V2 file written to "
+                + testFile.getAbsolutePath());
+
+    }
+
+    /**
+     * Generate a V1 file containing a category list.
+     * This is used to test various modes of importing categories.
+     * The file <i>must</i> contain at least one To Do item
+     * in order for the import worker to consider it valid.
+     */
+    //Test
     public void generateCategoriesV1File() throws IOException {
 
         File testFile = File.createTempFile("Palm-categories-v1-", ".dat");
@@ -658,9 +987,16 @@ public class PalmTestDatGenerator {
         category.shortName = "J";
         categories.add(category);
 
+        ToDoEntry todo = new ToDoEntry();
+        todo.ID = 1;
+        todo.description = "Add all categories";
+        todo.categoryIndex = UNFILED.index;
+        todo.priority = 1;
+        todo.completed = true;
+
         writeDatFile(testFile, false, false,
         "C:\\Program Files\\Palm\\User\\todo\\categories.dat",
-        categories, Collections.emptyList());
+        categories, Collections.singletonList(todo));
 
         assertTrue("No data was written", testFile.length() > 0);
 
@@ -728,7 +1064,7 @@ public class PalmTestDatGenerator {
      *     <li>Category index (int)</li>
      * </ul>
      */
-    @Test
+    //Test
     public void generateToDoV1File() throws IOException {
 
         File testFile = File.createTempFile("Palm-todos-v1-", ".dat");
@@ -852,7 +1188,7 @@ public class PalmTestDatGenerator {
      *     <li>Repeat After Completed (boolean)</li>
      * </ul>
      */
-    @Test
+    //Test
     public void generateToDoSGV2File() throws IOException {
 
         File testFile = File.createTempFile("Palm-todos-v2-", ".dat");
@@ -905,7 +1241,7 @@ public class PalmTestDatGenerator {
         records.add(item);
 
         // This one includes a due date, alarm, completion date,
-        // and repeats daily until Christmas Eve
+        // and repeats every Thursday until Christmas Eve
         item = new ToDoEntry();
         item.ID = 67;
         item.categoryIndex = TEST_CATEGORIES.get(2).index;
@@ -923,7 +1259,7 @@ public class PalmTestDatGenerator {
         item.repeat.interval = 1;
         item.repeat.repeatUntil = LocalDate.of(2026, 12, 24)
                 .atTime(8, 0).toEpochSecond(ZoneOffset.UTC);
-        item.repeat.dayOfWeekBitmap = 0x7f;
+        item.repeat.dayOfWeek = 4;
         records.add(item);
 
         // This one has a due date, no completion date or alarm,
