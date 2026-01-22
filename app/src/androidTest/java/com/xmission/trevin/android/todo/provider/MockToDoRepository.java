@@ -669,6 +669,8 @@ public class MockToDoRepository implements ToDoRepository {
         if (categories.containsValue(newCategory.getName()))
             throw new SQLException("Category name already exists");
         categories.put(newCategory.getId(), newCategory.getName());
+        if (newCategory.getId() >= nextCategoryId)
+            nextCategoryId = newCategory.getId() + 1;
         if (transactionLevel <= 0)
             notifyObservers();
         return newCategory;

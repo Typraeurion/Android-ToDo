@@ -468,13 +468,20 @@ public class AlarmWorker extends Worker {
     @Override
     @NonNull
     public ListenableFuture<ForegroundInfo> getForegroundInfoAsync() {
-        Notification busyNotification =
-                new Notification.Builder(context, SILENT_CHANNEL_ID)
-                        .setSmallIcon(R.drawable.stat_todo)
-                        .setContentText(context.getString(R.string.app_name))
-                        .setContentText(context.getString(
-                                R.string.AlarmServiceBackgroundMessage))
-                        .build();
+        Log.d(TAG, ".getForegroundInfoAsync");
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context);
+        } else {
+            builder = new Notification.Builder(context, SILENT_CHANNEL_ID);
+        }
+        Notification busyNotification = builder
+                .setSmallIcon(R.drawable.stat_todo)
+                .setContentText(context.getString(R.string.app_name))
+                .setContentText(context.getString(
+                        R.string.AlarmServiceBackgroundMessage))
+                .setOnlyAlertOnce(true)
+                .build();
         ForegroundInfo info = new ForegroundInfo(
                 FG_NOTIFICATION_ID, busyNotification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);

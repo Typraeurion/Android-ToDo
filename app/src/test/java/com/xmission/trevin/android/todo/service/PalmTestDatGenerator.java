@@ -42,6 +42,15 @@ public class PalmTestDatGenerator {
     public static Charset DAT_ENCODING = Charset.forName("Cp1252");
 
     /**
+     * Timestamp to use for date fields where the date should be unset.
+     * <b>Warning:</b> This is only a few years away from the current
+     * date of this implementation, due to the limitation of 32-bit time; see:
+     * &ldquo;<a href"https://en.wikipedia.org/wiki/Year_2038_problem">Year
+     * 2038 Problem</a>&rdquo;.
+     */
+    public static final long UNSET_DATE = ToDoEntry.MAX_DATE + 25199;
+
+    /**
      * Common method for writing the &lqduo;.dat&rdquo; files.
      *
      * @param out the output file to write
@@ -227,8 +236,7 @@ public class PalmTestDatGenerator {
                         break;
                     case ToDoEntry.FIELD_DUE_DATE:
                         writeInteger(outStream, (int)
-                                ((todo.dueDate == null)
-                                        ? (ToDoEntry.MAX_DATE + 25199) // Not sure why...
+                                ((todo.dueDate == null) ? UNSET_DATE
                                         : todo.dueDate.intValue()));
                         break;
                     case ToDoEntry.FIELD_COMPLETED:
@@ -249,8 +257,7 @@ public class PalmTestDatGenerator {
                         break;
                     case ToDoEntry.FIELD_COMPLETION_DATE:
                         writeInteger(outStream, ((int)
-                                ((todo.completionDate == null)
-                                        ? (ToDoEntry.MAX_DATE + 25199) // Not sure why...
+                                ((todo.completionDate == null) ? UNSET_DATE
                                         : todo.completionDate.intValue())));
                         break;
                     case ToDoEntry.FIELD_HAS_ALARM:
@@ -289,8 +296,7 @@ public class PalmTestDatGenerator {
                                 writeInteger(outStream, 0);
                                 break;
                             case TYPE_DATE:
-                                writeInteger(outStream, (int)
-                                        ToDoEntry.MAX_DATE+ 25199); // Not sure why...
+                                writeInteger(outStream, (int) UNSET_DATE);
                                 break;
                             case TYPE_CSTRING:
                                 writeZeroes(outStream, 4);
@@ -988,7 +994,7 @@ public class PalmTestDatGenerator {
         categories.add(category);
 
         ToDoEntry todo = new ToDoEntry();
-        todo.ID = 1;
+        todo.ID = 151;
         todo.description = "Add all categories";
         todo.categoryIndex = UNFILED.index;
         todo.priority = 1;
@@ -1221,7 +1227,7 @@ public class PalmTestDatGenerator {
         item.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_MONTH_DATE;
         item.repeat.type = RepeatEvent.TYPE_REPEAT_BY_MONTH_DATE;
         item.repeat.interval = 6;
-        item.repeat.repeatUntil = ToDoEntry.MAX_DATE + 25199L;
+        item.repeat.repeatUntil = UNSET_DATE;
         item.repeat.dayOfWeekBitmap = 0x7f;
         item.repeat.dateOfMonth = 10;
         records.add(item);
@@ -1277,6 +1283,7 @@ public class PalmTestDatGenerator {
         item.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_WEEK;
         item.repeat.type = RepeatEvent.TYPE_REPEAT_BY_WEEK;
         item.repeat.interval = 1;
+        item.repeat.repeatUntil = UNSET_DATE;
         item.repeat.dayOfWeekBitmap = 0x54; // Tuesday, Thursday, Saturday
         records.add(item);
 
@@ -1294,6 +1301,7 @@ public class PalmTestDatGenerator {
         item.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_YEAR;
         item.repeat.type = RepeatEvent.TYPE_REPEAT_BY_YEAR;
         item.repeat.interval = 4;
+        item.repeat.repeatUntil = UNSET_DATE;
         item.repeat.dateOfMonth = 29;
         item.repeat.monthOfYear = 2;
         records.add(item);
@@ -1313,6 +1321,7 @@ public class PalmTestDatGenerator {
         item.repeat.typeName = RepeatEvent.NAME_REPEAT_BY_MONTH_DAY;
         item.repeat.type = RepeatEvent.TYPE_REPEAT_BY_MONTH_DAY;
         item.repeat.interval = 1;
+        item.repeat.repeatUntil = UNSET_DATE;
         item.repeat.dayOfWeek = 5;
         item.repeat.weekOfMonth = 4;
         records.add(item);

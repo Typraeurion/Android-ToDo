@@ -92,6 +92,21 @@ public class AlarmInitReceiver extends BroadcastReceiver {
                 + ", data=" + intent.getDataString() + ")");
         if (workManager == null)
             workManager = WorkManager.getInstance(context);
+
+        /**
+         * Check whether we are running in a test context.
+         * If so, skip the alarm initialization which
+         * would set up the normal repository before the tests
+         * have a chance to substitute the mock repository.
+         */
+        try {
+            Class.forName("androidx.test.platform.app.InstrumentationRegistry");
+            Log.i(TAG, "Skipping alarm initialization in test context");
+            return;
+        } catch (ClassNotFoundException e) {
+            // Probably not in a test context
+        }
+
         WorkRequest req = new OneTimeWorkRequest
                 .Builder(AlarmWorker.class)
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)

@@ -334,6 +334,14 @@ public class PalmImportWorker extends Worker {
         static final int FIELD_NOTE = 17;
         String note;
         static final int FIELD_REPEAT_AFTER_COMPLETE = 18;
+        /*
+         * FIXME: I can't find any documentation on whether this flag
+         * simply means the event repeats (the same as a non-null
+         * `repeat' field) or if it affects _how_ the next repeat
+         * is calculated (e.g. must follow the completion date).
+         * For now we're going to assume this is just redundant
+         * with a non-null `repeat` field.
+         */
         Boolean repeatAfterCompleted;
         static final int FIELD_COMPLETION_DATE = 19;
         // "Unset" completion dates are also set to Dec. 31, 2031
@@ -441,8 +449,8 @@ public class PalmImportWorker extends Worker {
             }
             if (repeat != null) {
                 sb.append(repeat);
-                if (repeatAfterCompleted)
-                    sb.append("(after last completed)");
+//                if (repeatAfterCompleted)
+//                    sb.append("(after last completed)");
                 sb.append(',');
             }
             sb.append("\n\t");
@@ -1463,6 +1471,23 @@ public class PalmImportWorker extends Worker {
                 break;
 
             case OVERWRITE:
+                /*
+                 * First remove all conflicting names.
+                 * DO NOT add new categories in the same loop,
+                 * as that may lead to inconsistencies between
+                 * what's in the database and our maps.
+                 */
+                for (i = 0; i < dataCategories.length; i++) {
+                    if (categoryNameMap.containsKey(dataCategories[i].longName)) {
+                        long oldId = categoryNameMap.get(dataCategories[i].longName);
+                        Log.d(TAG, String.format(".mergeCategories: \"%s\""
+                                + " already exists with ID %d; deleting it.",
+                                dataCategories[i].longName, oldId));
+                        repository.deleteCategory(oldId);
+                        categoryIDMap.remove(oldId);
+                        categoryNameMap.remove(dataCategories[i].longName);
+                    }
+                }
                 for (i = 0; i < dataCategories.length; i++) {
                     if (categoryIDMap.containsKey(dataCategories[i].newID)) {
                         if (!categoryIDMap.get(dataCategories[i].newID)
@@ -1471,7 +1496,7 @@ public class PalmImportWorker extends Worker {
                                     + categoryIDMap.get(dataCategories[i].newID)
                                     + "\" with \""
                                     + dataCategories[i].longName + "\"");
-                            repository.updateCategory(dataCategories[i].ID,
+                            repository.updateCategory(dataCategories[i].newID,
                                     dataCategories[i].longName);
                         }
                     } else {
@@ -1500,11 +1525,20 @@ public class PalmImportWorker extends Worker {
                                     + dataCategories[i].longName + "\" from "
                                     + dataCategories[i].ID + " to "
                                     + dataCategories[i].newID);
-                    } else {
+                    } else if (categoryIDMap.containsKey(dataCategories[i].newID)) {
+                        // Use a new ID when there is a conflict
                         Log.d(TAG, ".mergeCategories: adding \""
                                 + dataCategories[i].longName + "\"");
                         ToDoCategory newCat = repository.insertCategory(
                                 dataCategories[i].longName);
+                        dataCategories[i].newID = newCat.getId();
+                    } else {
+                        ToDoCategory newCat = new ToDoCategory();
+                        newCat.setId(dataCategories[i].ID);
+                        newCat.setName(dataCategories[i].longName);
+                        Log.d(TAG, String.format(
+                                ".mergeCategories: adding %s", newCat));
+                        repository.insertCategory(newCat);
                         dataCategories[i].newID = newCat.getId();
                     }
                     importCount = dataCategories.length + dataToDos.length + i + 1;
@@ -1587,9 +1621,10 @@ public class PalmImportWorker extends Worker {
                         break;
 
                     case MERGE:
-                        if ((existingRecord != null) &&
-                                existingRecord.getCategoryName().equals(
-                                        categoryMap.get(dataToDos[i].categoryIndex).longName) &&
+                        if (existingRecord == null)
+                            newRecord.setId(dataToDos[i].ID);
+                        else if (existingRecord.getCategoryName().equals(
+                                categoryMap.get(dataToDos[i].categoryIndex).longName) &&
                                 existingRecord.getDescription().equals(
                                         dataToDos[i].description)) {
                             if (dataToDos.length < 64) {
@@ -1678,14 +1713,14 @@ public class PalmImportWorker extends Worker {
                     switch (dataToDos[i].repeat.type) {
 
                         case RepeatEvent.TYPE_REPEAT_BY_DAY:
-                            repeat = dataToDos[i].repeatAfterCompleted
-                                    ? new RepeatDayAfter() : new RepeatDaily();
+                            repeat = /* dataToDos[i].repeatAfterCompleted
+                                    ? new RepeatDayAfter() : */ new RepeatDaily();
                             break;
 
                         case RepeatEvent.TYPE_REPEAT_BY_WEEK:
-                            if (dataToDos[i].repeatAfterCompleted)
+                            /* if (dataToDos[i].repeatAfterCompleted)
                                 repeat = new RepeatWeekAfter();
-                            else {
+                            else */ {
                                 RepeatWeekly rw = new RepeatWeekly();
                                 rw.setWeekDays(WeekDays.fromBitMap(
                                         dataToDos[i].repeat.dayOfWeekBitmap));
@@ -1702,9 +1737,9 @@ public class PalmImportWorker extends Worker {
                             break;
 
                         case RepeatEvent.TYPE_REPEAT_BY_MONTH_DATE:
-                            if (dataToDos[i].repeatAfterCompleted)
+                            /* if (dataToDos[i].repeatAfterCompleted)
                                 repeat = new RepeatMonthAfter();
-                            else {
+                            else */ {
                                 RepeatMonthlyOnDate rmdt =
                                         new RepeatMonthlyOnDate();
                                 rmdt.setDate(dataToDos[i].repeat.dateOfMonth);
@@ -1713,9 +1748,9 @@ public class PalmImportWorker extends Worker {
                             break;
 
                         case RepeatEvent.TYPE_REPEAT_BY_YEAR:
-                            if (dataToDos[i].repeatAfterCompleted)
+                            /* if (dataToDos[i].repeatAfterCompleted)
                                 repeat = new RepeatYearAfter();
-                            else {
+                            else */ {
                                 RepeatYearlyOnDate rydt = new RepeatYearlyOnDate();
                                 rydt.setDate(dataToDos[i].repeat.dateOfMonth);
                                 rydt.setMonth(Months.fromValue(

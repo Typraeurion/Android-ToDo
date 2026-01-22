@@ -595,6 +595,18 @@ public class PalmImportWorkerTests {
             for (ToDoCategory cat : TEST_CATEGORIES_1) {
                 if (entry.getKey().equals(cat.getId()) &&
                         !entry.getValue().equals(cat.getName())) {
+                    // No imported categories are valid candidates
+                    boolean newName = false;
+                    for (ToDoCategory cat2 : TEST_CATEGORIES_1) {
+                        if (entry.getValue().equals(cat2.getName())) {
+                            newName = true;
+                            break;
+                        }
+                    }
+                    if (newName) {
+                        candidates.remove(entry);
+                        continue;
+                    }
                     dupCatId = new ToDoCategory();
                     dupCatId.setId(entry.getKey());
                     dupCatId.setName(entry.getValue());
@@ -620,14 +632,16 @@ public class PalmImportWorkerTests {
         mockRepo.insertItem(todoDupCatId);
 
         for (ToDoCategory cat : TEST_CATEGORIES_1) {
-            if (cat.getId().equals(todoDupCatId.getId())) {
+            if (cat.getId().equals(dupCatId.getId())) {
                 todoDupCatId.setCategoryName(cat.getName());
                 break;
             }
         }
 
+        Instant start = Instant.now();
         runImportWorker("Palm-categories-v1.dat",
                 ImportType.OVERWRITE, Result.Success.class);
+        Instant stop = Instant.now();
 
         // Set our category expectations
         for (ToDoCategory cat : TEST_CATEGORIES_1) {
@@ -643,14 +657,20 @@ public class PalmImportWorkerTests {
         // Verify the category of the first To Do item
         // was changed to Unfiled
         ToDoItem actualItem = mockRepo.getItemById(todoDupCatName.getId());
-        assertEquals("To Do item formerly in category "
-                + dupCatName.getName(), todoDupCatName, actualItem);
+        List<String> diffs = compareToDoRecords(
+                "To Do item formerly in category " + dupCatName.getName(),
+                todoDupCatName, actualItem, start, stop);
+        if (!diffs.isEmpty())
+            fail(StringUtils.join("\n", diffs));
 
         // Verify the category of the second To Do item
         // just had its name changed
         actualItem = mockRepo.getItemById(todoDupCatId.getId());
-        assertEquals("To To item with category #" + dupCatId.getId(),
-                todoDupCatId, actualItem);
+        diffs = compareToDoRecords(
+                "To Do item with category #" + dupCatId.getId(),
+                todoDupCatId, actualItem, start, stop);
+        if (!diffs.isEmpty())
+            fail(StringUtils.join("\n", diffs));
 
     }
 
@@ -751,8 +771,10 @@ public class PalmImportWorkerTests {
             expectedCategories.put(cat.getId(), cat.getName());
         }
 
+        Instant start = Instant.now();
         runImportWorker("Palm-categories-v1.dat",
                 importType, Result.Success.class);
+        Instant stop = Instant.now();
 
         // Find the new ID's of categories which should have been moved
         SortedMap<Long,String> actualCategories = readCategories();
@@ -771,14 +793,20 @@ public class PalmImportWorkerTests {
 
         // The To Do items should not have been changed
         ToDoItem actualItem = mockRepo.getItemById(todoDupCatName.getId());
-        assertEquals(String.format("To Do item in category #%d \"%s\"",
-                dupCatName.getId(), dupCatName.getName()),
-                todoDupCatName, actualItem);
+        List<String> diffs = compareToDoRecords(String.format(
+                        "To Do item in category #%d \"%s\"",
+                        dupCatName.getId(), dupCatName.getName()),
+                todoDupCatName, actualItem, start, stop);
+        if (!diffs.isEmpty())
+            fail(StringUtils.join("\n", diffs));
 
         actualItem = mockRepo.getItemById(todoDupCatId.getId());
-        assertEquals(String.format("To Do item in category #%d \"%s\"",
-                dupCatId.getId(), dupCatId.getName()),
-                todoDupCatId, actualItem);
+        diffs = compareToDoRecords(String.format(
+                        "To Do item in category #%d \"%s\"",
+                        dupCatId.getId(), dupCatId.getName()),
+                todoDupCatId, actualItem, start, stop);
+        if (!diffs.isEmpty())
+            fail(StringUtils.join("\n", diffs));
 
     }
 
@@ -1033,6 +1061,8 @@ public class PalmImportWorkerTests {
         todo.setId(242);
         todo.setPrivate(1);
         todo.setDescription("Submit mission report");
+        todo.setCategoryId(TEST_CATEGORIES_2.get(3).getId());
+        todo.setCategoryName(TEST_CATEGORIES_2.get(3).getName());
         todo.setDue(LocalDate.of(2026, 1, 30));
         todo.setPriority(86);
         RepeatMonthlyOnDay rmdy = new RepeatMonthlyOnDay();
@@ -1218,20 +1248,51 @@ public class PalmImportWorkerTests {
             throws AssertionError {
         SortedSet<Long> allIds = new TreeSet<>(expected.keySet());
         allIds.addAll(actual.keySet());
+        // For items where we don't know the ultimate ID in advance,
+        // get a map of descriptions to actual item ID's.
+        Map<String,Long> descriptionMap = new HashMap<>();
+        for (ToDoItem item : actual.values()) {
+            if (!expected.containsKey(item.getId()))
+                descriptionMap.put(item.getDescription(), item.getId());
+        }
+        Set<Long> unknownIds = new HashSet<>(allIds.headSet(0L));
+        for (long id : unknownIds) {
+            String description = expected.get(id).getDescription();
+            if (descriptionMap.containsKey(description)) {
+                ToDoItem item = expected.remove(id);
+                expected.put(descriptionMap.get(description), item);
+                allIds.remove(id);
+            }
+        }
         List<String> errors = new ArrayList<>();
         for (long id : allIds) {
-            if (!expected.containsKey(id)) {
+            ToDoItem expectedItem = expected.get(id);
+            ToDoItem actualItem = (id >= 0) ? actual.get(id)
+                    : descriptionMap.containsKey(expectedItem.getDescription())
+                    ? actual.get(descriptionMap.get(expectedItem.getDescription()))
+                    : null;
+            if (expectedItem == null) {
                 errors.add(String.format("Record #%d expected:<null> but was:%s",
-                        id, actual.get(id)));
+                        id, actualItem));
                 continue;
             }
-            if (!actual.containsKey(id)) {
+            if (actualItem == null) {
+                // If the created and modified times are unset,
+                // substitute the import time before stringifying them.
+                Duration timeFudge = Duration.between(timeStart, timeEnd)
+                        .dividedBy(2);
+                Instant expectedImportTime = timeStart.plus(timeFudge);
+                ToDoItem printItem = expectedItem.clone();
+                if (printItem.getCreateTime().equals(Instant.MIN))
+                    printItem.setCreateTime(expectedImportTime);
+                if (printItem.getModTime().equals(Instant.MIN))
+                    printItem.setModTime(expectedImportTime);
                 errors.add(String.format("Record #%d expected:%s but was:<null>",
-                        id, expected.get(id)));
+                        id, printItem));
                 continue;
             }
             errors.addAll(compareToDoRecords(String.format("Record #%d", id),
-                    expected.get(id), actual.get(id), timeStart, timeEnd));
+                    expectedItem, actualItem, timeStart, timeEnd));
         }
         if (errors.size() > 1)
             fail(message + ": Multiple errors:\n"
@@ -1260,14 +1321,14 @@ public class PalmImportWorkerTests {
             Instant timeStart, Instant timeEnd) {
         List<String> errors = new ArrayList<>();
         Duration timeFudge = Duration.between(timeStart, timeEnd).dividedBy(2);
-        String expectedImportTime = timeStart.plus(timeFudge)
-                .atOffset(ZoneOffset.UTC)
+        Instant expectedImportTime = timeStart.plus(timeFudge);
+        String expectedImportStr = expectedImportTime.atOffset(ZoneOffset.UTC)
                 .format(DateTimeFormatter.ISO_INSTANT);
         if (!timeFudge.isZero())
-            expectedImportTime = String.format("%s \u00b1%fms",
+            expectedImportStr = String.format("%s \u00b1%fms",
                     expectedImportTime, timeFudge.toMillis() / 1000.0);
 
-        if ((expected.getId() == null) ? (actual.getId() != null) :
+        if ((expected.getId() >= 0) &&
                 !expected.getId().equals(actual.getId()))
             errors.add(String.format("%s ID expected:%d but was:%d",
                     message, expected.getId(), actual.getId()));
@@ -1302,10 +1363,10 @@ public class PalmImportWorkerTests {
                 : !expected.getDue().equals(actual.getDue()))
             errors.add(String.format("%s due date expected:%s but was:%s",
                     message, expected.getDue(), actual.getDue()));
-        // Palm data files don't support a completed time
-        if (actual.getCompleted() != null)
-            errors.add(String.format("%s completed time expected:<null> but was:%s",
-                    message, actual.getCompleted()));
+        if ((expected.getCompleted() == null) ? (actual.getCompleted() != null)
+                : !expected.getCompleted().equals(actual.getCompleted()))
+            errors.add(String.format("%s completed time expected:%s but was:%s",
+                    message, expected.getCompleted(), actual.getCompleted()));
         if (expected.isChecked() != actual.isChecked())
             errors.add(String.format("%s checked expected:%b but was:%b",
                     message, expected.isChecked(), actual.isChecked()));
@@ -1335,17 +1396,22 @@ public class PalmImportWorkerTests {
                 !expected.getRepeatInterval().equals(actual.getRepeatInterval()))
             errors.add(String.format("%s repeat interval expected:%s but was:%s",
                     message, expected.getRepeatInterval(), actual.getRepeatInterval()));
-        // Hide days earlier is a feature we added, not part of Palm data
-        if (actual.getHideDaysEarlier() != null)
-            errors.add(String.format("%s hide days earlier expected:<null> but was:%d",
-                    message, actual.getHideDaysEarlier()));
+        if ((expected.getHideDaysEarlier() == null) ? (actual.getHideDaysEarlier() != null)
+                : !expected.getHideDaysEarlier().equals(actual.getHideDaysEarlier()))
+            errors.add(String.format("%s hide days earlier expected:%s but was:%s",
+                    message, expected.getHideDaysEarlier(), actual.getHideDaysEarlier()));
 
         // Limit the returned errors to about half a dozen fields.  Any more
         // than that and we just report the whole record as a mismatch.
         if (errors.size() >= 6) {
             errors.clear();
+            ToDoItem printItem = expected.clone();
+            if (printItem.getCreateTime().equals(Instant.MIN))
+                printItem.setCreateTime(expectedImportTime);
+            if (printItem.getModTime().equals(Instant.MIN))
+                printItem.setModTime(expectedImportTime);
             errors.add(String.format("%s expected:%s but was:%s",
-                    message, expected, actual));
+                    message, printItem, actual));
         }
         return errors;
     }
@@ -1456,7 +1522,7 @@ public class PalmImportWorkerTests {
             rewrittenItem = TEST_TODOS_1.get(RAND.nextInt(TEST_TODOS_1.size()));
             if (rewrittenItem.getCategoryId() == ToDoCategory.UNFILED) {
                 rewrittenItem = null;
-                break;
+                continue;
             }
             for (ToDoItem todo : oldItems) {
                 if (todo.getId().equals(rewrittenItem.getId())) {
@@ -1474,11 +1540,16 @@ public class PalmImportWorkerTests {
         modItem.setCategoryId(sameCatName.getId());
         modItem.setCategoryName(sameCatName.getName());
         modItem.setDescription(rewrittenItem.getDescription());
+        modItem.setCreateTime(Instant.now().minusSeconds(
+                RAND.nextInt(86400) + 86400));
+        modItem.setModTime(modItem.getCreateTime());
+        mockRepo.insertItem(modItem);
         // Set our expected record to the imported record
         // but having the original creation time and new category ID
         rewrittenItem = rewrittenItem.clone();
         rewrittenItem.setCategoryId(sameCatName.getId());
         rewrittenItem.setCreateTime(modItem.getCreateTime());
+        rewrittenItem.setModTime(Instant.MIN);
         oldItems.add(rewrittenItem);
 
         Instant start = Instant.now();
@@ -1486,10 +1557,17 @@ public class PalmImportWorkerTests {
                 ImportType.MERGE, Result.Success.class);
         Instant stop = Instant.now();
 
+        // The ID's of imported categories that conflict with existing
+        // entries should change; we won't know what they are in advance.
+        Map<String,Long> catNameMap = new HashMap<>();
+        for (ToDoCategory cat : mockRepo.getCategories())
+            catNameMap.put(cat.getName(), cat.getId());
         for (ToDoCategory cat : TEST_CATEGORIES_2) {
             if (cat.getName().equals(sameCatName.getName()))
                 continue;
-            expectedCategories.put(cat.getId(), cat.getName());
+            assertTrue(String.format("Category \"%s\" was not imported",
+                    cat.getName()), catNameMap.containsKey(cat.getName()));
+            expectedCategories.put(catNameMap.get(cat.getName()), cat.getName());
         }
         assertCategoriesEquals(expectedCategories);
 
@@ -1501,10 +1579,17 @@ public class PalmImportWorkerTests {
             expectedToDos.put(todo.getId(), todo);
         Map<String,ToDoItem> conflictsByTitle = new HashMap<>();
         for (ToDoItem todo: TEST_TODOS_1) {
-            if (expectedToDos.containsKey(todo.getId()))
+            if (todo.getId() == rewrittenItem.getId())
+                // The rewritten item was already added to the map
+                continue;
+            if (expectedToDos.containsKey(todo.getId())) {
                 conflictsByTitle.put(todo.getDescription(), todo);
-            else
-                expectedToDos.put(todo.getId(), todo);
+                continue;
+            }
+            ToDoItem newExpectation = todo.clone();
+            newExpectation.setCategoryId(
+                    catNameMap.get(todo.getCategoryName()));
+            expectedToDos.put(todo.getId(), newExpectation);
         }
 
         SortedMap<Long,ToDoItem> actualToDos = new TreeMap<>();
@@ -1517,16 +1602,19 @@ public class PalmImportWorkerTests {
                 ToDoItem newExpectation = conflictsByTitle.get(
                         todo.getDescription()).clone();
                 newExpectation.setId(todo.getId());
+                newExpectation.setCategoryId(
+                        catNameMap.get(todo.getCategoryName()));
                 expectedToDos.put(todo.getId(), newExpectation);
                 conflictsByTitle.remove(todo.getDescription());
             }
         }
-        // If we have any remaining conflicts, give them new ID's.
-        long nextAvailableId = Math.max(expectedToDos.lastKey(),
-                actualToDos.lastKey()) + 1;
+        // If we have any remaining conflicts, ignore their ID's.
+        long nextAvailableId = -1;
         for (ToDoItem todo : conflictsByTitle.values()) {
             ToDoItem newExpectation = todo.clone();
-            newExpectation.setId(nextAvailableId++);
+            newExpectation.setId(--nextAvailableId);
+            newExpectation.setCategoryId(
+                    catNameMap.get(todo.getCategoryName()));
             expectedToDos.put(newExpectation.getId(), newExpectation);
         }
 
@@ -1565,7 +1653,11 @@ public class PalmImportWorkerTests {
                 alreadyImportedItem.getCategoryName());
         expectedCategories.put(alreadyImportedCategory.getId(),
                 alreadyImportedCategory.getName());
+        alreadyImportedItem = alreadyImportedItem.clone();
         alreadyImportedItem.setCategoryId(alreadyImportedCategory.getId());
+        alreadyImportedItem.setCreateTime(Instant.now().minusSeconds(
+                RAND.nextInt(86400) + 86400));
+        alreadyImportedItem.setModTime(alreadyImportedItem.getCreateTime());
         mockRepo.insertItem(alreadyImportedItem);
         oldItems.add(alreadyImportedItem);
 
@@ -1574,8 +1666,13 @@ public class PalmImportWorkerTests {
                 ImportType.ADD, Result.Success.class);
         Instant stop = Instant.now();
 
+        // The ID's of imported categories that conflict with existing
+        // entries should change; we won't know what they are in advance.
+        Map<String,Long> catNameMap = new HashMap<>();
+        for (ToDoCategory cat : mockRepo.getCategories())
+            catNameMap.put(cat.getName(), cat.getId());
         for (ToDoCategory cat : TEST_CATEGORIES_2)
-            expectedCategories.put(cat.getId(), cat.getName());
+            expectedCategories.put(catNameMap.get(cat.getName()), cat.getName());
         assertCategoriesEquals(expectedCategories);
 
         // Records with a conflicting ID should be assigned a new ID,
@@ -1586,10 +1683,17 @@ public class PalmImportWorkerTests {
             expectedToDos.put(todo.getId(), todo);
         Map<Long,ToDoItem> conflictingItems = new HashMap<>();
         for (ToDoItem todo : TEST_TODOS_2) {
-            if (expectedToDos.containsKey(todo.getId()))
+            if (todo.getId() == alreadyImportedItem.getId())
+                // The already imported item was already added to the map
+                continue;
+            if (expectedToDos.containsKey(todo.getId())) {
                 conflictingItems.put(todo.getId(), todo);
-            else
-                expectedToDos.put(todo.getId(), todo);
+                continue;
+            }
+            ToDoItem newExpectation = todo.clone();
+            newExpectation.setCategoryId(
+                    catNameMap.get(todo.getCategoryName()));
+            expectedToDos.put(todo.getId(), newExpectation);
         }
 
         SortedMap<Long,ToDoItem> actualToDos = new TreeMap<>();
@@ -1600,17 +1704,20 @@ public class PalmImportWorkerTests {
                 ToDoItem newExpectation = conflictingItems.get(
                         todo.getId()).clone();
                 newExpectation.setId(todo.getId());
+                newExpectation.setCategoryId(
+                        catNameMap.get(todo.getCategoryName()));
                 expectedToDos.put(todo.getId(), newExpectation);
                 conflictingItems.remove(todo.getId());
             }
         }
-        // If we have any remaining conflicts, give them new ID's
-        long nextAvailableId = Math.max(expectedToDos.lastKey(),
-                actualToDos.lastKey()) + 1;
+        // If we have any remaining conflicts, ignore their ID's
+        long nextAvailableId = -1;
         for (ToDoItem todo : conflictingItems.values()) {
             ToDoItem newExpectation = todo.clone();
-            newExpectation.setId(nextAvailableId++);
-            expectedToDos.put(newExpectation.getId(), newExpectation);
+            newExpectation.setId(--nextAvailableId);
+            newExpectation.setCategoryId(
+                    catNameMap.get(todo.getCategoryName()));
+            expectedToDos.put(--nextAvailableId, newExpectation);
         }
 
         assertToDoEquals("Imported To Do records",
