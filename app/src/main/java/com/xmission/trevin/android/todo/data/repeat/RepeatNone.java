@@ -55,6 +55,11 @@ public class RepeatNone implements RepeatInterval {
     }
 
     @Override
+    public RepeatType getType() {
+        return RepeatType.NONE;
+    }
+
+    @Override
     public boolean updateForDueDate(@NonNull LocalDate newDue) {
         return false;
     }

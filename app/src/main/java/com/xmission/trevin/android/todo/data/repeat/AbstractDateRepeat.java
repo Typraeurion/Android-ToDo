@@ -35,10 +35,10 @@ public abstract class AbstractDateRepeat extends AbstractAdjustableRepeat {
      * default date of the current day of the month.
      * We require that there always be at least one day in the set.
      *
-     * @param typeId the ID of this repeat interval type
+     * @param type the repeat interval type
      */
-    protected AbstractDateRepeat(int typeId) {
-        super(typeId);
+    protected AbstractDateRepeat(RepeatType type) {
+        super(type);
         date = LocalDate.now().getDayOfMonth();
     }
 
@@ -47,15 +47,15 @@ public abstract class AbstractDateRepeat extends AbstractAdjustableRepeat {
      * given by a bit mask (i.e. from the database) and a default date
      * of the current day of the month.
      *
-     * @param typeId the ID of this repeat interval type
+     * @param type the repeat interval type
      * @param bitMask the bit field containing the allowed days
      *                on which this item can be repeated
      *
      * @throws IllegalArgumentException if the bit field
      * (masked by all possible days) is 0
      */
-    protected AbstractDateRepeat(int typeId, int bitMask) {
-        super(typeId, bitMask);
+    protected AbstractDateRepeat(RepeatType type, int bitMask) {
+        super(type, bitMask);
         date = LocalDate.now().getDayOfMonth();
     }
 
@@ -64,11 +64,11 @@ public abstract class AbstractDateRepeat extends AbstractAdjustableRepeat {
      * direction of {@link WeekdayDirection#NEXT NEXT}, and a day
      * of the month from the given date.
      *
-     * @param typeId the ID of this repeat interval type
+     * @param type the repeat interval type
      * @param due the initial date on which to base this repeat interval
      */
-    protected AbstractDateRepeat(int typeId, @NonNull LocalDate due) {
-        super(typeId, due);
+    protected AbstractDateRepeat(RepeatType type, @NonNull LocalDate due) {
+        super(type, due);
         date = due.getDayOfMonth();
     }
 
@@ -77,7 +77,7 @@ public abstract class AbstractDateRepeat extends AbstractAdjustableRepeat {
      * given by a bit mask (i.e. from the database) and a day
      * of the month from the given date.
      *
-     * @param typeId the ID of this repeat interval type
+     * @param type the repeat interval type
      * @param bitMask the bit field containing the allowed days
      *                on which this item can be repeated
      * @param due the initial date on which to base this repeat interval
@@ -85,10 +85,10 @@ public abstract class AbstractDateRepeat extends AbstractAdjustableRepeat {
      * @throws IllegalArgumentException if the bit field
      * (masked by all possible days) is 0
      */
-    protected AbstractDateRepeat(int typeId,
+    protected AbstractDateRepeat(RepeatType type,
                                  int bitMask,
                                  @NonNull LocalDate due) {
-        super(typeId, bitMask, due);
+        super(type, bitMask, due);
         date = due.getDayOfMonth();
     }
 

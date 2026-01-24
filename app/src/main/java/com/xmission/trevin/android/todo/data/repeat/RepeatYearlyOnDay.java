@@ -63,7 +63,7 @@ public class RepeatYearlyOnDay extends RepeatMonthlyOnDay {
      * @param due the first date on which this To Do item is due
      */
     public RepeatYearlyOnDay(@NonNull LocalDate due) {
-        super(REPEAT_MONTHLY_ON_DAY, due);
+        super(RepeatType.MONTHLY_ON_DAY, due);
         month = Months.fromJavaMonth(due.getMonth());
     }
 

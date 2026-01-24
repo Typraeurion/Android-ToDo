@@ -90,7 +90,7 @@ public class RepeatSemiMonthlyOnDates extends AbstractDateRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatSemiMonthlyOnDates(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_SEMI_MONTHLY_ON_DATES, bitMask, due);
+        super(RepeatType.SEMI_MONTHLY_ON_DATES, bitMask, due);
         if (date < 16) {
             date2 = date + 15;
         } else {

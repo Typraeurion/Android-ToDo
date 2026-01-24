@@ -70,7 +70,7 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
      * @param due the first date on which this To Do item is due
      */
     public RepeatSemiMonthlyOnDays(@NonNull LocalDate due) {
-        super(REPEAT_SEMI_MONTHLY_ON_DAYS, due);
+        super(RepeatType.SEMI_MONTHLY_ON_DAYS, due);
         day2 = day;
         if (week < 2) {
             week2 = week + 2;

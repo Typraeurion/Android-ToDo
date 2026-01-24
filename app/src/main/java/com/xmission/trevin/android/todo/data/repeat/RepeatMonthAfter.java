@@ -40,7 +40,7 @@ public class RepeatMonthAfter extends AbstractAdjustableRepeat {
      * that starts on the current day.
      */
     public RepeatMonthAfter() {
-        super(REPEAT_MONTH_AFTER);
+        super(RepeatType.MONTH_AFTER);
     }
 
     /**
@@ -49,7 +49,7 @@ public class RepeatMonthAfter extends AbstractAdjustableRepeat {
      * @param due the first date on which this To Do item is due
      */
     public RepeatMonthAfter(@NonNull LocalDate due) {
-        super(REPEAT_MONTH_AFTER, due);
+        super(RepeatType.MONTH_AFTER, due);
     }
 
     /**
@@ -63,7 +63,7 @@ public class RepeatMonthAfter extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatMonthAfter(int bitMask) {
-        super(REPEAT_MONTH_AFTER, bitMask);
+        super(RepeatType.MONTH_AFTER, bitMask);
     }
 
     /**
@@ -79,7 +79,7 @@ public class RepeatMonthAfter extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatMonthAfter(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_MONTH_AFTER, bitMask, due);
+        super(RepeatType.MONTH_AFTER, bitMask, due);
     }
 
     @Override

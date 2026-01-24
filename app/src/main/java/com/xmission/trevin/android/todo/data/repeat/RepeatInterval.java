@@ -33,6 +33,9 @@ public interface RepeatInterval extends Cloneable, Serializable {
     /** @return the ID of this interval (as stored in the database) */
     int getId();
 
+    /** @return the type enumeration of this interval */
+    RepeatType getType();
+
     /**
      * Update the repeat settings to accommodate a change in the due date.
      * This is intended for use when the user is changing the repeat

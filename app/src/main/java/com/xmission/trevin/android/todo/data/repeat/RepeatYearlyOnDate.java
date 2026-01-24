@@ -87,7 +87,7 @@ public class RepeatYearlyOnDate extends AbstractDateRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatYearlyOnDate(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_YEARLY_ON_DATE, bitMask, due);
+        super(RepeatType.YEARLY_ON_DATE, bitMask, due);
         month = Months.fromJavaMonth(due.getMonth());
     }
 

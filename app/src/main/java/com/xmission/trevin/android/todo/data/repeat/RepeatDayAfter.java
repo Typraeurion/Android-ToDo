@@ -38,7 +38,7 @@ public class RepeatDayAfter extends AbstractAdjustableRepeat {
      * Create a default RepeatDayAfter object that starts on the current day.
      */
     public RepeatDayAfter() {
-        super(REPEAT_DAY_AFTER);
+        super(RepeatType.DAY_AFTER);
     }
 
     /**
@@ -48,7 +48,7 @@ public class RepeatDayAfter extends AbstractAdjustableRepeat {
      * @param due the first date on which this To Do item is due
      */
     public RepeatDayAfter(@NonNull LocalDate due) {
-        super(REPEAT_DAY_AFTER, due);
+        super(RepeatType.DAY_AFTER, due);
     }
 
     /**
@@ -62,7 +62,7 @@ public class RepeatDayAfter extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatDayAfter(int bitMask) {
-        super(REPEAT_DAY_AFTER, bitMask);
+        super(RepeatType.DAY_AFTER, bitMask);
     }
 
     /**
@@ -78,7 +78,7 @@ public class RepeatDayAfter extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatDayAfter(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_DAY_AFTER, bitMask, due);
+        super(RepeatType.DAY_AFTER, bitMask, due);
     }
 
     @Override

@@ -81,7 +81,7 @@ public class RepeatYearAfter extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatYearAfter(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_YEAR_AFTER, bitMask, due);
+        super(RepeatType.YEAR_AFTER, bitMask, due);
     }
 
     @Override

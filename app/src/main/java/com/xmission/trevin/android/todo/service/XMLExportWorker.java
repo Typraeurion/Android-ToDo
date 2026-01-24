@@ -1,0 +1,237 @@
+/*
+ * Copyright © 2026 Trevin Beattie
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package com.xmission.trevin.android.todo.service;
+
+import android.content.Context;
+import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.work.Data;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
+
+import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+
+/**
+ * This class exports the To Do list to an XML file on external storage.
+ *
+ * @author Trevin Beattie
+ */
+public class XMLExportWorker extends Worker implements ProgressBarUpdater {
+
+    public static final String TAG = "XMLExportWorker";
+
+    /**
+     * The key of the input data that holds
+     * the location of the todo.xml file
+     */
+    public static final String XML_DATA_FILENAME = "XMLDataFileName";
+
+    /**
+     * The key of the input data that indicates whether to
+     * export private records.
+     */
+    public static final String EXPORT_PRIVATE = "XMLExportPrivate";
+
+    /**
+     * Output stream where we be writing the XML document.
+     * <p>
+     * <b>Caution:</b> in order to properly use the Storage Access
+     * Framework and check for access errors, the file is opened
+     * in this class&rsquo; constructor; the actual write operation
+     * does not occur until {@link #doWork()} is called, so the
+     * file may remain open for an indeterminate amount of time.
+     * </p>
+     */
+    private OutputStream xmlStream;
+
+    /** Whether to export private records */
+    private boolean exportPrivate;
+
+    /** Internal time when we last updated the async progress */
+    private long lastProgressTimeNano;
+
+    @NonNull
+    private final Context context;
+
+    @NonNull
+    private final ToDoPreferences preferences;
+
+    @NonNull
+    private final ToDoRepository repository;
+
+    /** Handler for making calls involving the UI */
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+
+    /**
+     * Initialize the XMLExportWorker using the standard system services
+     * and app class instances.
+     *
+     * @param context the application context
+     * @param params Parameters to set up the internal state of this worker
+     *
+     * @throws IllegalArgumentException if the input data is invalid.
+     */
+    public XMLExportWorker(@NonNull Context context,
+                           @NonNull WorkerParameters params)
+        throws IllegalArgumentException, IOException {
+        super(context, params);
+        Log.d(TAG, String.format("Default initialization for %s",
+                context.getClass().getName()));
+        this.context = context;
+        preferences = ToDoPreferences.getInstance(context);
+        repository = ToDoRepositoryImpl.getInstance();
+
+        if (!params.getInputData().hasKeyWithValueOfType(
+                XML_DATA_FILENAME, String.class))
+            throw new IllegalArgumentException(
+                    "No XML output file provided");
+        exportPrivate = params.getInputData().getBoolean(
+                EXPORT_PRIVATE, false);
+
+        String fileLocation = params.getInputData().getString(XML_DATA_FILENAME);
+        if (fileLocation.startsWith("content://")) {
+            // This is a URI from the Storage Access Framework
+            try {
+                Uri contentUri = Uri.parse(fileLocation);
+                xmlStream = context.getContentResolver().openOutputStream(
+                        contentUri, "wt");
+            } catch (FileNotFoundException fe) {
+                Log.e(TAG, String.format("Failed to open %s for writing",
+                        fileLocation, fe));
+                showToast(context.getString(
+                        R.string.ErrorExportCantMkdirs, fileLocation));
+                throw fe;
+            } catch (IOException ioe) {
+                Log.e(TAG, String.format("Failed to open %s for writing",
+                        fileLocation, ioe));
+                showToast(context.getString(
+                        R.string.ErrorExportPermissionDenied, fileLocation));
+                throw ioe;
+            }
+        }
+
+        else {
+            File xmlFile = new File(fileLocation);
+            if (xmlFile.exists()) {
+                if (!xmlFile.canWrite()) {
+                    Log.w(TAG, String.format("Cannot write to %s", fileLocation));
+                    showToast(context.getString(
+                            R.string.ErrorExportPermissionDenied, fileLocation));
+                    throw new IOException("Cannot write to "
+                            + xmlFile.getAbsolutePath());
+                }
+            } else try {
+                Files.createFile(xmlFile.toPath());
+                xmlStream = new FileOutputStream(xmlFile, false);
+            } catch (IOException ioe) {
+                Log.e(TAG, String.format("Failed to open %s for writing",
+                        fileLocation), ioe);
+                if (!xmlFile.getParentFile().exists()) {
+                    showToast(context.getString(
+                            R.string.ErrorExportCantMkdirs,
+                            xmlFile.getAbsoluteFile().getParent()));
+                    throw new FileNotFoundException(String.format(
+                            "Parent directory %s does not exist",
+                            xmlFile.getAbsoluteFile().getParent()));
+                }
+                showToast(context.getString(
+                        R.string.ErrorExportPermissionDenied, fileLocation));
+                throw ioe;
+            }
+        }
+    }
+
+    /**
+     * Main entry point of the worker.
+     */
+    @Override
+    @NonNull
+    public Result doWork() {
+        Log.d(TAG, ".doWork");
+        long startTimeNano = System.nanoTime();
+        lastProgressTimeNano = startTimeNano;
+        updateProgress(context.getString(
+                R.string.ProgressMessageStart), 0, 0, false);
+        repository.open(context);
+        try {
+            // To Do: Call the XMLExporter class
+            XMLExporter.export(preferences, repository,
+                    xmlStream, exportPrivate, this);
+            return Result.success();
+        } catch (Exception e) {
+            Log.e(TAG, "Error exporting data to XML!", e);
+            showToast(e.getMessage());
+            return Result.failure(new Data.Builder()
+                    .putString("Exception", e.getClass().getCanonicalName())
+                    .putString("message", e.getMessage())
+                    .build());
+        } finally {
+            long now = System.nanoTime();
+            repository.release(context);
+            Log.d(TAG, String.format("Finished work in %.4f seconds",
+                    (now - startTimeNano) / 1.0e+9));
+        }
+    }
+
+    @Override
+    public void updateProgress(String modeString,
+                               int currentCount, int totalCount,
+                               boolean throttle) {
+        if (throttle) {
+            long now = System.nanoTime();
+            if ((now - lastProgressTimeNano) < 250000000L)
+                return;
+        }
+        Data progressData = new Data.Builder()
+                .putString(PROGRESS_CURRENT_MODE, modeString)
+                .putInt(PROGRESS_MAX_COUNT, totalCount)
+                .putInt(PROGRESS_CURRENT_COUNT, totalCount)
+                .build();
+        setProgressAsync(progressData);
+    }
+
+    /**
+     * Show a toast message.  This must be done on the UI thread.
+     *
+     * @param message the message to toast
+     */
+    private void showToast(String message) {
+        uiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(context, message,
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+}

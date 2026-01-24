@@ -50,13 +50,13 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
     protected int week;
 
     /** Bypass the {@code id} field for our subclasses */
-    protected RepeatMonthlyOnDay(int typeId) {
-        this(typeId, LocalDate.now());
+    protected RepeatMonthlyOnDay(RepeatType type) {
+        this(type, LocalDate.now());
     }
 
     /** Bypass the {@code id} field for our subclasses */
-    protected RepeatMonthlyOnDay(int typeId, @NonNull LocalDate due) {
-        super(typeId, due);
+    protected RepeatMonthlyOnDay(RepeatType type, @NonNull LocalDate due) {
+        super(type, due);
         day = WeekDays.fromJavaDay(due.getDayOfWeek());
         week = (due.getDayOfMonth() - 1) / 7;
     }
@@ -69,7 +69,7 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
      * the last week.
      */
     public RepeatMonthlyOnDay() {
-        this(REPEAT_MONTHLY_ON_DAY, LocalDate.now());
+        this(RepeatType.MONTHLY_ON_DAY, LocalDate.now());
     }
 
     /**
@@ -81,7 +81,7 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
      * @param due the first date on which this To Do item is due
      */
     public RepeatMonthlyOnDay(@NonNull LocalDate due) {
-        this(REPEAT_MONTHLY_ON_DAY, due);
+        this(RepeatType.MONTHLY_ON_DAY, due);
     }
 
     /** @return the day of the week on which this item repeats */

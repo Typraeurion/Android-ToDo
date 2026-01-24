@@ -65,7 +65,7 @@ public class RepeatWeekly extends AbstractRepeat {
      * the given due date is on.
      */
     public RepeatWeekly(@NonNull LocalDate due) {
-        super(REPEAT_WEEKLY, due);
+        super(RepeatType.WEEKLY, due);
         fixedWeekDays.add(WeekDays.fromJavaDay(due.getDayOfWeek()));
     }
 
@@ -82,7 +82,7 @@ public class RepeatWeekly extends AbstractRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatWeekly(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_WEEKLY, due);
+        super(RepeatType.WEEKLY, due);
         if ((bitMask & WeekDays.DAYS_BIT_MASK) == 0)
             throw new IllegalArgumentException("No days selected");
         fixedWeekDays.addAll(WeekDays.fromBitMap(bitMask));

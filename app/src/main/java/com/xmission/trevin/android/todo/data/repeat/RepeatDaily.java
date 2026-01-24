@@ -35,7 +35,7 @@ public class RepeatDaily extends AbstractAdjustableRepeat {
      * Create a default RepeatDaily object that starts from the current day.
      */
     public RepeatDaily() {
-        super(REPEAT_DAILY);
+        super(RepeatType.DAILY);
     }
 
     /**
@@ -45,7 +45,7 @@ public class RepeatDaily extends AbstractAdjustableRepeat {
      * @param due the first date on which this To Do item is due
      */
     public RepeatDaily(@NonNull LocalDate due) {
-        super(REPEAT_DAILY, due);
+        super(RepeatType.DAILY, due);
     }
 
     /**
@@ -59,7 +59,7 @@ public class RepeatDaily extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatDaily(int bitMask) {
-        super(REPEAT_DAILY, bitMask);
+        super(RepeatType.DAILY, bitMask);
     }
 
     /**
@@ -75,7 +75,7 @@ public class RepeatDaily extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatDaily(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_DAILY, bitMask, due);
+        super(RepeatType.DAILY, bitMask, due);
     }
 
     @Override

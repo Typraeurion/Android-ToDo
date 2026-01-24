@@ -41,7 +41,7 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
      * that starts on the current day.
      */
     public RepeatMonthlyOnDate() {
-        super(REPEAT_MONTHLY_ON_DATE);
+        super(RepeatType.MONTHLY_ON_DATE);
     }
 
     /**
@@ -50,7 +50,7 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
      * @param due the first date on which this To Do item is due
      */
     public RepeatMonthlyOnDate(@NonNull LocalDate due) {
-        super(REPEAT_MONTHLY_ON_DATE, due);
+        super(RepeatType.MONTHLY_ON_DATE, due);
     }
 
     /**
@@ -64,7 +64,7 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatMonthlyOnDate(int bitMask) {
-        super(REPEAT_MONTHLY_ON_DATE, bitMask);
+        super(RepeatType.MONTHLY_ON_DATE, bitMask);
     }
 
     /**
@@ -80,7 +80,7 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatMonthlyOnDate(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_MONTHLY_ON_DATE, bitMask, due);
+        super(RepeatType.MONTHLY_ON_DATE, bitMask, due);
     }
 
     private LocalDate setDateAndAdjust(@NonNull LocalDate base) {

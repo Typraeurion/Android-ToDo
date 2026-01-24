@@ -79,7 +79,7 @@ public class RepeatWeekAfter extends AbstractAdjustableRepeat {
      * (masked by all possible days) is 0
      */
     public RepeatWeekAfter(int bitMask, @NonNull LocalDate due) {
-        super(REPEAT_WEEK_AFTER, bitMask, due);
+        super(RepeatType.WEEK_AFTER, bitMask, due);
     }
 
     @Override

@@ -36,13 +36,14 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
-import com.xmission.trevin.android.todo.provider.ToDoProvider;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 /**
  * This class exports the To Do list to an XML file on external storage.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated to be replaced by {@link XMLExportWorker}
  */
 public class XMLExporterService extends IntentService
         implements ProgressReportingService {

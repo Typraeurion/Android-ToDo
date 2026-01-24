@@ -31,8 +31,8 @@ import java.time.LocalDate;
  */
 public abstract class AbstractRepeat implements RepeatInterval {
 
-    /** The ID of this repeat interval, as stored in the database */
-    protected final int id;
+    /** The type enum of this repeat interval */
+    protected final RepeatType type;
 
     /**
      * The number of days, weeks, months, or years
@@ -50,10 +50,10 @@ public abstract class AbstractRepeat implements RepeatInterval {
     /**
      * Initialize this repeat interval for the given type ID
      *
-     * @param typeId the ID of this repeat interval type
+     * @param type the repeat interval type
      */
-    protected AbstractRepeat(int typeId) {
-        this(typeId, LocalDate.now());
+    protected AbstractRepeat(RepeatType type) {
+        this(type, LocalDate.now());
     }
 
     /**
@@ -63,16 +63,21 @@ public abstract class AbstractRepeat implements RepeatInterval {
      * to support the {@link RepeatType#newInstance(int, LocalDate)}
      * method.
      *
-     * @param typeId the ID of this repeat interval type
+     * @param type the repeat interval type
      * @param due the first date on which this To Do item is due
      */
-    protected AbstractRepeat(int typeId, @NonNull LocalDate due) {
-        id = typeId;
+    protected AbstractRepeat(RepeatType type, @NonNull LocalDate due) {
+        this.type = type;
     }
 
     /** @return the ID of this interval (as stored in the database) */
     public int getId() {
-        return id;
+        return type.getId();
+    }
+
+    /** @return the type enumeration of this interval */
+    public RepeatType getType() {
+        return type;
     }
 
     /**

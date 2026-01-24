@@ -44,6 +44,20 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * This class imports To Do data from a Palm database (todo.dat).
+ *
+ * @author Trevin Beattie
+ */
+// To Do: Extract the Palm data classes into a todo.data.palm package.
+/*
+ * To Do: Separate the bulk of the work (without any Android
+ * dependencies except for Log) into a separate Runner class
+ * that can be tested without relying on TestListenableWorkerBuilder.
+ * (You'll still need to come up with a mock Runner with which you
+ * can test the Worker, but that will mean fewer test cases need
+ * to be repeated on every supported SDK level.)
+ */
 public class PalmImportWorker extends Worker {
 
     public static final String TAG = "PalmImportWorker";
@@ -652,12 +666,6 @@ public class PalmImportWorker extends Worker {
     /** Flag whether the Palm database has been successfully read in */
     private boolean hasReadPalmDB = false;
 
-    /** The current mode of operation */
-    public enum OpMode {
-	READING, CATEGORIES, ITEMS
-    }
-    private OpMode currentMode = OpMode.READING;
-
     /** The total number of entries to be imported */
     private int totalCount = 0;
 
@@ -711,7 +719,7 @@ public class PalmImportWorker extends Worker {
      */
     public PalmImportWorker(@NonNull Context context,
                             @NonNull WorkerParameters params,
-                       @NonNull ToDoRepository repository)
+                            @NonNull ToDoRepository repository)
             throws IllegalArgumentException, IOException {
         super(context, params);
         Log.d(TAG, String.format(
@@ -752,30 +760,12 @@ public class PalmImportWorker extends Worker {
     }
 
     /**
-     * @return a text description of the current mode of operation
-     */
-    private String getCurrentMode() {
-        switch (currentMode) {
-            case READING:
-                return context.getString(R.string.ProgressMessageImportReading);
-            case CATEGORIES:
-                return context.getString(R.string.ProgressMessageImportCategories);
-            case ITEMS:
-                return context.getString(R.string.ProgressMessageImportItems);
-            default:
-                // This should be unreachable!
-                return context.getString(R.string.ProgressMessageStart);
-        }
-    }
-
-    /**
      * Main entry point of the worker.
      */
     @Override
     @NonNull
     public Result doWork() {
         Log.d(TAG, ".doWork");
-        currentMode = OpMode.READING;
         importCount = 0;
         // Don't set this to 0, or it will mess up the progress bar.
         totalCount = 1;
