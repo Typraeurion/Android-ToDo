@@ -58,8 +58,8 @@ public class RepeatYearlyOnDateTests {
         LocalDate targetDate = LocalDate.ofYearDay(2001,
                 RAND.nextInt(365) + 1);
         LocalDate startDate = targetDate;
-        Set<WeekDays> allowed = (direction != null) ? randomDays() :
-                WeekDays.fromBitMap(WeekDays.DAYS_BIT_MASK);
+        Set<WeekDays> allowed = (direction != null)
+                ? randomDays() : WeekDays.ALL;
         LocalDate endDate = withEnd ?
                 startDate.plusYears(RAND.nextInt(50) + 25) : null;
         RepeatYearlyOnDate repeat = new RepeatYearlyOnDate(targetDate);

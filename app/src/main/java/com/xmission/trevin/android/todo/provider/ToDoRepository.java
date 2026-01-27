@@ -347,7 +347,7 @@ public interface ToDoRepository {
      *
      * @return the newly added item.  This will be the same as the
      * {@code item} parameter that was passed in but will have its
-     * {@code id} field set.
+     * {@code id} and {@code categoryName} fields set.
      *
      * @throws java.lang.IllegalArgumentException if the
      * {@code description} is empty or &hellip;

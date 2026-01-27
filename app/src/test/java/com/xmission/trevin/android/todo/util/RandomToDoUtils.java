@@ -123,7 +123,7 @@ public class RandomToDoUtils {
      */
     public static RepeatInterval randomRepeat() {
         // To Do: Implement method stub
-        return null;
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
 }

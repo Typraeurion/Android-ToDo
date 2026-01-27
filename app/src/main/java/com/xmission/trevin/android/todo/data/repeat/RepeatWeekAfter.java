@@ -39,7 +39,7 @@ public class RepeatWeekAfter extends AbstractAdjustableRepeat {
      * Create a default RepeatWeekAfter object that starts on the current day.
      */
     public RepeatWeekAfter() {
-        this(WeekDays.DAYS_BIT_MASK, LocalDate.now());
+        super(RepeatType.WEEK_AFTER);
     }
 
     /**
@@ -49,37 +49,7 @@ public class RepeatWeekAfter extends AbstractAdjustableRepeat {
      * @param due the first date on which this To Do item is due
      */
     public RepeatWeekAfter(@NonNull LocalDate due) {
-        this(WeekDays.DAYS_BIT_MASK, due);
-    }
-
-    /**
-     * Create a RepeatWeekAfter object with the days of the week
-     * and direction given by a bit mask (i.e. from the database).
-     *
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatWeekAfter(int bitMask) {
-        this(bitMask, LocalDate.now());
-    }
-
-    /**
-     * Create a RepeatWeekAfter object with the days of the week and direction
-     * given by a bit mask (i.e. from the database) and a given due date.
-     * For an &ldquo;after&rdquo; task, the due date makes no difference.
-     *
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     * @param due the first date on which this To Do item is due
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatWeekAfter(int bitMask, @NonNull LocalDate due) {
-        super(RepeatType.WEEK_AFTER, bitMask, due);
+        super(RepeatType.WEEK_AFTER, due);
     }
 
     @Override

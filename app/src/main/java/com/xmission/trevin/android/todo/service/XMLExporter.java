@@ -142,6 +142,9 @@ public class XMLExporter {
     /** The week-days attribute name */
     public static final String ATTR_WEEK_DAYS = "week-days";
 
+    /** The weekday direction attribute name */
+    public static final String ATTR_DIRECTION = "weekday-direction";
+
     /** The (first) date attribute name */
     public static final String ATTR_DAY1 = "day1";
 
@@ -220,7 +223,7 @@ public class XMLExporter {
 
         PrintStream out = new PrintStream(outStream);
         try {
-            out.println("<?xml version=\"1.0\" encoding\"utf-8\"?>");
+            out.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             out.printf(Locale.US, "<%s %s=\"2\" %s=\"%d\" %s=\"%s\">\n",
                     DOCUMENT_TAG, ATTR_VERSION,
                     ATTR_DB_VERSION, ToDoRepositoryImpl.DATABASE_VERSION,
@@ -346,7 +349,7 @@ public class XMLExporter {
                 PREFERENCES_TAG, ATTR_COUNT, prefs.size());
         for (String key : prefs.keySet()) {
             Object value = prefs.get(key);
-            out.printf(Locale.US, "    <%s>%s<%s>\n",
+            out.printf(Locale.US, "    <%s>%s</%s>\n",
                     key, escapeXML((value == null) ? null
                             : value.toString()), key);
         }
@@ -400,7 +403,7 @@ public class XMLExporter {
                     CATEGORIES_ITEM, ATTR_ID, category.getId(),
                     escapeXML(category.getName()), CATEGORIES_ITEM);
         }
-        out.printf(Locale.US, "  </%s\n", CATEGORIES_TAG);
+        out.printf(Locale.US, "  </%s>\n", CATEGORIES_TAG);
         Log.i(LOG_TAG, String.format("Wrote %d categories",
                 categories.size()));
         return categories.size();
@@ -542,7 +545,6 @@ public class XMLExporter {
                                 item.getRepeatInterval(), out);
                         break;
                 }
-                // To Do: Finish implementing method stub (repeat intervals)
             }
 
             out.printf(Locale.US, "      </%s>\n", TODO_DUE);
@@ -595,10 +597,20 @@ public class XMLExporter {
      */
     private static void writeRepeatWeekdays(
             AbstractAdjustableRepeat repeat, PrintStream out) {
-        int weekdayBitmask = WeekDays.toBitMap(repeat.getAllowedWeekDays())
-                + repeat.getDirection().getValue();
+        StringBuilder daysStr = new StringBuilder();
+        if (WeekDays.ALL.equals(repeat.getAllowedWeekDays()))
+            daysStr.append("ALL");
+        else {
+            for (WeekDays day : repeat.getAllowedWeekDays()) {
+                if (daysStr.length() > 0)
+                    daysStr.append(",");
+                daysStr.append(day.name());
+            }
+        }
         out.printf(Locale.US, " %s=\"%s\"", ATTR_WEEK_DAYS,
-                Integer.toBinaryString(weekdayBitmask));
+                daysStr.toString());
+        out.printf(Locale.US, " %s=\"%s\"", ATTR_DIRECTION,
+                repeat.getDirection().name());
     }
 
     /**
@@ -639,9 +651,17 @@ public class XMLExporter {
     private static void writeWeeklyRepeat(
             RepeatWeekly repeat, PrintStream out) {
         writeRepeatHeader(repeat, out);
-        out.printf(Locale.US, " %s=\"%s\"",
-                ATTR_WEEK_DAYS, Integer.toBinaryString(
-                WeekDays.toBitMap(repeat.getWeekDays())));
+        StringBuilder daysStr = new StringBuilder();
+        if (WeekDays.ALL.equals(repeat.getWeekDays()))
+            daysStr.append("ALL");
+        else {
+            for (WeekDays day : repeat.getWeekDays()) {
+                if (daysStr.length() > 0)
+                    daysStr.append(",");
+                daysStr.append(day.name());
+            }
+        }
+        out.printf(Locale.US, " %s=\"%s\"", ATTR_WEEK_DAYS, daysStr);
         writeRepeatTail(repeat, out);
     }
 
@@ -669,8 +689,8 @@ public class XMLExporter {
     private static void writeMonthlyOnDayRepeat(
             RepeatMonthlyOnDay repeat, PrintStream out) {
         writeRepeatHeader(repeat, out);
-        out.printf(Locale.US, " %s=\"%d\" %s=\"%d\"",
-                ATTR_DAY1, repeat.getDay().getValue(),
+        out.printf(Locale.US, " %s=\"%s\" %s=\"%d\"",
+                ATTR_DAY1, repeat.getDay().name(),
                 ATTR_WEEK1, repeat.getWeek());
         writeRepeatTail(repeat, out);
     }
@@ -685,7 +705,7 @@ public class XMLExporter {
             RepeatSemiMonthlyOnDates repeat, PrintStream out) {
         writeRepeatHeader(repeat, out);
         writeRepeatWeekdays(repeat, out);
-        out.printf(Locale.US, " %s=\"%d\" %s=\"%d=\"",
+        out.printf(Locale.US, " %s=\"%d\" %s=\"%d\"",
                 ATTR_DAY1, repeat.getDate(),
                 ATTR_DAY2, repeat.getDate2());
         writeRepeatTail(repeat, out);
@@ -700,10 +720,10 @@ public class XMLExporter {
     private static void writeSemiMonthlyOnDaysRepeat(
             RepeatSemiMonthlyOnDays repeat, PrintStream out) {
         writeRepeatHeader(repeat, out);
-        out.printf(Locale.US, " %s=\"%d\" %s=\"%d\" %s=\"%d\" %s=\"%d\"",
-                ATTR_DAY1, repeat.getDay().getValue(),
+        out.printf(Locale.US, " %s=\"%s\" %s=\"%d\" %s=\"%s\" %s=\"%d\"",
+                ATTR_DAY1, repeat.getDay().name(),
                 ATTR_WEEK1, repeat.getWeek(),
-                ATTR_DAY2, repeat.getDay2().getValue(),
+                ATTR_DAY2, repeat.getDay2().name(),
                 ATTR_WEEK2, repeat.getWeek2());
         writeRepeatTail(repeat, out);
     }
@@ -718,9 +738,9 @@ public class XMLExporter {
             RepeatYearlyOnDate repeat, PrintStream out) {
         writeRepeatHeader(repeat, out);
         writeRepeatWeekdays(repeat, out);
-        out.printf(Locale.US, " %s=\"%d\" %s=\"%d\"",
+        out.printf(Locale.US, " %s=\"%d\" %s=\"%s\"",
                 ATTR_DAY1, repeat.getDate(),
-                ATTR_MONTH, repeat.getMonth().getValue());
+                ATTR_MONTH, repeat.getMonth().name());
         writeRepeatTail(repeat, out);
     }
 
@@ -733,10 +753,10 @@ public class XMLExporter {
     private static void writeYearlyOnDayRepeat(
             RepeatYearlyOnDay repeat, PrintStream out) {
         writeRepeatHeader(repeat, out);
-        out.printf(Locale.US, " %s=\"%d\" %s=\"%d\" %s=\"%d\"",
-                ATTR_DAY1, repeat.getDay().getValue(),
+        out.printf(Locale.US, " %s=\"%s\" %s=\"%d\" %s=\"%s\"",
+                ATTR_DAY1, repeat.getDay().name(),
                 ATTR_WEEK1, repeat.getWeek(),
-                ATTR_MONTH, repeat.getMonth().getValue());
+                ATTR_MONTH, repeat.getMonth().name());
         writeRepeatTail(repeat, out);
     }
 

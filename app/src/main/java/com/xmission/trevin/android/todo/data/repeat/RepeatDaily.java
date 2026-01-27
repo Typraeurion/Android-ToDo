@@ -48,36 +48,6 @@ public class RepeatDaily extends AbstractAdjustableRepeat {
         super(RepeatType.DAILY, due);
     }
 
-    /**
-     * Create a RepeatDaily object with the days of the week and direction
-     * given by a bit mask (i.e. from the database).
-     *
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatDaily(int bitMask) {
-        super(RepeatType.DAILY, bitMask);
-    }
-
-    /**
-     * Create a RepeatDaily object with the days of the week and direction
-     * given by a bit mask (i.e. from the database) and a given due date.
-     * For a daily task, the due date makes no difference.
-     *
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     * @param due the first date on which this To Do item is due
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatDaily(int bitMask, @NonNull LocalDate due) {
-        super(RepeatType.DAILY, bitMask, due);
-    }
-
     @Override
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {

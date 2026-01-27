@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.database.DataSetObserver;
 import android.database.SQLException;
+import android.database.sqlite.SQLiteConstraintException;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -30,6 +31,7 @@ import com.xmission.trevin.android.todo.data.*;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.*;
@@ -46,7 +48,7 @@ public class MockToDoRepository implements ToDoRepository {
     /** Singleton instance of this repository */
     private static MockToDoRepository instance;
 
-    private String unfiledCategoryName = null;
+    private final String unfiledCategoryName = "Unfiled";
 
     private final LinkedHashMap<Context,Integer> openContexts =
             new LinkedHashMap<>();
@@ -79,8 +81,10 @@ public class MockToDoRepository implements ToDoRepository {
     private final ArrayList<DataSetObserver> registeredObservers =
             new ArrayList<>();
 
-    /** Instantiate the To Do repository.  This should be a singletone. */
-    private MockToDoRepository() {}
+    /** Instantiate the To Do repository.  This should be a singleton. */
+    private MockToDoRepository() {
+        categories.put((long) ToDoCategory.UNFILED, unfiledCategoryName);
+    }
 
     /** @return the singleton instance of the To Do repository */
     public static MockToDoRepository getInstance() {
@@ -130,41 +134,14 @@ public class MockToDoRepository implements ToDoRepository {
 
     @Override
     public void open(@NonNull Context context) throws SQLException {
-        Log.d(TAG, ".open");
-        if (unfiledCategoryName == null) {
-            unfiledCategoryName = context.getString(R.string.Category_Unfiled);
-            categories.put((long) ToDoCategory.UNFILED, unfiledCategoryName);
-        }
-        if (openContexts.containsKey(context)) {
-            openContexts.put(context, openContexts.get(context) + 1);
-            Log.d(TAG, String.format(
-                    "Context has opened the repository %d times",
-                    openContexts.get(context)));
-        } else {
-            openContexts.put(context, 1);
-        }
+        // For the local test copy of this class,
+        // we don't support Android contexts.
+        throw new UnsupportedOperationException("Where did you find a Context?");
     }
 
     @Override
     public void release(@NonNull Context context) {
-        if (!openContexts.containsKey(context)) {
-            Log.e(TAG, ".release called from context"
-                    + " which did not open the repository!");
-            return;
-        }
-        Log.d(TAG, ".release");
-        int openCount = openContexts.get(context) - 1;
-        if (openCount > 0) {
-            openContexts.put(context, openCount);
-            Log.d(TAG, String.format(
-                    "Context has %d remaining connections to the repository",
-                    openCount));
-        } else {
-            openContexts.remove(context);
-            if (openContexts.isEmpty()) {
-                Log.d(TAG, "The last context has released the repository");
-            }
-        }
+        throw new UnsupportedOperationException("Where did you find a Context?");
     }
 
     /**
@@ -1033,9 +1010,11 @@ public class MockToDoRepository implements ToDoRepository {
      * @param item the To Do item to check
      *
      * @throws IllegalArgumentException if any fields are invalid
+     * @throws SQLException if the item&rsquo;s category ID is not
+     * found in the categories table
      */
     private void checkToDoFields(ToDoItem item)
-            throws IllegalArgumentException {
+            throws IllegalArgumentException, SQLException {
         if (item.isEncrypted()) {
             if ((item.getEncryptedDescription() == null) ||
                     (item.getEncryptedDescription().length == 0))
@@ -1046,6 +1025,9 @@ public class MockToDoRepository implements ToDoRepository {
                 throw new IllegalArgumentException(
                         "Description cannot be empty");
         }
+        if (!categories.containsKey(item.getCategoryId()))
+            throw new SQLiteConstraintException(String.format(
+                    "Category ID %d does not exist", item.getCategoryId()));
         if (item.getCreateTime() == null)
             item.setCreateTimeNow();
         if (item.getModTime() == null)
@@ -1076,7 +1058,7 @@ public class MockToDoRepository implements ToDoRepository {
 
     @Override
     public synchronized ToDoItem insertItem(@NonNull ToDoItem item)
-            throws IllegalArgumentException {
+            throws IllegalArgumentException, SQLException {
         Log.d(TAG, String.format(".insertItem(%s)", item));
         checkToDoFields(item);
         // Allow setting the ID for inserts, used when importing data.
@@ -1093,6 +1075,8 @@ public class MockToDoRepository implements ToDoRepository {
         itemTable.put(item.getId(), itemClone);
         if (transactionLevel <= 0)
             notifyObservers();
+        // Ensure the category name is set
+        item.setCategoryName(categories.get(item.getCategoryId()));
         return item;
     }
 

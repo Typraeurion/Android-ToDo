@@ -53,36 +53,6 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
         super(RepeatType.MONTHLY_ON_DATE, due);
     }
 
-    /**
-     * Create a RepeatMonthlyOnDate object with the days of the week
-     * and direction given by a bit mask (i.e. from the database).
-     *
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatMonthlyOnDate(int bitMask) {
-        super(RepeatType.MONTHLY_ON_DATE, bitMask);
-    }
-
-    /**
-     * Create a RepeatMonthlyOnDate object with the days of the week
-     * and direction given by a bit mask (i.e. from the database)
-     * and a given due date.
-     *
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     * @param due the first date on which this To Do item is due
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatMonthlyOnDate(int bitMask, @NonNull LocalDate due) {
-        super(RepeatType.MONTHLY_ON_DATE, bitMask, due);
-    }
-
     private LocalDate setDateAndAdjust(@NonNull LocalDate base) {
         LocalDate hardDate = base.withDayOfMonth(
                 Math.min(date, base.lengthOfMonth()));

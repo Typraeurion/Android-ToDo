@@ -34,14 +34,15 @@ public abstract class AbstractAdjustableRepeat extends AbstractRepeat {
 
     /** Days of the week on which this event can occur */
     @NonNull
-    protected SortedSet<WeekDays> allowedWeekDays = new TreeSet<>();
+    protected SortedSet<WeekDays> allowedWeekDays =
+            new TreeSet<>(WeekDays.ALL);
 
     /**
      * The direction to look for the next available day of the week
      * when the target date falls on an unavailable day.
      */
     @NonNull
-    protected WeekdayDirection direction;
+    protected WeekdayDirection direction = WeekdayDirection.NEXT;
 
     /**
      * Initialize this repeat with all days of the week and a default
@@ -51,23 +52,7 @@ public abstract class AbstractAdjustableRepeat extends AbstractRepeat {
      * @param type the repeat interval type
      */
     protected AbstractAdjustableRepeat(RepeatType type) {
-        this(type, WeekDays.DAYS_BIT_MASK
-                | WeekdayDirection.NEXT.getValue(), LocalDate.now());
-    }
-
-    /**
-     * Initialize this repeat with the days of the week and direction
-     * given by a bit mask (i.e. from the database).
-     *
-     * @param type the repeat interval type
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    protected AbstractAdjustableRepeat(RepeatType type, int bitMask) {
-        this(type, bitMask, LocalDate.now());
+        super(type);
     }
 
     /**
@@ -80,31 +65,7 @@ public abstract class AbstractAdjustableRepeat extends AbstractRepeat {
      */
     protected AbstractAdjustableRepeat(RepeatType type,
                                        @NonNull LocalDate due) {
-        this(type, WeekDays.DAYS_BIT_MASK
-                | WeekdayDirection.NEXT.getValue(), due);
-    }
-
-    /**
-     * Initialize this repeat with the days of the week and direction
-     * given by a bit mask (i.e. from the database) and a day
-     * of the month from the given date.
-     *
-     * @param type the repeat interval type
-     * @param bitMask the bit field containing the allowed days
-     *                on which this item can be repeated
-     * @param due the initial date on which to base this repeat interval
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    protected AbstractAdjustableRepeat(RepeatType type,
-                                       int bitMask,
-                                       @NonNull LocalDate due) {
         super(type, due);
-        if ((bitMask & WeekDays.DAYS_BIT_MASK) == 0)
-            throw new IllegalArgumentException("No days selected");
-        allowedWeekDays.addAll(WeekDays.fromBitMap(bitMask));
-        direction = WeekdayDirection.fromBitMap(bitMask);
     }
 
     /**

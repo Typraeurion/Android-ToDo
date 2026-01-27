@@ -1189,6 +1189,10 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             }
             if (!inTransaction)
                 notifyObservers();
+            if (item.getCategoryName() == null) {
+                ToDoCategory category = getCategoryById(item.getCategoryId());
+                item.setCategoryName(category.getName());
+            }
             item.setId(rowId);
             return item;
         } catch (SQLException e) {

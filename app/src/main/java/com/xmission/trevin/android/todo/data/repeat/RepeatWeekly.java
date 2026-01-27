@@ -45,19 +45,8 @@ public class RepeatWeekly extends AbstractRepeat {
      * We require that there always be at least one day in the set.
      */
     public RepeatWeekly() {
-        this(WeekDays.DAYS_BIT_MASK |
-                WeekdayDirection.NEXT.getValue(), LocalDate.now());
-    }
-
-    /**
-     * Initialize this repeat with the days of the week given
-     * by a bit mask (i.e. from the database).
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatWeekly(int bitMask) {
-        this(bitMask, LocalDate.now());
+        super(RepeatType.WEEKLY);
+        fixedWeekDays.addAll(WeekDays.ALL);
     }
 
     /**
@@ -67,25 +56,6 @@ public class RepeatWeekly extends AbstractRepeat {
     public RepeatWeekly(@NonNull LocalDate due) {
         super(RepeatType.WEEKLY, due);
         fixedWeekDays.add(WeekDays.fromJavaDay(due.getDayOfWeek()));
-    }
-
-    /**
-     * Initialize this repeat with the days of the week given
-     * by a bit mask (i.e. from the database) for the given due
-     * date.  For a weekly task, the due date makes no difference.
-     *
-     * @param bitMask the bit field containing the days
-     *                on which this item can be repeated
-     * @param due the first date on which this To Do item is due
-     *
-     * @throws IllegalArgumentException if the bit field
-     * (masked by all possible days) is 0
-     */
-    public RepeatWeekly(int bitMask, @NonNull LocalDate due) {
-        super(RepeatType.WEEKLY, due);
-        if ((bitMask & WeekDays.DAYS_BIT_MASK) == 0)
-            throw new IllegalArgumentException("No days selected");
-        fixedWeekDays.addAll(WeekDays.fromBitMap(bitMask));
     }
 
     /**

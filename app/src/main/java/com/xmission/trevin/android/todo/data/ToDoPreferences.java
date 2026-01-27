@@ -443,7 +443,7 @@ public class ToDoPreferences
         listeners.put(TPREF_IMPORT_TYPE, new LinkedList<>());
         listeners.put(TPREF_IMPORT_PRIVATE, new LinkedList<>());
         prefs.registerOnSharedPreferenceChangeListener(this);
-        uiHandler = new Handler(Looper.getMainLooper());
+        uiHandler = handler;
     }
 
     /**

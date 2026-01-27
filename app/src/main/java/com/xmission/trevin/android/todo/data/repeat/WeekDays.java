@@ -21,6 +21,7 @@ import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColum
 import androidx.annotation.NonNull;
 
 import java.time.DayOfWeek;
+import java.util.Collections;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -39,6 +40,15 @@ public enum WeekDays {
     THURSDAY(DayOfWeek.THURSDAY, REPEAT_THURSDAYS, 4, "Thursday"),
     FRIDAY(DayOfWeek.FRIDAY, REPEAT_FRIDAYS, 5, "Friday"),
     SATURDAY(DayOfWeek.SATURDAY, REPEAT_SATURDAYS, 6, "Saturday");
+
+    /** The set of all week days */
+    public static final Set<WeekDays> ALL;
+    static {
+        Set<WeekDays> set = new TreeSet<>();
+        for (WeekDays wd : values())
+            set.add(wd);
+        ALL = Collections.unmodifiableSet(set);
+    }
 
     /** The official Java equivalent of this day */
     @NonNull
