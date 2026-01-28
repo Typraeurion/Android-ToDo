@@ -18,7 +18,7 @@ package com.xmission.trevin.android.todo.service;
 
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.*;
 import static com.xmission.trevin.android.todo.service.XMLExporter.*;
-import static com.xmission.trevin.android.todo.service.XMLImporterService.decodeBase64;
+import static com.xmission.trevin.android.todo.service.XMLImporter.decodeBase64;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomAlarm;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomToDo;
 
@@ -97,18 +97,55 @@ public class XMLExporterTests {
                 doc.getDocumentElement().getTagName());
 
         XPath xpath = XPathFactory.newInstance().newXPath();
-        assertNotNull(String.format("Missing <%s> section", PREFERENCES_TAG),
-                xpath.evaluate(String.format("/%s/%s",
+        assertNotNull(String.format(Locale.US,
+                        "Missing <%s> section", PREFERENCES_TAG),
+                xpath.evaluate(String.format(Locale.US, "/%s/%s",
                         DOCUMENT_TAG, PREFERENCES_TAG), doc));
-        assertNotNull(String.format("Missing <%s> section", METADATA_TAG),
-                xpath.evaluate(String.format("/%s/%s",
+        assertNotNull(String.format(Locale.US,
+                        "Missing <%s> section", METADATA_TAG),
+                xpath.evaluate(String.format(Locale.US, "/%s/%s",
                         DOCUMENT_TAG, METADATA_TAG), doc));
-        assertNotNull(String.format("Missing <%s> section", CATEGORIES_TAG),
-                xpath.evaluate(String.format("/%s/%s",
+        assertNotNull(String.format(Locale.US,
+                        "Missing <%s> section", CATEGORIES_TAG),
+                xpath.evaluate(String.format(Locale.US, "/%s/%s",
                         DOCUMENT_TAG, CATEGORIES_TAG), doc));
-        assertNotNull(String.format("Missing <%s> section", ITEMS_TAG),
-                xpath.evaluate(String.format("/%s/%s",
+        assertNotNull(String.format(Locale.US,
+                        "Missing <%s> section", ITEMS_TAG),
+                xpath.evaluate(String.format(Locale.US, "/%s/%s",
                         DOCUMENT_TAG, ITEMS_TAG), doc));
+
+        String attrValue = xpath.evaluate(String.format(Locale.US,
+                "/%s/@%s", DOCUMENT_TAG, ATTR_VERSION), doc);
+        assertNotNull(String.format(Locale.US,
+                        "Missing %s attribute in document root",
+                        ATTR_VERSION), attrValue);
+        assertEquals(String.format(Locale.US,
+                "Document root %s attribute", ATTR_VERSION),
+                "2", attrValue);
+
+        attrValue = xpath.evaluate(String.format(Locale.US,
+                "/%s/@%s", DOCUMENT_TAG, ATTR_TOTAL_RECORDS), doc);
+        assertNotNull(String.format(Locale.US,
+                        "Missing %s attribute in document root",
+                        ATTR_TOTAL_RECORDS), attrValue);
+
+        attrValue = xpath.evaluate(String.format(Locale.US,
+                "/%s/@%s", DOCUMENT_TAG, ATTR_EXPORTED), doc);
+        assertNotNull(String.format(Locale.US,
+                        "Missing %s attribute in document root",
+                        ATTR_EXPORTED), attrValue);
+
+        attrValue = xpath.evaluate(String.format(Locale.US,
+                "/%s/%s/@%s", DOCUMENT_TAG, CATEGORIES_TAG, ATTR_COUNT), doc);
+        assertNotNull(String.format(Locale.US,
+                        "Missing %s attribute in %s section",
+                        ATTR_COUNT, CATEGORIES_TAG), attrValue);
+
+        attrValue = xpath.evaluate(String.format(Locale.US,
+                "/%s/%s/@%s", DOCUMENT_TAG, ITEMS_TAG, ATTR_COUNT), doc);
+        assertNotNull(String.format(Locale.US,
+                        "Missing %s attribute in %s section",
+                        ATTR_COUNT, ITEMS_TAG), attrValue);
     }
 
     /**
@@ -406,6 +443,19 @@ public class XMLExporterTests {
                     CATEGORIES_TAG, ATTR_COUNT, countStr));
         }
 
+        String maxIdStr = xpath.evaluate(String.format("/%s/%s/@%s",
+                DOCUMENT_TAG, CATEGORIES_TAG, ATTR_MAX_ID), doc);
+        assertFalse(String.format("Missing %s %S",
+        CATEGORIES_TAG, ATTR_MAX_ID), maxIdStr.isEmpty());
+        try {
+            long actualId = Long.parseLong(maxIdStr);
+            assertEquals("Maximum category ID",
+                    mockRepo.getMaxCategoryId(), actualId);
+        } catch (NumberFormatException x) {
+            fail(String.format("%s %s \"%s\" is not an integer",
+                    CATEGORIES_TAG, ATTR_MAX_ID, countStr));
+        }
+
         Map<Long,String> actualCategories = new TreeMap<>();
         NodeList children = (NodeList) xpath.evaluate(String.format(
                 "/%s/%s/%s", DOCUMENT_TAG, CATEGORIES_TAG, CATEGORIES_ITEM),
@@ -639,16 +689,22 @@ public class XMLExporterTests {
         }
 
         childElement = getOnlyChild(itemId, TODO_CREATED, element);
-        content = childElement.getTextContent();
+        assertTrue(String.format("Exported item #%d %s has no %s",
+                itemId, TODO_CREATED, ATTR_TIME),
+                childElement.hasAttribute(ATTR_TIME));
         assertEquals(String.format("Exported item #%d created time", itemId),
                 expectedItem.getCreateTime().atOffset(ZoneOffset.UTC)
-                        .format(DateTimeFormatter.ISO_INSTANT), content);
+                        .format(DateTimeFormatter.ISO_INSTANT),
+                childElement.getAttribute(ATTR_TIME));
 
         childElement = getOnlyChild(itemId, TODO_MODIFIED, element);
-        content = childElement.getTextContent();
+        assertTrue(String.format("Exported item #%d %s has no %s",
+                itemId, TODO_MODIFIED, ATTR_TIME),
+                childElement.hasAttribute(ATTR_TIME));
         assertEquals(String.format("Exported item #%d last modified time",
                 itemId), expectedItem.getModTime().atOffset(ZoneOffset.UTC)
-                .format(DateTimeFormatter.ISO_INSTANT), content);
+                .format(DateTimeFormatter.ISO_INSTANT),
+                childElement.getAttribute(ATTR_TIME));
 
         if (expectedItem.isEncrypted()) {
             if (expectedItem.getEncryptedNote() == null)
@@ -921,7 +977,7 @@ public class XMLExporterTests {
             testCategories.add(category);
         }
 
-        Map<Long,ToDoItem> expectedItems = new HashMap<>();
+        Map<Long,ToDoItem> expectedItems = new TreeMap<>();
         for (int i = RAND.nextInt(10) + 10; i >= 0; --i) {
             ToDoItem todo = randomToDo();
             todo.setDue(null);
@@ -956,6 +1012,19 @@ public class XMLExporterTests {
         } catch (NumberFormatException x) {
             fail(String.format("%s %s \"%s\" is not an integer",
                     ITEMS_TAG, ATTR_COUNT, countStr));
+        }
+
+        String maxIdStr = xpath.evaluate(String.format("/%s/%s/@%s",
+                DOCUMENT_TAG, ITEMS_TAG, ATTR_MAX_ID), doc);
+        assertFalse(String.format("Missing %s %S",
+                ITEMS_TAG, ATTR_MAX_ID), maxIdStr.isEmpty());
+        try {
+            long actualId = Long.parseLong(maxIdStr);
+            assertEquals("Maximum item ID",
+                    mockRepo.getMaxItemId(), actualId);
+        } catch (NumberFormatException x) {
+            fail(String.format("%s %s \"%s\" is not an integer",
+                    ITEMS_TAG, ATTR_MAX_ID, countStr));
         }
 
         Set<Long> idsSeen = new TreeSet<>();

@@ -163,7 +163,7 @@ public class XMLImporterService extends IntentService
     protected Map<Long,CategoryEntry> categoriesByID =
         new HashMap<>();
 
-    /** Next free record ID (counting both the Palm and Android databases) */
+    /** Next free record ID (counting both the XML file and Android database) */
     private long nextFreeRecordID = 1;
 
     /*
@@ -661,7 +661,7 @@ public class XMLImporterService extends IntentService
                         Long.parseLong(getText(prefsMap.get(
                                 TPREF_NOTIFICATION_SOUND))));
             } catch (NumberFormatException x) {
-                Log.e(LOG_TAG, "Invalid notificationt sound index: "
+                Log.e(LOG_TAG, "Invalid notification sound index: "
                         + getText(prefsMap.get(TPREF_NOTIFICATION_SOUND)), x);
                 // Ignore this change
             }

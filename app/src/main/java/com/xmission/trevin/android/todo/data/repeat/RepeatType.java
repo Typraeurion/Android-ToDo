@@ -23,6 +23,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.time.LocalDate;
+import java.util.Locale;
 
 /**
  * Enumeration of the different types of repeating intervals
@@ -64,6 +65,24 @@ public enum RepeatType {
 
     /**
      * Create an instance of the {@link RepeatInterval} object
+     * for this repeat type.  Its fields will be initialized
+     * with default values assuming the next due date is today.
+     */
+    @NonNull
+    public RepeatInterval newInstance() {
+        try {
+            return implementingClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+                    String message = String.format(Locale.US,
+                            "Failed to create a %s",
+                            getClass().getSimpleName());
+            Log.e("RepeatType", message, e);
+            throw new RuntimeException(message, e);
+        }
+    }
+
+    /**
+     * Create an instance of the {@link RepeatInterval} object
      * for the given repeat type.  Its fields will be initialized
      * with default values assuming the next due date is today.
      *
@@ -83,12 +102,35 @@ public enum RepeatType {
                     return type.implementingClass
                             .getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
-                    Log.e("RepeatType", String.format(
+                    String message = String.format(Locale.US,
                             "Failed to create a %s (type %d)",
-                            type.getClass().getSimpleName(), typeId), e);
+                            type.getClass().getSimpleName(), typeId);
+                    Log.e("RepeatType", message, e);
+                    throw new RuntimeException(message, e);
                 }
         }
         throw new IllegalArgumentException("Unknown repeat type: " + typeId);
+    }
+
+    /**
+     * Create an instance of the {@link RepeatInterval} object
+     * for this repeat type, initializing its fields on the basis of
+     * a given due date.
+     *
+     * @param due the first date on which this To Do item is due
+     */
+    @NonNull
+    public RepeatInterval newInstance(LocalDate due) {
+        try {
+            return implementingClass.getDeclaredConstructor(
+                    LocalDate.class).newInstance(due);
+        } catch (Exception e) {
+                    String message = String.format(Locale.US,
+                            "Failed to create a %s",
+                            getClass().getSimpleName());
+            Log.e("RepeatType", message, e);
+            throw new RuntimeException(message, e);
+        }
     }
 
     /**

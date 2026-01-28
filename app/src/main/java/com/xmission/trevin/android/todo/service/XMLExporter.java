@@ -36,7 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * This class exports the To Do list to a given XML file.
+ * This class exports the To Do list to a given XML output stream.
  *
  * @author Trevin Beattie
  */
@@ -64,6 +64,9 @@ public class XMLExporter {
     /** The exported timestamp attribute name */
     public static final String ATTR_EXPORTED = "exported";
 
+    /** The total record count attribute name */
+    public static final String ATTR_TOTAL_RECORDS = "total-records";
+
     /** The preferences element name */
     public static final String PREFERENCES_TAG = "Preferences";
 
@@ -84,6 +87,9 @@ public class XMLExporter {
 
     /** The count attribute name */
     public static final String ATTR_COUNT = "count";
+
+    /** The maximum ID attribute name */
+    public static final String ATTR_MAX_ID = "max-id";
 
     /** Name of categories child elements */
     public static final String CATEGORIES_ITEM = "category";
@@ -177,7 +183,7 @@ public class XMLExporter {
 
     /** Modes of operation */
     public enum OpMode {
-        SETTINGS, CATEGORIES, ITEMS
+        START, SETTINGS, CATEGORIES, ITEMS, FINISH
     }
     /**
      * Text to pass to the {@link ProgressBarUpdater} for each
@@ -186,9 +192,11 @@ public class XMLExporter {
      */
     private static final Map<OpMode,String> modeText = new HashMap<>();
     static {
+        modeText.put(OpMode.START, "Starting\u2026");
         modeText.put(OpMode.SETTINGS, "Exporting application settings\u2026");
         modeText.put(OpMode.CATEGORIES, "Exporting categories\u2026");
         modeText.put(OpMode.ITEMS, "Exporting To-Do items\u2026");
+        modeText.put(OpMode.FINISH, "Finishing\u2026");
     }
 
     /**
@@ -223,13 +231,6 @@ public class XMLExporter {
 
         PrintStream out = new PrintStream(outStream);
         try {
-            out.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-            out.printf(Locale.US, "<%s %s=\"2\" %s=\"%d\" %s=\"%s\">\n",
-                    DOCUMENT_TAG, ATTR_VERSION,
-                    ATTR_DB_VERSION, ToDoRepositoryImpl.DATABASE_VERSION,
-                    ATTR_EXPORTED, Instant.now().atOffset(ZoneOffset.UTC)
-                            .format(DateTimeFormatter.ISO_INSTANT));
-
             // Get all of the preferences, metadata, and categories;
             // these should be very short collections.
             Map<String,?> prefsMap = prefs.getAllPreferences();
@@ -251,6 +252,14 @@ public class XMLExporter {
             int totalCount = prefsMap.size() + metadata.size()
                     + categories.size() + itemCount;
 
+            out.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            out.printf(Locale.US, "<%s %s=\"2\" %s=\"%d\" %s=\"%s\" %s=\"%d\">\n",
+                    DOCUMENT_TAG, ATTR_VERSION,
+                    ATTR_DB_VERSION, ToDoRepositoryImpl.DATABASE_VERSION,
+                    ATTR_EXPORTED, Instant.now().atOffset(ZoneOffset.UTC)
+                            .format(DateTimeFormatter.ISO_INSTANT),
+                    ATTR_TOTAL_RECORDS, totalCount);
+
             progressUpdater.updateProgress(modeText.get(OpMode.SETTINGS),
                     0, totalCount, true);
             int prefsCount = writePreferences(prefsMap, out);
@@ -258,19 +267,21 @@ public class XMLExporter {
 
             progressUpdater.updateProgress(modeText.get(OpMode.CATEGORIES),
                     prefsCount + metaCount, totalCount, true);
-            int catCount = writeCategories(categories, out);
+            long maxCatId = repository.getMaxCategoryId();
+            int catCount = writeCategories(categories, maxCatId, out);
 
             progressUpdater.updateProgress(modeText.get(OpMode.ITEMS),
                     prefsCount + metaCount + catCount, totalCount, true);
+            long maxItemId = repository.getMaxItemId();
             ToDoCursor cursor = repository.getItems(
                     ToDoPreferences.ALL_CATEGORIES,
                     exportPrivate, exportPrivate,
                     ToDoRepositoryImpl.TODO_TABLE_NAME + "."
                             + ToDoSchema.ToDoItemColumns._ID);
-            itemCount = writeToDoItems(cursor, out, progressUpdater,
+            itemCount = writeToDoItems(cursor, maxItemId, out, progressUpdater,
                     prefsCount + metaCount + catCount, totalCount);
 
-            progressUpdater.updateProgress(modeText.get(OpMode.ITEMS),
+            progressUpdater.updateProgress(modeText.get(OpMode.FINISH),
                     prefsCount + metaCount + catCount + itemCount,
                     totalCount, false);
 
@@ -390,14 +401,16 @@ public class XMLExporter {
      * Write the category list
      *
      * @param categories the categories to write
+     * @param maxId the highest category ID in the database
      * @param out the PrintStream to which we should write the data
      *
      * @return the total number of categories written
      */
     static int writeCategories(
-            List<ToDoCategory> categories, PrintStream out) {
-        out.printf(Locale.US, "  <%s %s=\"%d\">\n",
-                CATEGORIES_TAG, ATTR_COUNT, categories.size());
+            List<ToDoCategory> categories, long maxId, PrintStream out) {
+        out.printf(Locale.US, "  <%s %s=\"%d\" %s=\"%d\">\n",
+                CATEGORIES_TAG, ATTR_COUNT, categories.size(),
+                ATTR_MAX_ID, maxId);
         for (ToDoCategory category : categories) {
             out.printf(Locale.US, "    <%s %s=\"%d\">%s</%s>\n",
                     CATEGORIES_ITEM, ATTR_ID, category.getId(),
@@ -413,6 +426,7 @@ public class XMLExporter {
      * Write the To Do list
      *
      * @param cursor the cursor over the items to write
+     * @param maxId the highest item ID in the database
      * @param out the PrintStream to which we should write the data
      * @param progressUpdater a class to call back while we are processing
      * the data to mark our progress.
@@ -422,11 +436,12 @@ public class XMLExporter {
      *
      * @return the total number of items written
      */
-    static int writeToDoItems(ToDoCursor cursor, PrintStream out,
+    static int writeToDoItems(ToDoCursor cursor, long maxId, PrintStream out,
                               ProgressBarUpdater progressUpdater,
                               int baseCount, int totalCount) {
-        out.printf(Locale.US, "  <%s %s=\"%d\">\n",
-                ITEMS_TAG, ATTR_COUNT, cursor.getCount());
+        out.printf(Locale.US, "  <%s %s=\"%d\" %s=\"%d\">\n",
+                ITEMS_TAG, ATTR_COUNT, cursor.getCount(),
+                ATTR_MAX_ID, maxId);
         int count = 0;
         while (cursor.moveToNext()) {
             ToDoItem item = cursor.getItem();
@@ -465,16 +480,14 @@ public class XMLExporter {
                         ? encodeBase64(item.getEncryptedDescription())
                         : escapeXML(item.getDescription()),
                 TODO_DESCRIPTION);
-        out.printf(Locale.US, "      <%s>%s</%s>\n",
-                TODO_CREATED,
+        out.printf(Locale.US, "      <%s %s=\"%s\"/>\n",
+                TODO_CREATED, ATTR_TIME,
                 item.getCreateTime().atOffset(ZoneOffset.UTC)
-                        .format(DateTimeFormatter.ISO_INSTANT),
-                TODO_CREATED);
-        out.printf(Locale.US, "      <%s>%s</%s>\n",
-                TODO_MODIFIED,
+                        .format(DateTimeFormatter.ISO_INSTANT));
+        out.printf(Locale.US, "      <%s %s=\"%s\"/>\n",
+                TODO_MODIFIED, ATTR_TIME,
                 item.getModTime().atOffset(ZoneOffset.UTC)
-                        .format(DateTimeFormatter.ISO_INSTANT),
-                TODO_MODIFIED);
+                        .format(DateTimeFormatter.ISO_INSTANT));
 
         // The hide, alarm, repeat interval, and notification timestamp
         // are all contingent on having a due date.

@@ -71,6 +71,13 @@ public interface ToDoRepository {
     int countCategories();
 
     /**
+     * Get the highest category ID.  This is used by the exporter
+     * so that the importer will have an idea of what ID&rsquo;s
+     * are free for new categories if needed.
+     */
+    long getMaxCategoryId();
+
+    /**
      * Get all of the categories available from the database.
      * This will include the pre-populated &ldquo;Unfiled&rdquo;
      * category.  The categories will be sorted alphabetically.
@@ -284,6 +291,13 @@ public interface ToDoRepository {
      * @return the number of encrypted items in the database
      */
     int countEncryptedItems();
+
+    /**
+     * Get the highest item ID.  This is used by the exporter
+     * so that the importer will have an idea of what ID&rsquo;s
+     * are free for new To Do items if needed.
+     */
+    long getMaxItemId();
 
     /**
      * Get a cursor over To Do items matching the given selection criteria.

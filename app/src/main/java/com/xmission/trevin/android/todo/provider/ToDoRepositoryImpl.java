@@ -361,6 +361,27 @@ public class ToDoRepositoryImpl implements ToDoRepository {
     }
 
     @Override
+    public long getMaxCategoryId() {
+        Log.d(TAG, ".getMaxCategoryId");
+        Cursor c = getDb().rawQuery("SELECT MAX(" + ToDoCategoryColumns._ID
+                + ") FROM " + CATEGORY_TABLE_NAME, null);
+        try {
+            if (c.moveToFirst()) {
+                return c.getLong(0);
+            }
+            // This is technically possible, but shouldn't happen
+            // since the Unfiled category should always be present.
+            Log.w(TAG, "Nothing returned from max category query!");
+            return 1;
+        } catch (SQLException e) {
+            Log.e(TAG, "Failed to count the number of categories!", e);
+            return 1;
+        } finally {
+            c.close();
+        }
+    }
+
+    @Override
     public List<ToDoCategory> getCategories() {
         Log.d(TAG, ".getCategories");
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -861,6 +882,38 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of encrypted To Do items!", e);
             return 0;
+        } finally {
+            c.close();
+        }
+    }
+
+    @Override
+    public long getMaxItemId() {
+        Log.d(TAG, ".getMaxItemId()");
+        Cursor c = getDb().rawQuery("SELECT MAX(" + ToDoItemColumns._ID
+                + ") FROM " + TODO_TABLE_NAME, null);
+        try {
+            if (c.moveToFirst()) {
+                return c.getLong(0);
+            }
+            // If there are no items, fall through.
+        } catch (SQLException e) {
+            Log.e(TAG, "Failed to count the number of To Do items!", e);
+            return 1;
+        } finally {
+            c.close();
+        }
+
+        // If there are no items, try to get the sequence value from SQLite.
+        c = getDb().rawQuery("SELECT seq FROM sqlite_sequence WHERE name = ?",
+                new String[] { TODO_TABLE_NAME });
+        try {
+            if (c.moveToFirst()) {
+                return c.getLong(0);
+            }
+            Log.w(TAG, "No items in the database and"
+                    + " SQLite sequence was not found");
+            return 1;
         } finally {
             c.close();
         }

@@ -57,7 +57,7 @@ public class MockToDoRepository implements ToDoRepository {
      * opens the repository, since we need the &ldquo;Unfiled&rdquo;
      * category name from the context resources.
      */
-    private final Map<Long,String> categories = new TreeMap<>();
+    private final SortedMap<Long,String> categories = new TreeMap<>();
 
     private long nextCategoryId = 1;
 
@@ -65,12 +65,12 @@ public class MockToDoRepository implements ToDoRepository {
      * Metadata table.  This is keyed by name which is the most common
      * use case.
      */
-    private final Map<String,ToDoMetadata> metadata = new TreeMap<>();
+    private final SortedMap<String,ToDoMetadata> metadata = new TreeMap<>();
 
     private long nextMetadataId = 1;
 
     /** To Do item table.  This is indexed by the item ID. */
-    private final Map<Long,ToDoItem> itemTable = new TreeMap<>();
+    private final SortedMap<Long,ToDoItem> itemTable = new TreeMap<>();
 
     private long nextItemId = 1;
 
@@ -610,6 +610,13 @@ public class MockToDoRepository implements ToDoRepository {
     }
 
     @Override
+    public long getMaxCategoryId() {
+        if (categories.isEmpty())
+            return nextCategoryId;
+        return categories.lastKey();
+    }
+
+    @Override
     public List<ToDoCategory> getCategories() {
         Log.d(TAG, ".getCategories");
         List<ToDoCategory> list = new ArrayList<>(categories.size());
@@ -875,6 +882,13 @@ public class MockToDoRepository implements ToDoRepository {
                 counter++;
         }
         return counter;
+    }
+
+    @Override
+    public long getMaxItemId() {
+        if (itemTable.isEmpty())
+            return nextItemId;
+        return itemTable.lastKey();
     }
 
     @Override

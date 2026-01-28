@@ -22,6 +22,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.work.Data;
 import androidx.work.Worker;
@@ -31,23 +32,24 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.service.XMLImporter.ImportType;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
+import java.io.InputStream;
 import java.util.Locale;
 
 /**
- * This class exports the To Do list to an XML file on external storage.
+ * This class imports the To Do list from an XML file on external storage.
  *
  * @author Trevin Beattie
  */
-public class XMLExportWorker extends Worker implements ProgressBarUpdater {
+public class XMLImportWorker extends Worker implements ProgressBarUpdater {
 
-    public static final String TAG = "XMLExportWorker";
+    public static final String TAG = "XMLImportWorker";
 
     /**
      * The key of the input data that holds
@@ -55,26 +57,44 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
      */
     public static final String XML_DATA_FILENAME = "XMLDataFileName";
 
-    /**
-     * The key of the input data that indicates whether to
-     * export private records.
-     */
-    public static final String EXPORT_PRIVATE = "XMLExportPrivate";
+    /** The key of the input data that holds the import type */
+    public static final String XML_IMPORT_TYPE = "XMLImportType";
 
     /**
-     * Output stream where we be writing the XML document.
+     * The key of the input data that indicates
+     * whether to import private records
+     */
+    public static final String IMPORT_PRIVATE = "XMLImportPrivate";
+
+    /** The key of the input data that holds the password for the backup */
+    public static final String XML_PASSWORD = "XMLImportPassword";
+
+    /**
+     * Input stream from which we will be reading the XML document.
      * <p>
      * <b>Caution:</b> in order to properly use the Storage Access
      * Framework and check for access errors, the file is opened
-     * in this class&rsquo; constructor; the actual write operation
+     * in this class&rsquo; constructor; the actual read operation
      * does not occur until {@link #doWork()} is called, so the
      * file may remain open for an indeterminate amount of time.
      * </p>
      */
-    private OutputStream xmlStream;
+    private final InputStream xmlStream;
 
-    /** Whether to export private records */
-    private boolean exportPrivate;
+    /** How to merge items from the XML file with those in the database. */
+    private final ImportType importType;
+
+    /** Whether to import private records */
+    private final boolean importPrivate;
+
+    /** The password used to decrypt records in the XML file */
+    private String xmlPassword = null;
+
+    /**
+     * The password used to encrypt private records in the database.
+     * If {@code null}, private records will not be encrypted.
+     */
+    private String currentPassword = null;
 
     /** Internal time when we last updated the async progress */
     private long lastProgressTimeNano;
@@ -92,7 +112,7 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     /**
-     * Initialize the XMLExportWorker using the standard system services
+     * Initialise the XMLImportWorker using the standard system services
      * and app class instances.
      *
      * @param context the application context
@@ -100,7 +120,7 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
      *
      * @throws IllegalArgumentException if the input data is invalid.
      */
-    public XMLExportWorker(@NonNull Context context,
+    public XMLImportWorker(@NonNull Context context,
                            @NonNull WorkerParameters params)
         throws IllegalArgumentException, IOException {
         super(context, params);
@@ -113,61 +133,84 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
         if (!params.getInputData().hasKeyWithValueOfType(
                 XML_DATA_FILENAME, String.class))
             throw new IllegalArgumentException(
-                    "No XML output file provided");
-        exportPrivate = params.getInputData().getBoolean(
-                EXPORT_PRIVATE, false);
+                    "No XML input file provided");
+        if (!params.getInputData().hasKeyWithValueOfType(
+                XML_IMPORT_TYPE, String.class))
+            throw new IllegalArgumentException("Import type not specified");
+        try {
+            importType = ImportType.valueOf(params.getInputData()
+                    .getString(XML_IMPORT_TYPE));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid import type", e);
+        }
+        importPrivate = params.getInputData().getBoolean(
+                IMPORT_PRIVATE, false);
+
+        /*
+         * Note: We don't verify either password when initializing the
+         * worker; we can't check the XML password until we are in
+         * the middle of reading the file, and there could be a race
+         * condition with the current password where it may change
+         * between here and importing data.  These checks will be done
+         * by the import method inside a database transaction.
+         */
+        if (params.getInputData().hasKeyWithValueOfType(
+                XML_PASSWORD, String.class))
+            xmlPassword = params.getInputData().getString(XML_PASSWORD);
+
+        if (importPrivate) {
+            StringEncryption se = StringEncryption.holdGlobalEncryption();
+            if (se.hasKey())
+                currentPassword = new String(se.getPassword());
+        }
 
         String fileLocation = params.getInputData().getString(XML_DATA_FILENAME);
         if (fileLocation.startsWith("content://")) {
             // This is a URI from the Storage Access Framework
             try {
                 Uri contentUri = Uri.parse(fileLocation);
-                xmlStream = context.getContentResolver().openOutputStream(
-                        contentUri, "wt");
+                xmlStream = context.getContentResolver()
+                        .openInputStream(contentUri);
             } catch (FileNotFoundException fe) {
                 Log.e(TAG, String.format(Locale.US,
-                        "Failed to open %s for writing", fileLocation), fe);
+                        "Content URI %s does not exist", fileLocation), fe);
                 showToast(context.getString(
-                        R.string.ErrorExportCantMkdirs, fileLocation));
+                        R.string.ErrorImportNotFound, fileLocation));
                 throw fe;
-            } catch (IOException ioe) {
+            } catch (IOException e) {
                 Log.e(TAG, String.format(Locale.US,
-                        "Failed to open %s for writing", fileLocation), ioe);
+                        "Failed to open %s for reading", fileLocation), e);
                 showToast(context.getString(
-                        R.string.ErrorExportPermissionDenied, fileLocation));
-                throw ioe;
+                        R.string.ErrorImportCantRead, fileLocation));
+                throw e;
             }
         }
 
         else {
             File xmlFile = new File(fileLocation);
-            if (xmlFile.exists()) {
-                if (!xmlFile.canWrite()) {
-                    Log.w(TAG, String.format(Locale.US,
-                            "Cannot write to %s", fileLocation));
-                    showToast(context.getString(
-                            R.string.ErrorExportPermissionDenied,
-                            fileLocation));
-                    throw new IOException(String.format(Locale.US,
-                            "Cannot write to %s", xmlFile.getAbsolutePath()));
-                }
-            } else try {
-                Files.createFile(xmlFile.toPath());
-                xmlStream = new FileOutputStream(xmlFile, false);
-            } catch (IOException ioe) {
-                Log.e(TAG, String.format("Failed to open %s for writing",
-                        fileLocation), ioe);
-                if (!xmlFile.getParentFile().exists()) {
-                    showToast(context.getString(
-                            R.string.ErrorExportCantMkdirs,
-                            xmlFile.getAbsoluteFile().getParent()));
-                    throw new FileNotFoundException(String.format(
-                            "Parent directory %s does not exist",
-                            xmlFile.getAbsoluteFile().getParent()));
-                }
+            if (!xmlFile.exists()) {
+                Log.e(TAG, String.format(Locale.US,
+                        "File %s does not exist", fileLocation));
                 showToast(context.getString(
-                        R.string.ErrorExportPermissionDenied, fileLocation));
-                throw ioe;
+                        R.string.ErrorImportNotFound, fileLocation));
+                throw new FileNotFoundException(fileLocation);
+            }
+            if (!xmlFile.canRead()) {
+                Log.e(TAG, String.format(Locale.US,
+                        "Cannot read %s", fileLocation));
+                showToast(context.getString(
+                        R.string.ErrorImportPermissionDenied, fileLocation));
+                throw new IOException(String.format(Locale.US,
+                        "Cannot read %s", xmlFile.getAbsolutePath()));
+            }
+            try {
+                xmlStream = new FileInputStream(xmlFile);
+            } catch (IOException e) {
+                Log.e(TAG, String.format(Locale.US,
+                        "Failed to open %s for reading", fileLocation), e);
+                showToast(context.getString(
+                        R.string.ErrorImportCantRead, fileLocation));
+                throw e;
             }
         }
     }
@@ -185,11 +228,12 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
                 R.string.ProgressMessageStart), 0, 0, false);
         repository.open(context);
         try {
-            XMLExporter.export(preferences, repository,
-                    xmlStream, exportPrivate, this);
+            XMLImporter.importData(preferences, repository,
+                    xmlStream, importType, importPrivate,
+                    xmlPassword, currentPassword, this);
             return Result.success();
         } catch (Exception e) {
-            Log.e(TAG, "Error exporting data to XML!", e);
+            Log.e(TAG, "Error importing data from XML!", e);
             showToast(e.getMessage());
             return Result.failure(new Data.Builder()
                     .putString("Exception", e.getClass().getCanonicalName())
@@ -229,8 +273,7 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
         uiHandler.post(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(context, message,
-                        Toast.LENGTH_LONG).show();
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
             }
         });
     }

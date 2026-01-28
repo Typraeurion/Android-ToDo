@@ -206,6 +206,16 @@ public class ToDoRepositoryTests {
     }
 
     /**
+     * Test getting the maximum category ID.
+     */
+    @Test
+    public void testGetMaxCategoryId() {
+        long maxId = repo.getMaxCategoryId();
+        assertTrue(String.format("Expected a positive category ID, got %d",
+                maxId), maxId > 0);
+    }
+
+    /**
      * Test inserting a new category, reading it,
      * updating it, and then deleting it.
      * <p>
@@ -649,6 +659,16 @@ public class ToDoRepositoryTests {
                 repo.deleteMetadata(name);
             }
         }
+    }
+
+    /**
+     * Test getting the maximum To Do item ID.
+     */
+    @Test
+    public void testGetMaxItemId() {
+        long maxId = repo.getMaxItemId();
+        assertTrue(String.format("Expected a positive item ID, got %d",
+                maxId), maxId > 0);
     }
 
     /**
