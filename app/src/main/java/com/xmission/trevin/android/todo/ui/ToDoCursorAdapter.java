@@ -16,7 +16,6 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -24,6 +23,7 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.RepeatSettings;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.app.Activity;
@@ -147,20 +147,20 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
 		? View.VISIBLE : View.GONE);
 	String description = context.getString(R.string.PasswordProtected);
 	int privacy = cursor.getInt(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.PRIVATE));
-	if (privacy > 1) {
-	    if (encryptor.hasKey()) {
-		try {
-		    description = encryptor.decrypt(cursor.getBlob(
-			    cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION)));
-		} catch (GeneralSecurityException gsx) {
-		    Log.e(TAG, "Unable to decrypt the description for item "
-			    + itemID, gsx);
-		}
-	    }
-	} else {
-	    description = cursor.getString(
-		    cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION));
-	}
+        if (privacy > 1) {
+            if (encryptor.hasKey()) {
+                try {
+                    description = encryptor.decrypt(cursor.getBlob(
+                            cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION)));
+                } catch (EncryptionException e) {
+                    Log.e(TAG, "Unable to decrypt the description for item "
+                            + itemID, e);
+                }
+            }
+        } else {
+            description = cursor.getString(
+                    cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION));
+        }
 	editDescription.setText(description);
 	/* // If the description is empty, this is a new item.
 	// Give it focus so the user can enter some text.

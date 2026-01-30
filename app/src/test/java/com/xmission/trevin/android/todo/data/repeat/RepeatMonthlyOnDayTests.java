@@ -52,9 +52,9 @@ public class RepeatMonthlyOnDayTests {
     public static LocalDate setWeekAndDayForMonth(
             LocalDate baseDate, int week, WeekDays day) {
         LocalDate target;
-        if (week < 4) {
+        if (week > 0) {
             // Start from the beginning of the month and go forward
-            target = baseDate.withDayOfMonth(1).plusWeeks(week);
+            target = baseDate.withDayOfMonth(1).plusWeeks(week - 1);
             while (target.getDayOfWeek() != day.getJavaDay())
                 target = target.plusDays(1);
         } else {
@@ -69,18 +69,18 @@ public class RepeatMonthlyOnDayTests {
     /**
      * Format an ordinal week number for messages.
      *
-     * @param week the week number &mdash; 0&ndash;3 is the first through
-     *             fourth weeks, 4 is the <i>last</i> week.
+     * @param week the week number &mdash; 1&ndash;4 is the first through
+     *             fourth weeks, -1 is the <i>last</i> week.
      *
      * @return the corresponding string &ldquo;1st&rdquo;, &ldquo;2nd&rdquo;
      * &ldquo;3rd&rdquo;, &ldquo;4th&rdquo;, or &ldquo;last&rdquo;.
      */
     public static String ordinalWeek(int week) {
         switch (week) {
-            case 0: return "1st";
-            case 1: return "2nd";
-            case 2: return "3rd";
-            case 4: return "last";
+            case 1: return "1st";
+            case 2: return "2nd";
+            case 3: return "3rd";
+            case -1: return "last";
             default: return String.format("%dth", week + 1);
         }
     }
@@ -100,7 +100,9 @@ public class RepeatMonthlyOnDayTests {
         // The repeat should have initialized its own day and week according
         // to our start day, but make it explicit here.
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
-        int targetWeek = (startDate.getDayOfMonth() - 1) / 7;
+        int targetWeek = (startDate.getDayOfMonth() - 1) / 7 + 1;
+        if (targetWeek > 4)
+            targetWeek = -1;
         String stndrd = ordinalWeek(targetWeek);
         repeat.setDay(targetDay);
         repeat.setWeek(targetWeek);
@@ -135,11 +137,11 @@ public class RepeatMonthlyOnDayTests {
         RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(startDate);
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
         repeat.setDay(targetDay);
-        repeat.setWeek(3);
+        repeat.setWeek(4);
         for (int i = 0; i < 15; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(100));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    startDate.plusMonths(1), 3, targetDay);
+                    startDate.plusMonths(1), 4, targetDay);
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
@@ -168,11 +170,11 @@ public class RepeatMonthlyOnDayTests {
         RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(startDate);
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
         repeat.setDay(targetDay);
-        repeat.setWeek(4);
+        repeat.setWeek(-1);
         for (int i = 0; i < 15; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(100));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    startDate.plusMonths(1), 4, targetDay);
+                    startDate.plusMonths(1), -1, targetDay);
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             assertEquals(String.format(
@@ -200,12 +202,12 @@ public class RepeatMonthlyOnDayTests {
         LocalDate endDate = startDate.plusMonths(RAND.nextInt(6) + 4);
         RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(startDate);
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
-        int targetWeek = (startDate.getDayOfMonth() - 1) / 7;
+        int targetWeek = (startDate.getDayOfMonth() - 1) / 7 + 1;
         // If we're starting within the last week, randomly switch
         // from targeting the fourth week to the last week.
         if ((startDate.getDayOfMonth() > startDate.lengthOfMonth() - 7) &&
-                RAND.nextBoolean())
-            targetWeek = 4;
+                ((targetWeek > 4) || RAND.nextBoolean()))
+            targetWeek = -1;
         String stndrdth = ordinalWeek(targetWeek);
         repeat.setDay(targetDay);
         repeat.setWeek(targetWeek);
@@ -238,12 +240,12 @@ public class RepeatMonthlyOnDayTests {
     public void testRepeatEveryNMonthsOnDay() {
         LocalDate startDate = LocalDate.now();
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
-        int targetWeek = (startDate.getDayOfMonth() - 1) / 7;
+        int targetWeek = (startDate.getDayOfMonth() - 1) / 7 + 1;
         // If we're starting within the last week, randomly switch
         // from targeting the fourth week to the last week.
         if ((startDate.getDayOfMonth() > startDate.lengthOfMonth() - 7) &&
-                RAND.nextBoolean())
-            targetWeek = 4;
+                ((targetWeek > 4) || RAND.nextBoolean()))
+            targetWeek = -1;
         String stndrdth = ordinalWeek(targetWeek);
         int increment = RAND.nextInt(10) + 2;
         RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(startDate);

@@ -17,6 +17,7 @@
 package com.xmission.trevin.android.todo.data.repeat;
 
 import static com.xmission.trevin.android.todo.data.repeat.RepeatMonthlyOnDayTests.ordinalWeek;
+import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomWeek;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
@@ -56,9 +57,9 @@ public class RepeatYearlyOnDayTests {
             LocalDate baseDate, Months month, int week, WeekDays day) {
         LocalDate target = baseDate.withMonth(
                 month.getJavaMonth().getValue());
-        if (week < 4) {
+        if (week > 0) {
             // Start from the beginning of the month and go forward
-            target = target.withDayOfMonth(1).plusWeeks(week);
+            target = target.withDayOfMonth(1).plusWeeks(week - 1);
             while (target.getDayOfWeek() != day.getJavaDay())
                 target = target.plusDays(1);
         } else {
@@ -128,7 +129,7 @@ public class RepeatYearlyOnDayTests {
      */
     @Test
     public void testRepeatYearlyEarly() {
-        runYearlyOnDayTest(1, RAND.nextInt(3), false);
+        runYearlyOnDayTest(1, RAND.nextInt(3) + 1, false);
     }
 
     /**
@@ -138,7 +139,7 @@ public class RepeatYearlyOnDayTests {
      */
     @Test
     public void testRepeatYearlyFourthWeek() {
-        runYearlyOnDayTest(1, 3, false);
+        runYearlyOnDayTest(1, 4, false);
     }
 
     /**
@@ -148,7 +149,7 @@ public class RepeatYearlyOnDayTests {
      */
     @Test
     public void testRepeatYearlyLastWeek() {
-        runYearlyOnDayTest(1, 4, false);
+        runYearlyOnDayTest(1, -1, false);
     }
 
     /**
@@ -156,7 +157,7 @@ public class RepeatYearlyOnDayTests {
      */
     @Test
     public void testRepeatYearlyWithEnd() {
-        runYearlyOnDayTest(1, RAND.nextInt(5), true);
+        runYearlyOnDayTest(1, randomWeek(), true);
     }
 
     /**
@@ -164,7 +165,7 @@ public class RepeatYearlyOnDayTests {
      */
     @Test
     public void testRepeatEveryNYears() {
-        runYearlyOnDayTest(RAND.nextInt(10) + 2, RAND.nextInt(5), false);
+        runYearlyOnDayTest(RAND.nextInt(10) + 2, randomWeek(), false);
     }
 
     /**
@@ -172,7 +173,7 @@ public class RepeatYearlyOnDayTests {
      */
     @Test
     public void testRepeatEveryNYearsWithEnd() {
-        runYearlyOnDayTest(RAND.nextInt(10) + 2, RAND.nextInt(5), true);
+        runYearlyOnDayTest(RAND.nextInt(10) + 2, randomWeek(), true);
     }
 
 }

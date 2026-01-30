@@ -44,8 +44,7 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
 
     /**
      * The week of the month on which this item repeats.
-     * 0 is the first week, 4 is the <i>last</i> week
-     * (regardless of the actual number of weeks in a month).
+     * 1 is the first week, 4 is the fourth week, -1 is the <i>last</i> week.
      */
     protected int week;
 
@@ -58,7 +57,7 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
     protected RepeatMonthlyOnDay(RepeatType type, @NonNull LocalDate due) {
         super(type, due);
         day = WeekDays.fromJavaDay(due.getDayOfWeek());
-        week = (due.getDayOfMonth() - 1) / 7;
+        week = (due.getDayOfMonth() - 1) / 7 + 1;
     }
 
     /**
@@ -105,7 +104,8 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
 
     /**
      * @return the week of the month on which this item repeats;
-     * 0 is the first week, 4 is the <i>last</i> week.
+     * 1 is the first week, 4 is the fourth week,
+     * -1 is the <i>last</i> week.
      */
     public int getWeek() {
         return week;
@@ -114,15 +114,19 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
     /**
      * Set the week of the month on which this item repeats.
      *
-     * @param weekNum the week number (from 0)
+     * @param weekNum the week number: 1&ndash;4 for the first through
+     * fourth weeks, or -1 for the last week.
      *
      * @throws IllegalArgumentException if {@code weekNum} is
-     * less than 0 or greater than 4
+     * less than -1, 0, or greater than 4
      */
     public void setWeek(int weekNum) {
-        if (weekNum < 0)
+        if (weekNum < -1)
             throw new IllegalArgumentException(
-                    "Week of the month cannot be negative");
+                    "Week of the month cannot be less than -1");
+        if (weekNum == 0)
+            throw new IllegalArgumentException(
+                    "Week of the month cannot be zero");
         if (weekNum > 4)
             throw new IllegalArgumentException(
                     "Week of the month cannot be greater than 4");
@@ -132,13 +136,16 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
     @Override
     public boolean updateForDueDate(@NonNull LocalDate newDue) {
         WeekDays newDay = WeekDays.fromJavaDay(newDue.getDayOfWeek());
-        int newWeek = (newDue.getDayOfMonth() - 1) / 7;
+        int newWeek = (newDue.getDayOfMonth() - 1) / 7 + 1;
+        // If this is in the fifth week, switch to negative.
+        if (newWeek >= 5)
+            newWeek = -1;
         // If this is in the last week but not the fifth week,
-        // allow matching either 3 or 4.
-        if ((newDue.getDayOfMonth() > newDue.lengthOfMonth() - 7) &&
-                newWeek == 3) {
-            if (week == 4)
-                newWeek = 4;
+        // allow matching either -1 or 4.
+        else if ((newWeek == 4) && (newDue.getDayOfMonth() >
+                newDue.lengthOfMonth() - 7)) {
+            if (week == -1)
+                newWeek = -1;
         }
         boolean dayChanged = (day != newDay) || (week != newWeek);
         if (dayChanged) {
@@ -152,7 +159,7 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
         TemporalAdjuster adjustment = TemporalAdjusters.dayOfWeekInMonth(
-                (week < 4) ? (week + 1) : -1, day.getJavaDay());
+                week, day.getJavaDay());
         LocalDate startOfMonth = priorDueDate.withDayOfMonth(1)
                 .plusMonths(increment);
         return checkEndDate(priorDueDate, startOfMonth.with(adjustment));
@@ -165,11 +172,11 @@ public class RepeatMonthlyOnDay extends AbstractRepeat {
      */
     protected void formatDay(StringBuilder sb, int week, WeekDays day) {
         switch (week) {
-            case 0: sb.append("first "); break;
-            case 1: sb.append("second "); break;
-            case 2: sb.append("third "); break;
-            case 3: sb.append("fourth "); break;
-            case 4: sb.append("last "); break;
+            case 1: sb.append("first "); break;
+            case 2: sb.append("second "); break;
+            case 3: sb.append("third "); break;
+            case 4: sb.append("fourth "); break;
+            case -1: sb.append("last "); break;
         }
         sb.append(day.toString());
     }

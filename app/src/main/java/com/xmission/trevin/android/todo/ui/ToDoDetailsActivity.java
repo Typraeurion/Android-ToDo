@@ -16,7 +16,6 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import java.security.GeneralSecurityException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -24,6 +23,7 @@ import java.util.*;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.RepeatSettings;
 import com.xmission.trevin.android.todo.data.RepeatSettings.IntervalType;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
@@ -321,21 +321,21 @@ public class ToDoDetailsActivity extends Activity {
             encryptor = StringEncryption.holdGlobalEncryption();
             int i = itemCursor.getColumnIndex(ToDoItemColumns.DESCRIPTION);
             if (isPrivate > 1) {
-        	if (encryptor.hasKey()) {
-        	    try {
-        		toDoDescription.setText(encryptor.decrypt(itemCursor.getBlob(i)));
-        	    } catch (GeneralSecurityException gsx) {
-        		Toast.makeText(this, gsx.getMessage(),
-        			Toast.LENGTH_LONG).show();
-        		finish();
-        	    }
-        	} else {
-        	    Toast.makeText(this, R.string.PasswordProtected,
-        		    Toast.LENGTH_LONG).show();
-        	    finish();
-        	}
+                if (encryptor.hasKey()) {
+                    try {
+                        toDoDescription.setText(encryptor.decrypt(itemCursor.getBlob(i)));
+                    } catch (EncryptionException e) {
+                        Toast.makeText(this, e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                        finish();
+                    }
+                } else {
+                    Toast.makeText(this, R.string.PasswordProtected,
+                            Toast.LENGTH_LONG).show();
+                    finish();
+                }
             } else {
-        	toDoDescription.setText(itemCursor.getString(i));
+                toDoDescription.setText(itemCursor.getString(i));
             }
 
             i = itemCursor.getColumnIndex(ToDoItemColumns.PRIORITY);
@@ -1189,25 +1189,25 @@ public class ToDoDetailsActivity extends Activity {
 	    String note = null;
 	    if (((wasPrivate > 1) != privateCheckBox.isChecked()) &&
 		    !itemCursor.isNull(itemCursor.getColumnIndex(ToDoItemColumns.NOTE))) {
-		if (wasPrivate > 1) {
-		    if (encryptor.hasKey()) {
-			try {
-			    note = encryptor.decrypt(itemCursor.getBlob(
-				    itemCursor.getColumnIndex(ToDoItemColumns.NOTE)));
-			} catch (GeneralSecurityException gsx) {
-			    itemCursor.close();
-			    Toast.makeText(ToDoDetailsActivity.this,
-				    gsx.getMessage(), Toast.LENGTH_LONG).show();
-			    return;
-			}
-		    } else {
-			Toast.makeText(ToDoDetailsActivity.this,
-				R.string.PasswordProtected, Toast.LENGTH_LONG).show();
-		    }
-		} else {
-		    note = itemCursor.getString(
-			    itemCursor.getColumnIndex(ToDoItemColumns.NOTE));
-		}
+                if (wasPrivate > 1) {
+                    if (encryptor.hasKey()) {
+                        try {
+                            note = encryptor.decrypt(itemCursor.getBlob(
+                                    itemCursor.getColumnIndex(ToDoItemColumns.NOTE)));
+                        } catch (EncryptionException e) {
+                            itemCursor.close();
+                            Toast.makeText(ToDoDetailsActivity.this,
+                                    e.getMessage(), Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                    } else {
+                        Toast.makeText(ToDoDetailsActivity.this,
+                                R.string.PasswordProtected, Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    note = itemCursor.getString(
+                            itemCursor.getColumnIndex(ToDoItemColumns.NOTE));
+                }
 	    }
 	    itemCursor.close();
 
@@ -1217,22 +1217,22 @@ public class ToDoDetailsActivity extends Activity {
 		values.put(ToDoItemColumns.DESCRIPTION, description);
 		if (note != null)
 		    values.put(ToDoItemColumns.NOTE, note);
-		if (privateCheckBox.isChecked()) {
-		    privacy = 1;
-		    if (encryptor.hasKey()) {
-			try {
-			    values.put(ToDoItemColumns.DESCRIPTION,
-				    encryptor.encrypt(description));
-			    if (note != null)
-				values.put(ToDoItemColumns.NOTE,
-					encryptor.encrypt(note));
-			    privacy = 2;
-			} catch (GeneralSecurityException gsx) {
-			    Toast.makeText(ToDoDetailsActivity.this,
-				    gsx.getMessage(), Toast.LENGTH_LONG).show();
-			}
-		    }
-		}
+                if (privateCheckBox.isChecked()) {
+                    privacy = 1;
+                    if (encryptor.hasKey()) {
+                        try {
+                            values.put(ToDoItemColumns.DESCRIPTION,
+                                    encryptor.encrypt(description));
+                            if (note != null)
+                                values.put(ToDoItemColumns.NOTE,
+                                        encryptor.encrypt(note));
+                            privacy = 2;
+                        } catch (EncryptionException e) {
+                            Toast.makeText(ToDoDetailsActivity.this,
+                                    e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
 		values.put(ToDoItemColumns.PRIVATE, privacy);
 	    } else {
 		validationErrors.add(getResources().getString(

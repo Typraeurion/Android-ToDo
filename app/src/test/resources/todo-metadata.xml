@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ToDoApp version="2" db-version="3" exported="2026-01-29T15:42:58.000Z" total-records="5">
+  <Preferences count="0">
+  </Preferences>
+  <Metadata count="4">
+    <item id="1" name="BouncyCastle.5Z01fEQvP6azXpNo">wM5lickks/WxwNNpUjRwwjN2rWQJ2xsqDERhYnKatDUu8StlgbZvYBFf4CykjN7h
+9ctQkjNIQi7bzct2DVrEAQ==</item>
+    <!-- The password for this hash is "Jx4ppbO2t". -->
+    <item id="2" name="StringEncryption.HashedPassword">Ah4AHgPnwQyAyWc50743Y0linoxnz8GsrMENbnlXZnHhWaUAtTch1vKBFLH12tUf
+3q9dMpJ4sITOytDAKHqfs6HHTTSvSw</item>
+    <item id="3" name="ToDoApplication.YMlgdKhM5bBlghg8">UV+VC1beLGCTVVo/hqiuvzGypg9Ui6X6DPLHMPot0O+/jQ4JClj5FV2xzY0FRWJE
+Jit2NlL1NgLHG4UMcSndBw==</item>
+    <item id="4" name="XMLImporter.ICGP7ea4pIOWHIPV">TEcYRw2NMvPnr+BMnmtc9uJMBB48Q544kwjqUGXdoEyw72ps7d/bqDSFzEzdIwDt
+KvjERGZNo+oSg6ICKnm+yQ==</item>
+  </Metadata>
+  <Categories count="1" max-id="1">
+    <category id="0">Unfiled</category>
+  </Categories>
+  <ToDoList count="0" max-id="1">
+  </ToDoList>
+</ToDoApp>

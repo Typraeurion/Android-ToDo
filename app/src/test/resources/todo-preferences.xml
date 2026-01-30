@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ToDoApp version="2" db-version="3" exported="2026-01-29T15:42:58.000Z" total-records="18">
+  <Preferences count="17">
+    <SortOrder>18237</SortOrder>
+    <ShowChecked>false</ShowChecked>
+    <ShowDueDate>true</ShowDueDate>
+    <ShowPriority>true</ShowPriority>
+    <ShowPrivate>true</ShowPrivate>
+    <ShowEncrypted>false</ShowEncrypted>
+    <ShowCategory>true</ShowCategory>
+    <UseLocalTimeZone>false</UseLocalTimeZone>
+    <FixedTimeZone>Asia/Pyongyang</FixedTimeZone>
+    <NotificationVibrate>true</NotificationVibrate>
+    <NotificationSound>14570</NotificationSound>
+    <SelectedCategory>17734</SelectedCategory>
+    <ExportFile>/storage/emulated/0/todo-5fpk3XVpLqdDUH5l.xml</ExportFile>
+    <ExportPrivate>false</ExportPrivate>
+    <ImportFile>/storage/emulated/0/todo-cUrpVNRxCyK6e8mq.xml</ImportFile>
+    <ImportType>2</ImportType>
+    <ImportPrivate>true</ImportPrivate>
+  </Preferences>
+  <Metadata count="0">
+  </Metadata>
+  <Categories count="1" max-id="1">
+    <category id="0">Unfiled</category>
+  </Categories>
+  <ToDoList count="0" max-id="1">
+  </ToDoList>
+</ToDoApp>

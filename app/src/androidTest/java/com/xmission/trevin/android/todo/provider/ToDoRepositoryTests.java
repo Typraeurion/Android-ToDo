@@ -17,6 +17,7 @@
 package com.xmission.trevin.android.todo.provider;
 
 import static com.xmission.trevin.android.todo.provider.MockToDoRepository.*;
+import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomWeek;
 import static org.junit.Assert.*;
 
 import android.content.Context;
@@ -766,8 +767,8 @@ public class ToDoRepositoryTests {
                 WeekDays.values().length - 1) + 1]);
         repeat.setDay2(WeekDays.values()[RAND.nextInt(
                 WeekDays.values().length - 1) + 1]);
-        repeat.setWeek(RAND.nextInt(4) + 1);
-        repeat.setWeek2(RAND.nextInt(4) + 1);
+        repeat.setWeek(randomWeek());
+        repeat.setWeek2(randomWeek());
         repeat.setEnd(expectedToDo.getDue()
                 .plusMonths(RAND.nextInt(255) + 1));
         expectedToDo.setRepeatInterval(repeat);

@@ -175,7 +175,8 @@ public class PasswordChangeWorkerTests {
         StringEncryption se = new StringEncryption();
         if (se.getPassword() == null) {
             se.setPassword(password.toCharArray());
-            se.checkPassword(mockRepo);
+            assertTrue("New password hash was not stored in the repository",
+                    se.checkPassword(mockRepo));
         }
         String decrypted = (savedItem.getEncryptedDescription() == null)
                 ? null : se.decrypt(savedItem.getEncryptedDescription());
@@ -411,7 +412,8 @@ public class PasswordChangeWorkerTests {
         // which password was last set in the global encryption instance.
         globalEncryption.forgetPassword();
         globalEncryption.setPassword(newPassword.toCharArray());
-        globalEncryption.checkPassword(mockRepo);
+        assertTrue("New password hash was not stored in the repository",
+                globalEncryption.checkPassword(mockRepo));
         String decrypted = (savedItem.getEncryptedDescription() == null) ? null
                 : globalEncryption.decrypt(savedItem.getEncryptedDescription());
         assertEquals("Decrypted description (#1) does not match original",

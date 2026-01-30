@@ -119,6 +119,18 @@ public class RandomToDoUtils {
     }
 
     /**
+     * Generate a random week of the month.  In repeats set according
+     * to a day of a week, weeks are numbered 1&ndash;4 for the first
+     * through fourth weeks or -1 for the <i>last</i> week.
+     *
+     * @return a value of -1, 1, 2, 3, or 4
+     */
+    public static int randomWeek() {
+        int x = RAND.nextInt(5);
+        return (x == 0) ? -1 : x;
+    }
+
+    /**
      * Generate a random repeat interval.
      */
     public static RepeatInterval randomRepeat() {

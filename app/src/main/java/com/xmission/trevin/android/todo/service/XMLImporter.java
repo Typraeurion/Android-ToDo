@@ -25,23 +25,29 @@ import static com.xmission.trevin.android.todo.ui.ToDoListActivity.TPREF_NOTIFIC
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.xmission.trevin.android.todo.data.*;
 import com.xmission.trevin.android.todo.data.repeat.*;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
+import com.xmission.trevin.android.todo.util.EncryptionException;
+import com.xmission.trevin.android.todo.util.PasswordMismatchException;
+import com.xmission.trevin.android.todo.util.PasswordRequiredException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import org.xml.sax.Attributes;
+import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
 import java.time.*;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -229,6 +235,8 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
          */
         public static ParseState fromTag(String tag) {
             for (ParseState state : values()) {
+                if (state.elementTag == null)
+                    continue;
                 if (state.elementTag.equals(tag))
                     return state;
             }
@@ -293,6 +301,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
     /** Repository passed to the {@link #importData} method */
     private final ToDoRepository repository;
 
+    /** The name of the XML file being read, if known */
+    private final String xmlFileName;
+
     /** Input stream passed to the {@link #importData} method */
     private final InputStream inStream;
 
@@ -342,6 +353,8 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @param prefs the To Do preferences.
      * @param repository The repository to which we should write records.
+     * @param xmlFileName the name of the XML file being read, if known
+     * (may be {@code null}).
      * @param inStream the stream from which we should read the XML data.
      * @param importType how to merge items from the XML file
      * with those in the database.
@@ -358,6 +371,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      */
     private XMLImporter(ToDoPreferences prefs,
                         ToDoRepository repository,
+                        String xmlFileName,
                         InputStream inStream,
                         ImportType importType,
                         boolean importPrivate,
@@ -366,6 +380,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         ProgressBarUpdater progressUpdater) {
         this.prefs = prefs;
         this.repository = repository;
+        this.xmlFileName = xmlFileName;
         this.inStream = inStream;
         this.importType = importType;
         this.importPrivate = importPrivate;
@@ -381,6 +396,8 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @param prefs the To Do preferences.
      * @param repository The repository to which we should write records.
      * It should have already been opened by the caller.
+     * @param fileName the name of the XML file being read, if known
+     * (may be {@code null}).
      * @param inStream the stream from which we should read the XML data.
      * @param importType how to merge items from the XML file
      * with those in the database.
@@ -401,6 +418,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      */
     public static void importData(ToDoPreferences prefs,
                                   ToDoRepository repository,
+                                  String fileName,
                                   InputStream inStream,
                                   ImportType importType,
                                   boolean importPrivate,
@@ -421,9 +439,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         try {
             // To Do: Read the document tag and extract the version number, if any
             XMLImporter importer = new XMLImporter(prefs, repository,
-                    inStream, importType, importPrivate,
+                    fileName, inStream, importType, importPrivate,
                     decryptor, encryptor, progressUpdater);
             repository.runInTransaction(importer);
+        } catch (UncaughtIOException ue) {
+            throw ue.getCause();
         } finally {
             inStream.close();
         }
@@ -435,14 +455,31 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             SAXParserFactory factory = SAXParserFactory.newInstance();
             SAXParser parser = factory.newSAXParser();
             parser.parse(inStream, this);
-            // To Do: Implement method stub
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to import XML", e);
+        } catch (IOException iox) {
+            throw new UncaughtIOException(iox);
+        } catch (ParserConfigurationException ce) {
+            throw new XMLParseException(ce.getMessage(), ce);
+        } catch (SAXParseException px) {
+            throw new XMLParseException(px.getMessage(), xmlFileName,
+                    px.getLineNumber(), px.getColumnNumber(), px);
+        } catch (SAXException se) {
+            throw new XMLParseException(se);
         }
     }
 
-    /** Current line number of the input file; useful for error reporting */
-    private int currentLineNumber = 1;
+    /** Current location in the input file for any error reporting */
+    @NonNull
+    private Locator xmlLocator = new Locator() {
+        // The default implementation returns unknown lines and columns
+        @Override
+        public int getLineNumber() { return -1; }
+        @Override
+        public int getColumnNumber() { return -1; }
+        @Override
+        public String getPublicId() { return ""; }
+        @Override
+        public String getSystemId() { return ""; }
+    };
 
     /**
      * The current text being read from the XML file, if expected;
@@ -496,16 +533,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
     private ZoneId assumedZone = ZoneOffset.UTC;
 
     /**
-     * Process text content.  Scans the text for any newline characters
-     * to increment the line number.  If we are expecting text, adds
-     * the characters to {@link #currentText}; otherwise ignores them.
+     * Process text content.  If we are expecting text, adds the
+     * characters to {@link #currentText}; otherwise ignores them.
      */
     @Override
     public void characters(char[] chars, int start, int length) {
-        for (int i = start; i < start + length; i++) {
-            if (chars[i] == '\n')
-                currentLineNumber++;
-        }
         if (currentState.hasText())
             currentText.append(chars, start, length);
     }
@@ -526,7 +558,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @return the value of the attribute if present, or {@code defaultValue}
      * if missing.
      *
-     * @throws SAXParseException if the attribute is not found and
+     * @throws XMLParseException if the attribute is not found and
      * {@code defaultValue} is {@code null}, or if its value is less than
      * {@code minAllowed} or greater than {@code maxAllowed}.
      */
@@ -534,27 +566,27 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                                   String elementName, String attrName,
                                   Integer defaultValue,
                                   Integer minAllowed, Integer maxAllowed)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = attributes.getValue(attrName);
         if (attrValue == null) {
             if (defaultValue != null)
                 return defaultValue;
-            throw new SAXParseException(String.format(Locale.US,
-                    "Missing %s %s", elementName, attrName),
-                    null, null, currentLineNumber, 0);
+            throw new XMLMissingRequiredAttributeException(
+                    elementName, attrName, xmlFileName,
+                    xmlLocator.getLineNumber(), xmlLocator.getColumnNumber());
         }
         try {
             int value = Integer.parseInt(attrValue);
             if (((minAllowed != null) && (value < minAllowed)) ||
                     ((maxAllowed != null) && (value > maxAllowed)))
-                throw new SAXParseException(String.format(Locale.US,
-                        "Invalid %s %s: %d", elementName, attrName, value),
-                        null, null, currentLineNumber, 0);
+                throw new XMLBadValueException(elementName, attrName,
+                        attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             return value;
         } catch (NumberFormatException x) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, x);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), x);
         }
     }
 
@@ -574,7 +606,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @return the value of the attribute if present, or {@code defaultValue}
      * if missing.
      *
-     * @throws SAXParseException if the attribute is not found and
+     * @throws XMLParseException if the attribute is not found and
      * {@code defaultValue} is {@code null}, or if its value is less than
      * {@code minAllowed} or greater than {@code maxAllowed}.
      */
@@ -582,27 +614,27 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                                   String elementName, String attrName,
                                   Long defaultValue,
                                   Long minAllowed, Long maxAllowed)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = attributes.getValue(attrName);
         if (attrValue == null) {
             if (defaultValue != null)
                 return defaultValue;
-            throw new SAXParseException(String.format(Locale.US,
-                    "Missing %s %s", elementName, attrName),
-                    null, null, currentLineNumber, 0);
+            throw new XMLMissingRequiredAttributeException(
+                    elementName, attrName, xmlFileName,
+                    xmlLocator.getLineNumber(), xmlLocator.getColumnNumber());
         }
         try {
             long value = Long.parseLong(attrValue);
             if (((minAllowed != null) && (value < minAllowed)) ||
                     ((maxAllowed != null) && (value > maxAllowed)))
-                throw new SAXParseException(String.format(Locale.US,
-                        "Invalid %s %s: %d", elementName, attrName, value),
-                        null, null, currentLineNumber, 0);
+                throw new XMLBadValueException(elementName, attrName,
+                        attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             return value;
         } catch (NumberFormatException x) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, x);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), x);
         }
     }
 
@@ -616,12 +648,12 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the value of the attribute.
      *
-     * @throws SAXParseException if the attribute is not found.
+     * @throws XMLParseException if the attribute is not found.
      */
     private boolean parseBooleanAttribute(
             Attributes attributes,
             String elementName, String attrName)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = getRequiredStringAttribute(
                 attributes, elementName, attrName);
         return Boolean.parseBoolean(attrValue);
@@ -637,22 +669,28 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the value of the attribute.
      *
-     * @throws SAXParseException if the attribute is not found or
+     * @throws XMLParseException if the attribute is not found or
      * is an empty string.
      */
     private String getRequiredStringAttribute(
             Attributes attributes,
             String elementName, String attrName)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = attributes.getValue(attrName);
-        if (attrValue == null)
-            throw new SAXParseException(String.format(Locale.US,
-                    "Missing %s %s", elementName, attrName),
-                    null, null, currentLineNumber, 0);
+        if (attrValue == null) {
+            if (xmlLocator == null)
+                throw new XMLMissingRequiredAttributeException(
+                        elementName, attrName, xmlFileName,
+                        xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
+            throw new XMLMissingRequiredAttributeException(
+                        elementName, attrName, xmlFileName,
+                    xmlLocator.getLineNumber(), xmlLocator.getColumnNumber());
+        }
         if (attrValue.length() == 0)
-            throw new SAXParseException(String.format(Locale.US,
-                    "%s %s is empty", elementName, attrName),
-                    null, null, currentLineNumber, 0);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber());
         return attrValue;
     }
 
@@ -669,28 +707,29 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @return the value of the attribute if present, or {@code defaultValue}
      * if missing.
      *
-     * @throws SAXParseException if the attribute is not found and
+     * @throws XMLParseException if the attribute is not found and
      * {@code defaultValue} is {@code null}.
      */
     private Instant parseTimestampAttribute(
             Attributes attributes,
             String elementName, String attrName,
             boolean required)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = attributes.getValue(attrName);
         if (attrValue == null) {
             if (required)
-                throw new SAXParseException(String.format(Locale.US,
-                        "Missing %s %s", elementName, attrName),
-                        null, null, currentLineNumber, 0);
+                throw new XMLMissingRequiredAttributeException(
+                        elementName, attrName, xmlFileName,
+                        xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             return null;
         }
         try {
             return Instant.parse(attrValue);
         } catch (NumberFormatException x) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, x);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), x);
         }
     }
 
@@ -713,20 +752,21 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @return the value of the attribute if present, or {@code null}
      * if missing.
      *
-     * @throws SAXParseException if the attribute is not found and
+     * @throws XMLParseException if the attribute is not found and
      * {@code defaultValue} is {@code null}.
      */
     private LocalDate parseDateAttribute(
             Attributes attributes,
             String elementName, String attrName,
             boolean required)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = attributes.getValue(attrName);
         if (attrValue == null) {
             if (required)
-                throw new SAXParseException(String.format(Locale.US,
-                        "Missing %s %s", elementName, attrName),
-                        null, null, currentLineNumber, 0);
+                throw new XMLMissingRequiredAttributeException(
+                        elementName, attrName, xmlFileName,
+                        xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             return null;
         }
         try {
@@ -742,13 +782,13 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             }
             return LocalDate.parse(attrValue);
         } catch (DateTimeParseException e) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, e);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), e);
         } catch (NumberFormatException x) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, x);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), x);
         }
     }
 
@@ -767,41 +807,42 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @return the value of the attribute if present, or {@code defaultValue}
      * if missing.
      *
-     * @throws SAXParseException if the attribute is not found and
+     * @throws XMLParseException if the attribute is not found and
      * {@code defaultValue} is {@code null}.
      */
     private LocalTime parseTimeAttribute(
             Attributes attributes,
             String elementName, String attrName,
             boolean required)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = attributes.getValue(attrName);
         if (attrValue == null) {
             if (required)
-                throw new SAXParseException(String.format(Locale.US,
-                        "Missing %s %s", elementName, attrName),
-                        null, null, currentLineNumber, 0);
+                throw new XMLMissingRequiredAttributeException(
+                        elementName, attrName, xmlFileName,
+                        xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             return null;
         }
         try {
             if (version <= 1) {
                 long millis = Long.parseLong(attrValue);
                 if ((millis < 0) || (millis > 86400000))
-                    throw new SAXParseException(String.format(Locale.US,
-                            "Invalid %s %s value: %d",
-                            elementName, attrName, millis),
-                            null, null, currentLineNumber, 0);
+                    throw new XMLBadValueException(
+                            elementName, attrName, attrValue, xmlFileName,
+                            xmlLocator.getLineNumber(),
+                            xmlLocator.getColumnNumber());
                 return LocalTime.ofNanoOfDay(millis * 1000000L);
             }
             return LocalTime.parse(attrValue);
         } catch (DateTimeParseException e) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, e);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), e);
         } catch (NumberFormatException x) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, x);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), x);
         }
     }
 
@@ -819,27 +860,26 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the bit mask as an integer.
      *
-     * @throws SAXParseException if the attribute is not found
+     * @throws XMLParseException if the attribute is not found
      * or is not a binary integer.
      */
     private int parseBinaryIntAttribute(Attributes attributes,
                                         String elementName, String attrName,
                                         int maxBits)
-        throws SAXParseException {
+        throws XMLParseException {
         String attrValue = getRequiredStringAttribute(
                 attributes, elementName, attrName);
         try {
             int value = Integer.parseInt(attrValue, 2);
             if ((value < 0) || (value >= (1 << maxBits)))
-                throw new SAXParseException(String.format(Locale.US,
-                        "Invalid %s %s: %s",
-                        elementName, attrName, attrValue),
-                        null, null, currentLineNumber, 0);
+                throw new XMLBadValueException(elementName, attrName,
+                        attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             return value;
         } catch (NumberFormatException x) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s: %s", elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0, x);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), x);
         }
     }
 
@@ -855,12 +895,12 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the day of the week
      *
-     * @throws SAXParseException if the attribute is not found
+     * @throws XMLParseException if the attribute is not found
      * or its not a valid day of the week.
      */
     private WeekDays parseWeekdayAttribute(
             Attributes attributes, String elementName, String attrName)
-        throws SAXParseException {
+        throws XMLParseException {
         if (version <= 1)
             return WeekDays.fromValue(parseIntAttribute(
                     attributes, elementName, attrName, null,
@@ -873,10 +913,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         try {
             return WeekDays.valueOf(attrValue);
         } catch (IllegalArgumentException e) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %S value: %s",
-                    elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber());
         }
     }
 
@@ -892,12 +931,12 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the day of the week
      *
-     * @throws SAXParseException if the attribute is not found
+     * @throws XMLParseException if the attribute is not found
      * or its not a valid day of the week.
      */
     private Months parseMonthAttribute(
             Attributes attributes, String elementName, String attrName)
-        throws SAXParseException {
+        throws XMLParseException {
         if (version <= 1)
             return Months.fromValue(parseIntAttribute(
                     attributes, elementName, attrName, null,
@@ -909,10 +948,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         try {
             return Months.valueOf(attrValue);
         } catch (IllegalArgumentException e) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %S value: %s",
-                    elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber());
         }
     }
 
@@ -926,13 +964,13 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the set of {@link WeekDays}
      *
-     * @throws SAXParseException if the attribute is not found, its value
+     * @throws XMLParseException if the attribute is not found, its value
      * is empty, or it does not contain a list of week days or the
      * value &ldquo;ALL&rdquo;.
      */
     private SortedSet<WeekDays> parseWeekdaysAttribute(
             Attributes attributes, String elementName, String attrName)
-        throws SAXParseException {
+        throws XMLParseException {
         String attrValue = getRequiredStringAttribute(
                 attributes, elementName, attrName).toUpperCase(Locale.US);
         SortedSet<WeekDays> days = new TreeSet<>();
@@ -943,16 +981,14 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         for (String day : attrValue.split(",")) try {
             days.add(WeekDays.valueOf(day.trim()));
         } catch (IllegalArgumentException e) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %s value: %s",
-                    elementName, attrName, day),
-                    null, null, currentLineNumber, 0, e);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber(), e);
         }
         if (days.isEmpty()) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %S value: %s",
-                    elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber());
         }
         return days;
     }
@@ -968,22 +1004,32 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      *
      * @return the {@link WeekdayDirection}
      *
-     * @throws SAXParseException if the attribute is not found, its value
+     * @throws XMLParseException if the attribute is not found, its value
      * is empty, or it is not a valid {@link WeekdayDirection}.
      */
     private WeekdayDirection parseWeekdayDirectionAttribute(
             Attributes attributes, String elementName, String attrName)
-            throws SAXParseException {
+            throws XMLParseException {
         String attrValue = getRequiredStringAttribute(
                 attributes, elementName, attrName).toUpperCase(Locale.US);
         try {
             return WeekdayDirection.valueOf(attrValue);
         } catch (IllegalArgumentException e) {
-            throw new SAXParseException(String.format(Locale.US,
-                    "Invalid %s %S value: %s",
-                    elementName, attrName, attrValue),
-                    null, null, currentLineNumber, 0);
+            throw new XMLBadValueException(elementName, attrName,
+                    attrValue, xmlFileName, xmlLocator.getLineNumber(),
+                    xmlLocator.getColumnNumber());
         }
+    }
+
+    /**
+     * Get the document&rsquo;s {@link Locator}
+     *
+     * @param locator the {@link Locator} used in the SAX parser
+     */
+    @Override
+    public void setDocumentLocator(Locator locator) {
+        Log.d(LOG_TAG, ".setDocumentLocator");
+        xmlLocator = locator;
     }
 
     /**
@@ -1016,14 +1062,14 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @param qName the full name of the element
      * @param attributes any attributes attached to the element
      *
-     * @throws SAXParseException if we encounter an unexpected element
+     * @throws XMLParseException if we encounter an unexpected element
      * or do not find an element&rsquo;s required attributes
      * or if any attribute value is invalid.
      */
     @Override
     public void startElement(String uri, String localName,
                              String qName, Attributes attributes)
-            throws SAXParseException {
+            throws XMLParseException {
         Log.d(LOG_TAG, String.format(Locale.US,
                 ".startElement(<%s>)", qName));
 
@@ -1036,8 +1082,12 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         else {
             ParseState nextState = ParseState.fromTag(qName);
             if (nextState == null)
-                throw new SAXParseException("Unknown element: " + qName,
-                        null, null, currentLineNumber, 0);
+                throw new XMLUnexpectedElementException(qName, true,
+                        (currentState == ParseState.PREFERENCE)
+                                ? preferenceName
+                                : currentState.getElementTag(),
+                        xmlFileName, xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
             nextState.checkParent(currentState);
             currentState = nextState;
         }
@@ -1068,6 +1118,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 break;
 
             case PREFERENCES:
+                if (prefsMap != null)
+                    throw new XMLParseException(String.format(Locale.US,
+                            "Multiple <%s> sections in document", qName),
+                            xmlFileName, xmlLocator.getLineNumber(),
+                            xmlLocator.getColumnNumber());
                 int prefsCount = parseIntAttribute(attributes,
                         PREFERENCES_TAG, ATTR_COUNT, -1, 0, null);
                 if (prefsCount <= 0)
@@ -1077,6 +1132,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 break;
 
             case METADATA:
+                if (metadata != null)
+                    throw new XMLParseException(String.format(Locale.US,
+                            "Multiple <%s> sections in document", qName),
+                            xmlFileName, xmlLocator.getLineNumber(),
+                            xmlLocator.getColumnNumber());
                 int metaCount = parseIntAttribute(attributes,
                         METADATA_TAG, ATTR_COUNT, -1, 0, null);
                 if (metaCount <= 0)
@@ -1094,6 +1154,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 break;
 
             case CATEGORIES:
+                if (categoriesRead)
+                    throw new XMLParseException(String.format(Locale.US,
+                            "Multiple <%s> sections in document", qName),
+                            xmlFileName, xmlLocator.getLineNumber(),
+                            xmlLocator.getColumnNumber());
                 int catCount = parseIntAttribute(attributes,
                         CATEGORIES_TAG, ATTR_COUNT, -1, 0, null);
                 if (catCount < 0)
@@ -1200,10 +1265,10 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         repeatType = RepeatType.valueOf(attrValue);
                         repeat = repeatType.newInstance();
                     } catch (IllegalArgumentException e) {
-                        throw new SAXParseException(String.format(Locale.US,
-                                "Invalid %s %s: %s",
-                                DUE_REPEAT, ATTR_NAME, attrValue),
-                                null, null, currentLineNumber, 0);
+                        throw new XMLBadValueException(DUE_REPEAT, ATTR_NAME,
+                                attrValue, xmlFileName,
+                                xmlLocator.getLineNumber(),
+                                xmlLocator.getColumnNumber());
                     }
                 }
                 currentToDoItem.setRepeatInterval(repeat);
@@ -1239,12 +1304,29 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                      * direction in a single binary bitmap string.
                      */
                     if (version <= 1) {
-                        int bitmap = parseBinaryIntAttribute(attributes,
-                                DUE_REPEAT, ATTR_WEEK_DAYS, 9);
-                        aar.setAllowedWeekDays(WeekDays.fromBitMap(
-                                bitmap & WeekDays.DAYS_BIT_MASK));
-                        aar.setDirection(WeekdayDirection.fromValue(
-                                bitmap & WeekdayDirection.DIRECTION_BIT_MASK));
+                        /*
+                         * There appears to have been a bug in the old code
+                         * where the weekday bitmap was allowed to be null;
+                         * some parts of the code treated it as an empty set,
+                         * while the old adjustDueDate method could crash
+                         * with a NullPointerException!  If this attribute
+                         * is missing, issue a warning and instead
+                         * treat it as the set of all days (the default).
+                         */
+                        if (attributes.getValue(ATTR_WEEK_DAYS) == null) {
+                            Log.w(LOG_TAG, String.format(Locale.US,
+                                    "%s %s=%d %s element has no %s",
+                                    TODO_ITEM, ATTR_ID,
+                                    currentToDoItem.getId(),
+                                    DUE_REPEAT, ATTR_WEEK_DAYS));
+                        } else {
+                            int bitmap = parseBinaryIntAttribute(attributes,
+                                    DUE_REPEAT, ATTR_WEEK_DAYS, 9);
+                            aar.setAllowedWeekDays(WeekDays.fromBitMap(
+                                    bitmap & WeekDays.DAYS_BIT_MASK));
+                            aar.setDirection(WeekdayDirection.fromValue(
+                                    bitmap & WeekdayDirection.DIRECTION_BIT_MASK));
+                        }
                     }
                     /*
                      * As of version 2, we use two separate fields
@@ -1288,7 +1370,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         rmdy.setDay(parseWeekdayAttribute(attributes,
                                 DUE_REPEAT, ATTR_DAY1));
                         rmdy.setWeek(parseIntAttribute(attributes,
-                                DUE_REPEAT, ATTR_WEEK1, null, 0, 4));
+                                DUE_REPEAT, ATTR_WEEK1, null, -1, 4));
                         break;
                     case SEMI_MONTHLY_ON_DATES:
                         RepeatSemiMonthlyOnDates rmsdt =
@@ -1303,11 +1385,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         rsmdy.setDay(parseWeekdayAttribute(attributes,
                                 DUE_REPEAT, ATTR_DAY1));
                         rsmdy.setWeek(parseIntAttribute(attributes,
-                                DUE_REPEAT, ATTR_WEEK1, null, 0, 4));
+                                DUE_REPEAT, ATTR_WEEK1, null, -1, 4));
                         rsmdy.setDay2(parseWeekdayAttribute(attributes,
                                 DUE_REPEAT, ATTR_DAY2));
                         rsmdy.setWeek2(parseIntAttribute(attributes,
-                                DUE_REPEAT, ATTR_WEEK2, null, 0, 4));
+                                DUE_REPEAT, ATTR_WEEK2, null, -1, 4));
                         break;
                     case YEARLY_ON_DATE:
                         RepeatYearlyOnDate rydt = (RepeatYearlyOnDate) repeat;
@@ -1320,7 +1402,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         rydy.setDay(parseWeekdayAttribute(attributes,
                                 DUE_REPEAT, ATTR_DAY1));
                         rydy.setWeek(parseIntAttribute(attributes,
-                                DUE_REPEAT, ATTR_WEEK1, null, 0, 4));
+                                DUE_REPEAT, ATTR_WEEK1, null, -1, 4));
                         rydy.setMonth(parseMonthAttribute(attributes,
                                 DUE_REPEAT, ATTR_MONTH));
                         break;
@@ -1343,31 +1425,31 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      * @param localName local name of the element (not used; empty)
      * @param qName the full name of the element
      *
-     * @throws SAXParseException if {@code qName} does not represent the
+     * @throws XMLParseException if {@code qName} does not represent the
      * current element being processed or if we fail to parse any
      * intervening text content.
      */
     @Override
     public void endElement(String uri, String localName, String qName)
-            throws SAXException {
+            throws XMLParseException {
         Log.d(LOG_TAG, String.format(Locale.US,
                 ".endElement(</%s>)", qName));
 
         // Special handling for preference items
         if (currentState == ParseState.PREFERENCE) {
             if (!preferenceName.equals(qName))
-                throw new SAXParseException(String.format(Locale.US,
-                        "Closing </%s> tag found after opening <%s> tag",
-                        qName, preferenceName),
-                        null, null, currentLineNumber, 0);
+                throw new XMLUnexpectedElementException(qName, false,
+                        preferenceName, xmlFileName,
+                        xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
         }
 
         else {
             if (!currentState.getElementTag().equals(qName))
-                throw new SAXParseException(String.format(Locale.US,
-                        "Closing </%s> tag found after opening <%s> tag",
-                        qName, currentState.getElementTag()),
-                        null, null, currentLineNumber, 0);
+                throw new XMLUnexpectedElementException(qName, false,
+                        currentState.getElementTag(),
+                        xmlFileName, xmlLocator.getLineNumber(),
+                        xmlLocator.getColumnNumber());
         }
 
         String textContent = currentState.hasText()
@@ -1383,7 +1465,6 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             case METADATA:
                 if (metadata != null)
                     readMetadata();
-                metadata = null;
                 break;
 
             case METADATUM:
@@ -1563,6 +1644,27 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 // Ignore this change
             }
         }
+        Boolean useLocalZone = null;
+        if (prefsMap.containsKey(TPREF_LOCAL_TIME_ZONE)) {
+            useLocalZone = Boolean.parseBoolean(
+                    prefsMap.get(TPREF_LOCAL_TIME_ZONE));
+        }
+        ZoneId fixedZone = null;
+        if (prefsMap.containsKey(TPREF_FIXED_TIME_ZONE)) {
+            try {
+                fixedZone = ZoneId.of(prefsMap.get(TPREF_FIXED_TIME_ZONE));
+                // Set this regardless of the useLocalZone flag so it's
+                // available when the user toggles from local back to fixed.
+                prefsEditor.setTimeZone(fixedZone);
+            } catch (DateTimeException x) {
+                Log.e(LOG_TAG, "Invalid time zone ID: "
+                        + prefsMap.get(TPREF_FIXED_TIME_ZONE), x);
+                // Ignore this zone
+            }
+        }
+        if (useLocalZone == Boolean.TRUE)
+            prefsEditor.setTimeZoneLocal();
+
         prefsEditor.finish();
     }
 
@@ -1582,15 +1684,12 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         if (importPrivate && metadata.containsKey(
                 StringEncryption.METADATA_PASSWORD_HASH)) {
             if (decryptor == null)
-                throw new RuntimeException("Import file is password-"
+                throw new PasswordRequiredException("Import file is password-"
                         + "protected but no password was provided");
-            try {
-                decryptor.checkPassword(metadata.get(
-                    StringEncryption.METADATA_PASSWORD_HASH));
-            } catch (GeneralSecurityException gsx) {
-                throw new RuntimeException("Import password does not match"
-                        + " the recorded hash", gsx);
-            }
+            if (!decryptor.checkPassword(metadata.get(
+                    StringEncryption.METADATA_PASSWORD_HASH)))
+                throw new PasswordMismatchException("Password does not match"
+                        + " the one used to encrypt the import file");
         }
     }
 
@@ -1731,13 +1830,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             throw new IllegalStateException(String.format(Locale.US,
                     "<%s> section encountered before <%s>",
                     ITEMS_TAG, CATEGORIES_TAG));
-        if (encryptor != null) try {
-            if (!encryptor.checkPassword(repository))
-                throw new RuntimeException("Current password is incorrect");
-        } catch (GeneralSecurityException gsx) {
-            throw new RuntimeException(
-                    "Failed to check the current password", gsx);
-        }
+        if ((encryptor != null) && !encryptor.checkPassword(repository))
+            throw new PasswordMismatchException(
+                    "Current password is incorrect");
         if (importType == ImportType.CLEAN) {
             Log.d(LOG_TAG, "Removing all existing To Do items");
             repository.deleteAllItems();
@@ -1770,7 +1865,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
 
         if (currentToDoItem.isEncrypted()) {
             if (decryptor == null)
-                throw new IllegalStateException(
+                throw new PasswordRequiredException(
                         "No password provided for decrypting private records");
             try {
                 currentToDoItem.setDescription(decryptor.decrypt(
@@ -1780,10 +1875,10 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                             currentToDoItem.getEncryptedNote()));
                 // Temporarily mark unencrypted
                 currentToDoItem.setPrivate(1);
-            } catch (GeneralSecurityException gsx) {
-                throw new RuntimeException(String.format(Locale.US,
+            } catch (EncryptionException e) {
+                throw new EncryptionException(String.format(Locale.US,
                         "Failed to decrypt To Do item #%d",
-                        currentToDoItem.getId()), gsx);
+                        currentToDoItem.getId()), e);
             }
         }
         if (currentToDoItem.isPrivate() && (encryptor != null)) {
@@ -1794,10 +1889,10 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 if (currentToDoItem.getNote() != null)
                     currentToDoItem.setEncryptedNote(encryptor.encrypt(
                             currentToDoItem.getNote()));
-            } catch (GeneralSecurityException gsx) {
-                throw new RuntimeException(String.format(Locale.US,
+            } catch (EncryptionException e) {
+                throw new EncryptionException(String.format(Locale.US,
                         "Failed to encrypt To Do item #%d",
-                        currentToDoItem.getId()), gsx);
+                        currentToDoItem.getId()), e);
             }
         }
 
@@ -1816,9 +1911,10 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 } else try {
                     existingRecord.setDescription(encryptor.decrypt(
                             existingRecord.getEncryptedDescription()));
-                } catch (GeneralSecurityException gsx) {
-                    throw new RuntimeException(
-                            "Failed to decrypt an existing To Do item", gsx);
+                } catch (EncryptionException e) {
+                    throw new RuntimeException(String.format(Locale.US,
+                            "Failed to decrypt existing To Do item #%d",
+                            existingRecord.getId()), e);
                 }
             }
         }

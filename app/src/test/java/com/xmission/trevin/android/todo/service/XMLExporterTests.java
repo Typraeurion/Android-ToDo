@@ -21,6 +21,7 @@ import static com.xmission.trevin.android.todo.service.XMLExporter.*;
 import static com.xmission.trevin.android.todo.service.XMLImporter.decodeBase64;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomAlarm;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomToDo;
+import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomWeek;
 
 import static org.junit.Assert.*;
 
@@ -1405,7 +1406,7 @@ public class XMLExporterTests {
         RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay();
         repeat.setIncrement(RAND.nextInt(10) + 1);
         repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
-        repeat.setWeek(RAND.nextInt(5));
+        repeat.setWeek(randomWeek());
         if (RAND.nextBoolean())
             repeat.setEnd(LocalDate.now().plusDays(RAND.nextInt(30) + 1));
         runRepeatTest(repeat);
@@ -1453,9 +1454,9 @@ public class XMLExporterTests {
         RepeatSemiMonthlyOnDays repeat = new RepeatSemiMonthlyOnDays();
         repeat.setIncrement(RAND.nextInt(10) + 1);
         repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
-        repeat.setWeek(RAND.nextInt(5));
+        repeat.setWeek(randomWeek());
         repeat.setDay2(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
-        repeat.setWeek2(RAND.nextInt(5));
+        repeat.setWeek2(randomWeek());
         if (RAND.nextBoolean())
             repeat.setEnd(LocalDate.now().plusDays(RAND.nextInt(30) + 1));
         runRepeatTest(repeat);
@@ -1488,7 +1489,7 @@ public class XMLExporterTests {
         repeat.setIncrement(RAND.nextInt(10) + 1);
         repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
         repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
-        repeat.setWeek(RAND.nextInt(5));
+        repeat.setWeek(randomWeek());
         if (RAND.nextBoolean())
             repeat.setEnd(LocalDate.now().plusDays(RAND.nextInt(30) + 1));
         runRepeatTest(repeat);

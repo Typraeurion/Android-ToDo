@@ -50,7 +50,6 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import androidx.work.impl.utils.futures.SettableFuture;
 
-import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -342,7 +341,7 @@ public class AlarmWorker extends Worker {
                     try {
                         descr = encryptor.decrypt(
                                 alarm.getEncryptedDescription());
-                    } catch (GeneralSecurityException gsx) {
+                    } catch (Exception e) {
                         descr = context.getString(
                                 R.string.NotificationFormatEncrypted);
                     }

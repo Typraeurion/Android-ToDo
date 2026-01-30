@@ -291,7 +291,7 @@ public final class ToDoSchema {
 
         /*
          * For repeating monthly or annually by day of the week,
-         * the week day number (0 = Sunday, 6 = Saturday).
+         * the week day number (1 = Sunday, 7 = Saturday).
          * For repeating monthly or annually by day of the month,
          * the date (1-31).  Negative numbers count from the end
          * of the month — e.g. -1 is the last day, -7 is a week
@@ -301,21 +301,21 @@ public final class ToDoSchema {
         public static final String REPEAT_DAY = "repeat_day";
 
         /*
-         * For repeating semi-monthly, the second day (0-6) or date (1-31).
+         * For repeating semi-monthly, the second day (1-7) or date (1-31).
          * <P>Type: INTEGER</P>
          */
         public static final String REPEAT_DAY2 = "repeat_day2";
 
         /*
          * For repeating monthly or annually by day of the week,
-         * the week number (0 = 1st Xxxday, 4 = last Xxxday).
+         * the week number (1 = 1st Xxxday, 4 = 4th Xxxday, -1 = last Xxxday).
          * <P>Type: INTEGER</P>
          */
         public static final String REPEAT_WEEK = "repeat_week";
 
         /*
          * For repeating semi-monthly by day of the week,
-         * the second week number (0-4).
+         * the second week number (-1 or 1-4).
          * <P>Type: INTEGER</P>
          */
         public static final String REPEAT_WEEK2 = "repeat_week2";

@@ -69,6 +69,9 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
     /** The key of the input data that holds the password for the backup */
     public static final String XML_PASSWORD = "XMLImportPassword";
 
+    /** The name of the XML file being read */
+    private final String importFileName;
+
     /**
      * Input stream from which we will be reading the XML document.
      * <p>
@@ -164,42 +167,42 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
                 currentPassword = new String(se.getPassword());
         }
 
-        String fileLocation = params.getInputData().getString(XML_DATA_FILENAME);
-        if (fileLocation.startsWith("content://")) {
+        importFileName = params.getInputData().getString(XML_DATA_FILENAME);
+        if (importFileName.startsWith("content://")) {
             // This is a URI from the Storage Access Framework
             try {
-                Uri contentUri = Uri.parse(fileLocation);
+                Uri contentUri = Uri.parse(importFileName);
                 xmlStream = context.getContentResolver()
                         .openInputStream(contentUri);
             } catch (FileNotFoundException fe) {
                 Log.e(TAG, String.format(Locale.US,
-                        "Content URI %s does not exist", fileLocation), fe);
+                        "Content URI %s does not exist", importFileName), fe);
                 showToast(context.getString(
-                        R.string.ErrorImportNotFound, fileLocation));
+                        R.string.ErrorImportNotFound, importFileName));
                 throw fe;
             } catch (IOException e) {
                 Log.e(TAG, String.format(Locale.US,
-                        "Failed to open %s for reading", fileLocation), e);
+                        "Failed to open %s for reading", importFileName), e);
                 showToast(context.getString(
-                        R.string.ErrorImportCantRead, fileLocation));
+                        R.string.ErrorImportCantRead, importFileName));
                 throw e;
             }
         }
 
         else {
-            File xmlFile = new File(fileLocation);
+            File xmlFile = new File(importFileName);
             if (!xmlFile.exists()) {
                 Log.e(TAG, String.format(Locale.US,
-                        "File %s does not exist", fileLocation));
+                        "File %s does not exist", importFileName));
                 showToast(context.getString(
-                        R.string.ErrorImportNotFound, fileLocation));
-                throw new FileNotFoundException(fileLocation);
+                        R.string.ErrorImportNotFound, importFileName));
+                throw new FileNotFoundException(importFileName);
             }
             if (!xmlFile.canRead()) {
                 Log.e(TAG, String.format(Locale.US,
-                        "Cannot read %s", fileLocation));
+                        "Cannot read %s", importFileName));
                 showToast(context.getString(
-                        R.string.ErrorImportPermissionDenied, fileLocation));
+                        R.string.ErrorImportPermissionDenied, importFileName));
                 throw new IOException(String.format(Locale.US,
                         "Cannot read %s", xmlFile.getAbsolutePath()));
             }
@@ -207,9 +210,9 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
                 xmlStream = new FileInputStream(xmlFile);
             } catch (IOException e) {
                 Log.e(TAG, String.format(Locale.US,
-                        "Failed to open %s for reading", fileLocation), e);
+                        "Failed to open %s for reading", importFileName), e);
                 showToast(context.getString(
-                        R.string.ErrorImportCantRead, fileLocation));
+                        R.string.ErrorImportCantRead, importFileName));
                 throw e;
             }
         }
@@ -229,7 +232,7 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
         repository.open(context);
         try {
             XMLImporter.importData(preferences, repository,
-                    xmlStream, importType, importPrivate,
+                    importFileName, xmlStream, importType, importPrivate,
                     xmlPassword, currentPassword, this);
             return Result.success();
         } catch (Exception e) {

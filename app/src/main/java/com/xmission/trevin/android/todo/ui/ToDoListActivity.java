@@ -19,7 +19,6 @@ package com.xmission.trevin.android.todo.ui;
 import static com.xmission.trevin.android.todo.service.AlarmWorker.EXTRA_ITEM_CATEGORY_ID;
 import static com.xmission.trevin.android.todo.service.AlarmWorker.EXTRA_ITEM_ID;
 
-import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -33,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.service.AlarmWorker;
+import com.xmission.trevin.android.todo.util.AuthenticationException;
+import com.xmission.trevin.android.todo.util.PasswordMismatchException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
@@ -1139,7 +1140,7 @@ public class ToDoListActivity extends ListActivity {
                         }
                     });
                 }
-            } catch (GeneralSecurityException gsx) {
+            } catch (PasswordMismatchException px) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -1229,7 +1230,7 @@ public class ToDoListActivity extends ListActivity {
                                 builder.show();
                                 return;
                             }
-                        } catch (GeneralSecurityException gsx) {
+                        } catch (AuthenticationException gsx) {
                             Arrays.fill(newPassword, (char) 0);
                             Arrays.fill(oldPassword, (char) 0);
                             new AlertDialog.Builder(ToDoListActivity.this)

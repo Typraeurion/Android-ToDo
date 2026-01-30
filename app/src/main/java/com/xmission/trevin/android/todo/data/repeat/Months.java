@@ -39,7 +39,13 @@ public enum Months {
     @NonNull
     private final Month javaMonth;
 
-    /** Interval value for this month */
+    /**
+     * Integer value for this month.  This was originally based on
+     * Java&rsquo;s {@link java.util.Calendar} month, which is
+     * 0-based, which is confusing since modern code uses
+     * {@link java.time.Month} which is 1-based.  We have to keep
+     * the old range for backwards compatibility.
+     */
     private final int value;
     /** Display name of the month; exclusively for logging purposes */
     @NonNull

@@ -16,9 +16,8 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import java.security.GeneralSecurityException;
-
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
@@ -93,13 +92,13 @@ public class ToDoNoteActivity extends Activity {
 	int i = itemCursor.getColumnIndex(ToDoItemColumns.DESCRIPTION);
         if (isPrivate > 1) {
             if (encryptor.hasKey()) {
-        	try {
-        	    description = encryptor.decrypt(itemCursor.getBlob(i));
-        	} catch (GeneralSecurityException gsx) {
-        	    Toast.makeText(this, gsx.getMessage(),
-        		    Toast.LENGTH_LONG).show();
-        	    finish();
-        	}
+                try {
+                    description = encryptor.decrypt(itemCursor.getBlob(i));
+                } catch (EncryptionException e) {
+                    Toast.makeText(this, e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                    finish();
+                }
             } else {
         	Toast.makeText(this, R.string.PasswordProtected,
         		Toast.LENGTH_LONG).show();
@@ -114,13 +113,13 @@ public class ToDoNoteActivity extends Activity {
         } else {
             if (isPrivate > 1) {
         	if (encryptor.hasKey()) {
-        	    try {
-        		note = encryptor.decrypt(itemCursor.getBlob(i));
-        	    } catch (GeneralSecurityException gsx) {
-        		Toast.makeText(this, gsx.getMessage(),
-        			Toast.LENGTH_LONG).show();
-        		finish();
-        	    }
+                    try {
+                        note = encryptor.decrypt(itemCursor.getBlob(i));
+                    } catch (EncryptionException e) {
+                        Toast.makeText(this, e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                        finish();
+                    }
         	} else {
         	    Toast.makeText(this, R.string.PasswordProtected,
         		    Toast.LENGTH_LONG).show();
@@ -179,9 +178,9 @@ public class ToDoNoteActivity extends Activity {
 		    if (encryptor.hasKey()) {
 			try {
 			    values.put(ToDoItemColumns.NOTE, encryptor.encrypt(note));
-			} catch (GeneralSecurityException gsx) {
-			    values.put(ToDoItemColumns.PRIVATE, 1);
-			}
+                        } catch (EncryptionException e) {
+                            values.put(ToDoItemColumns.PRIVATE, 1);
+                        }
 		    } else {
 			values.put(ToDoItemColumns.PRIVATE, 1);
 		    }

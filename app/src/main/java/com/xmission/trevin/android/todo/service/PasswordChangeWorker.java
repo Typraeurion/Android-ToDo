@@ -20,6 +20,8 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.util.AuthenticationException;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.content.Context;
@@ -33,8 +35,6 @@ import androidx.annotation.Nullable;
 import androidx.work.Data;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-
-import java.security.GeneralSecurityException;
 
 /**
  * Encrypts and decrypts private entries in the database
@@ -245,8 +245,6 @@ public class PasswordChangeWorker extends Worker {
         }
 
         catch (Exception e) {
-            if (e.getCause() instanceof GeneralSecurityException)
-                e = (Exception) e.getCause();
             Log.e(TAG, "Error changing the password!", e);
             showToast(e.getMessage());
             return Result.failure(new Data.Builder()
@@ -300,7 +298,7 @@ public class PasswordChangeWorker extends Worker {
                         R.string.ProgressMessageReencrypting);
         }
         @Override
-        public void run() throws SQLException {
+        public void run() throws EncryptionException, SQLException {
             long[] privateItemIds = repository.getPrivateItemIds();
             changeTarget = privateItemIds.length;
             int countDecrypted = 0;
@@ -308,69 +306,65 @@ public class PasswordChangeWorker extends Worker {
             long now = System.nanoTime();
             long startTime = now;
             long lastProgressUpdate = now;
-            try {
-                for (long id : privateItemIds) {
-                    ToDoItem item = repository.getItemById(id);
-                    if (item == null) {
-                        Log.w(TAG, String.format(
-                                "To Do item #%d disappeared while"
-                                        + " changing the password!", id));
-                        continue;
+            for (long id : privateItemIds) {
+                ToDoItem item = repository.getItemById(id);
+                if (item == null) {
+                    Log.w(TAG, String.format(
+                            "To Do item #%d disappeared while"
+                                    + " changing the password!", id));
+                    continue;
+                }
+                if (item.isEncrypted()) {
+                    if (oldEncryption == null)
+                        throw new IllegalStateException("Encrypted record"
+                                + " found but no old password was provided");
+                    item.setDescription(oldEncryption.decrypt(
+                            item.getEncryptedDescription()));
+                    item.setEncryptedDescription(null);
+                    if (item.getEncryptedNote() != null) {
+                        item.setNote(oldEncryption.decrypt(
+                                item.getEncryptedNote()));
+                        item.setEncryptedNote(null);
                     }
-                    if (item.isEncrypted()) {
-                        if (oldEncryption == null)
-                            throw new IllegalStateException("Encrypted record"
-                                    + " found but no old password was provided");
-                        item.setDescription(oldEncryption.decrypt(
-                                item.getEncryptedDescription()));
-                        item.setEncryptedDescription(null);
-                        if (item.getEncryptedNote() != null) {
-                            item.setNote(oldEncryption.decrypt(
-                                    item.getEncryptedNote()));
-                            item.setEncryptedNote(null);
-                        }
-                        item.setPrivate(1);
-                        countDecrypted++;
+                    item.setPrivate(1);
+                    countDecrypted++;
+                }
+                if (newEncryption != null) {
+                    item.setEncryptedDescription(newEncryption.encrypt(
+                            item.getDescription()));
+                    item.setDescription(null);
+                    if (item.getNote() != null) {
+                        item.setEncryptedNote(newEncryption.encrypt(
+                                item.getNote()));
+                        item.setNote(null);
                     }
-                    if (newEncryption != null) {
-                        item.setEncryptedDescription(newEncryption.encrypt(
-                                item.getDescription()));
-                        item.setDescription(null);
-                        if (item.getNote() != null) {
-                            item.setEncryptedNote(newEncryption.encrypt(
-                                    item.getNote()));
-                            item.setNote(null);
-                        }
-                        item.setPrivate(2);
-                        countEncrypted++;
-                    }
-                    repository.updateItem(item);
-                    numChanged++;
+                    item.setPrivate(2);
+                    countEncrypted++;
+                }
+                repository.updateItem(item);
+                numChanged++;
 
-                    // Periodically update our progress
-                    now = System.nanoTime();
-                    if (now >= lastProgressUpdate + 250000000L) {
-                        Data progressData = new Data.Builder()
-                                .putString(PROGRESS_CURRENT_MODE, progressMode)
-                                .putInt(PROGRESS_MAX_COUNT, changeTarget)
-                                .putInt(PROGRESS_CHANGED_COUNT, numChanged)
-                                .build();
-                        setProgressAsync(progressData);
-                        lastProgressUpdate = now;
-                    }
+                // Periodically update our progress
+                now = System.nanoTime();
+                if (now >= lastProgressUpdate + 250000000L) {
+                    Data progressData = new Data.Builder()
+                            .putString(PROGRESS_CURRENT_MODE, progressMode)
+                            .putInt(PROGRESS_MAX_COUNT, changeTarget)
+                            .putInt(PROGRESS_CHANGED_COUNT, numChanged)
+                            .build();
+                    setProgressAsync(progressData);
+                    lastProgressUpdate = now;
                 }
-                Log.d(TAG, String.format(
-                        "%d items decrypted, %d encrypted in %.3fs",
-                        countDecrypted, countEncrypted,
-                        (now - startTime) / 1.0e+9));
-                if (newEncryption == null) {
-                    if (oldEncryption != null)
-                        oldEncryption.removePassword(repository);
-                } else {
-                    newEncryption.storePassword(repository);
-                }
-            } catch (GeneralSecurityException gsx) {
-                throw new RuntimeException(gsx);
+            }
+            Log.d(TAG, String.format(
+                    "%d items decrypted, %d encrypted in %.3fs",
+                    countDecrypted, countEncrypted,
+                    (now - startTime) / 1.0e+9));
+            if (newEncryption == null) {
+                if (oldEncryption != null)
+                    oldEncryption.removePassword(repository);
+            } else {
+                newEncryption.storePassword(repository);
             }
         }
     }

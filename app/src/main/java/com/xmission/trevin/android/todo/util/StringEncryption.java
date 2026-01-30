@@ -164,14 +164,14 @@ public class StringEncryption {
      * when the user chooses to hide private records.
      */
     public void forgetPassword() {
-	if (key != null) {
-	    Arrays.fill(key, (byte) 0);
-	    key = null;
-	}
-	salt = null;
-	if (userPassword != null)
-	    Arrays.fill(userPassword, (char) 0);
-	userPassword = null;
+        if (key != null) {
+            Arrays.fill(key, (byte) 0);
+            key = null;
+        }
+        salt = null;
+        if (userPassword != null)
+            Arrays.fill(userPassword, (char) 0);
+        userPassword = null;
     }
 
     /**
@@ -180,11 +180,11 @@ public class StringEncryption {
      * if no password is set.
      */
     public char[] getPassword() {
-	if (userPassword == null)
-	    return null;
-	char[] copy = new char[userPassword.length];
-	System.arraycopy(userPassword, 0, copy, 0, userPassword.length);
-	return copy;
+        if (userPassword == null)
+            return null;
+        char[] copy = new char[userPassword.length];
+        System.arraycopy(userPassword, 0, copy, 0, userPassword.length);
+        return copy;
     }
 
     /**
@@ -195,24 +195,24 @@ public class StringEncryption {
      * the user is changing his/her password.
      */
     public void setPassword(char[] password) {
-	userPassword = new char[password.length];
-	System.arraycopy(password, 0, userPassword, 0, password.length);
-	if (key != null) {
-	    Arrays.fill(key, (byte) 0);
-	    key = null;
-	}
+        userPassword = new char[password.length];
+        System.arraycopy(password, 0, userPassword, 0, password.length);
+        if (key != null) {
+            Arrays.fill(key, (byte) 0);
+            key = null;
+        }
     }
 
     /**
      * Add some salt
      */
     public void addSalt() {
-	salt = new byte[SALT_LENGTH];
-	RAND.nextBytes(salt);
-	if (key != null) {
-	    Arrays.fill(key, (byte) 0);
-	    key = null;
-	}
+        salt = new byte[SALT_LENGTH];
+        RAND.nextBytes(salt);
+        if (key != null) {
+            Arrays.fill(key, (byte) 0);
+            key = null;
+        }
     }
 
     /**
@@ -259,10 +259,16 @@ public class StringEncryption {
      * Check the password against what was stored in the database.
      *
      * @return true if the password matches, false if it does not match.
+     *
+     * @throws InvalidPasswordHashException if the password hash
+     * in the database is invalid.
+     * @throws PasswordMismatchException if there is no password hash
+     * stored in the database.
+     *
      * @deprecated use {@link #checkPassword(ToDoRepository)}
      */
     public boolean checkPassword(ContentResolver resolver)
-		throws GeneralSecurityException {
+		throws InvalidPasswordHashException, PasswordMismatchException {
 	byte[] hashedPassword = null;
 	Cursor c = resolver.query(
 		ToDoSchema.ToDoMetadataColumns.CONTENT_URI, METADATA_PROJECTION,
@@ -272,7 +278,7 @@ public class StringEncryption {
 	    if (c.moveToFirst()) {
 		hashedPassword = c.getBlob(c.getColumnIndex(ToDoMetadataColumns.VALUE));
 	    } else {
-		throw new IllegalStateException(
+		throw new PasswordMismatchException(
 			"checkPassword(resolver) called with no password in the database");
 	    }
 	}
@@ -289,20 +295,20 @@ public class StringEncryption {
      *
      * @return true if the password matches, false if it does not match.
      *
-     * @throws IllegalStateException if there is no password hash
+     * @throws InvalidPasswordHashException if the password hash
+     * in the database is invalid.
+     * @throws PasswordMismatchException if there is no password hash
      * in the database
-     * @throws GeneralSecurityException if there was an error generating
-     * the password hash for comparison
      */
     public boolean checkPassword(ToDoRepository repository)
-            throws GeneralSecurityException, IllegalStateException {
+            throws InvalidPasswordHashException, PasswordMismatchException {
         ToDoMetadata passwordHash =
                 repository.getMetadataByName(METADATA_PASSWORD_HASH);
         if (passwordHash != null) {
             byte[] hashedPassword = passwordHash.getValue();
             return checkPassword(hashedPassword);
         } else {
-            throw new IllegalStateException("checkPassword(repository)"
+            throw new PasswordMismatchException("checkPassword(repository)"
                     + " called with no password in the database");
         }
     }
@@ -316,19 +322,21 @@ public class StringEncryption {
      *
      * @return true if the password matches, false if it does not match.
      *
-     * @throws GeneralSecurityException if there was an error generating
-     * the password hash for comparison
+     * @throws InvalidPasswordHashException if the given password
+     * hash is invalid.
      */
     public boolean checkPassword(byte[] hashedPassword)
-            throws GeneralSecurityException {
+            throws AuthenticationException {
         if (hashedPassword == null)
             return false;
-        ByteBuffer bb = ByteBuffer.wrap(hashedPassword).order(ByteOrder.BIG_ENDIAN);
+        ByteBuffer bb = ByteBuffer.wrap(hashedPassword)
+                .order(ByteOrder.BIG_ENDIAN);
         byte[] storedHash;
         int hLen = 0;
         try {
             if (bb.get() != 2)
-                throw new UnrecoverableKeyException("Unsupported encryption method");
+                throw new InvalidPasswordHashException(
+                        "Unsupported encryption method");
             salt = new byte[(bb.get() & 0xff) + 2];
             keyLength = ((bb.getShort() & 0xffff) + 2) * 8;
             keyIterationCount = (bb.getShort() & 0xffff) + 1;
@@ -337,7 +345,7 @@ public class StringEncryption {
             storedHash = new byte[bb.limit() - bb.position()];
             bb.get(storedHash);
         } catch (BufferUnderflowException bux) {
-            throw new UnrecoverableKeyException("Invalid password hash");
+            throw new InvalidPasswordHashException("Invalid password hash");
         }
 
         // Tentatively generate a key from the assumed password
@@ -385,12 +393,12 @@ public class StringEncryption {
      * @deprecated use {@link #storePassword(ToDoRepository)}
      */
     public void storePassword(ContentResolver resolver)
-		throws GeneralSecurityException {
-	if (key == null) {
-	    if (salt == null)
-		addSalt();
-	    generateKey();
-	}
+            throws PasswordRequiredException {
+        if (key == null) {
+            if (salt == null)
+                addSalt();
+            generateKey();
+        }
 
 	byte[] header = new byte[6];
 	ByteBuffer bb = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
@@ -441,11 +449,10 @@ public class StringEncryption {
      *
      * @param repository the repository in which to store the password hash
      *
-     * @throws GeneralSecurityException if there was an error generating
-     * the password hash
+     * @throws PasswordRequiredException if the password has not been set.
      */
     public void storePassword(ToDoRepository repository)
-        throws GeneralSecurityException {
+        throws AuthenticationException {
         if (key == null) {
             if (salt == null)
                 addSalt();
@@ -521,29 +528,30 @@ public class StringEncryption {
     /**
      * Generate the key from the password and salt.
      *
-     * @throws IllegalStateException if the password and salt have not been set.
+     * @throws IllegalStateException if the salt has not been set.
+     * @throws PasswordRequiredException if the password has not been set.
      */
     private void generateKey()
-		throws GeneralSecurityException, IllegalStateException {
-	if (userPassword == null)
-	    throw new IllegalStateException("Password is not set");
-	if (salt == null)
-	    throw new IllegalStateException("No salt");
-	/*
-	 * Android 4.4 changed the behavior of PBKDF2WithHmacSHA1
-	 * to use the UTF-8 encoding of the password instead of
-	 * the lower 8 bytes of each character.  Android 2.2 does
-	 * not support this algorithm.  To avoid decryption
-	 * errors when switching between platforms, do our own
-	 * encoding and call a local copy of the algorithm.
-	 */
-	byte[] passwordKey =
-	    PKCS5S2ParametersGenerator.PKCS5PasswordToUTF8Bytes(userPassword);
-	PKCS5S2ParametersGenerator generator = new PKCS5S2ParametersGenerator();
-	generator.init(passwordKey, salt, keyIterationCount);
-	KeyParameter param = generator.generateDerivedMacParameters(keyLength);
-	Arrays.fill(passwordKey, (byte) 0);
-	key = param.getKey();
+            throws IllegalStateException, PasswordRequiredException {
+        if (userPassword == null)
+            throw new PasswordRequiredException("Password is not set");
+        if (salt == null)
+            throw new IllegalStateException("No salt");
+        /*
+         * Android 4.4 changed the behavior of PBKDF2WithHmacSHA1
+         * to use the UTF-8 encoding of the password instead of
+         * the lower 8 bytes of each character.  Android 2.2 does
+         * not support this algorithm.  To avoid decryption
+         * errors when switching between platforms, do our own
+         * encoding and call a local copy of the algorithm.
+         */
+        byte[] passwordKey =
+                PKCS5S2ParametersGenerator.PKCS5PasswordToUTF8Bytes(userPassword);
+        PKCS5S2ParametersGenerator generator = new PKCS5S2ParametersGenerator();
+        generator.init(passwordKey, salt, keyIterationCount);
+        KeyParameter param = generator.generateDerivedMacParameters(keyLength);
+        Arrays.fill(passwordKey, (byte) 0);
+        key = param.getKey();
     }
 
     /**
@@ -554,7 +562,7 @@ public class StringEncryption {
      *
      * @throws IllegalStateException if the password and salt have not been set.
      */
-    byte[] getKey() throws GeneralSecurityException, IllegalStateException {
+    byte[] getKey() throws IllegalStateException {
         if (key == null)
             generateKey();
         return key;
@@ -570,20 +578,20 @@ public class StringEncryption {
      * @throws IllegalStateException if the password has not been provided
      */
     public byte[] encrypt(byte[] orig)
-		throws GeneralSecurityException, IllegalStateException {
-	if (orig == null)
-	    return null;
-	if (key == null)
-	    generateKey();
-	try {
-	    SecretKeySpec spec = new SecretKeySpec(key, "AES");
-	    AESCipher cipher = new AESCipher();
-	    cipher.init(Cipher.ENCRYPT_MODE, spec);
-	    return cipher.doFinal(orig);
-	} catch (GeneralSecurityException gsx) {
-	    forgetPassword();
-	    throw gsx;
-	}
+            throws EncryptionException, IllegalStateException {
+        if (orig == null)
+            return null;
+        if (key == null)
+            generateKey();
+        try {
+            SecretKeySpec spec = new SecretKeySpec(key, "AES");
+            AESCipher cipher = new AESCipher();
+            cipher.init(Cipher.ENCRYPT_MODE, spec);
+            return cipher.doFinal(orig);
+        } catch (GeneralSecurityException gsx) {
+            forgetPassword();
+            throw new EncryptionException(gsx);
+        }
     }
 
     /**
@@ -596,14 +604,14 @@ public class StringEncryption {
      * @throws IllegalStateException if the password has not been provided
      */
     public byte[] encrypt(String orig)
-		throws GeneralSecurityException, IllegalStateException {
-	if (orig == null)
-	    return null;
-	try {
-	    return encrypt(orig.getBytes("UTF-8"));
-	} catch (UnsupportedEncodingException uex) {
-	    throw new IllegalStateException("UTF-8 is not supported!", uex);
-	}
+            throws IllegalStateException {
+        if (orig == null)
+            return null;
+        try {
+            return encrypt(orig.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException uex) {
+            throw new IllegalStateException("UTF-8 is not supported!", uex);
+        }
     }
 
     /**
@@ -614,27 +622,24 @@ public class StringEncryption {
      * @return the decrypted string
      *
      * @throws IllegalStateException if the password has not been provided
-     * @throws InvalidKeyException if the decryption does not result
+     * @throws EncryptionException if the decryption does not result
      * in a valid string.
      */
     public byte[] decryptBytes(byte[] code)
-		throws GeneralSecurityException, IllegalStateException {
-	if (code == null)
-	    return null;
-	if (key == null)
-	    generateKey();
-	try {
-	    SecretKeySpec spec = new SecretKeySpec(key, "AES");
-	    AESCipher cipher = new AESCipher();
-	    cipher.init(Cipher.DECRYPT_MODE, spec);
-	    return cipher.doFinal(code);
-	} catch (IllegalBlockSizeException ibsx) {
-	    throw new InvalidKeyException(
-		    "Could not decode data using the given password", ibsx);
-	} catch (BadPaddingException bpx) {
-	    throw new InvalidKeyException(
-		    "Could not decode data using the given password", bpx);
-	}
+            throws EncryptionException, IllegalStateException {
+        if (code == null)
+            return null;
+        if (key == null)
+            generateKey();
+        try {
+            SecretKeySpec spec = new SecretKeySpec(key, "AES");
+            AESCipher cipher = new AESCipher();
+            cipher.init(Cipher.DECRYPT_MODE, spec);
+            return cipher.doFinal(code);
+        } catch (GeneralSecurityException gsx) {
+            throw new EncryptionException(
+                    "Could not decode data using the given password", gsx);
+        }
     }
 
     /**
@@ -645,19 +650,18 @@ public class StringEncryption {
      * @return the decrypted string
      *
      * @throws IllegalStateException if the password has not been provided
-     * @throws InvalidKeyException if the decryption does not result
+     * @throws EncryptionException if the decryption does not result
      * in a valid string.
      */
     public String decrypt(byte[] code)
-		throws GeneralSecurityException, IllegalStateException {
-	if (code == null)
-	    return null;
-	try {
-	    byte[] candidate = decryptBytes(code);
-	    return new String(candidate, "UTF-8");
-	} catch (UnsupportedEncodingException uex) {
-	    throw new InvalidKeyException(
-		    "Could not decode data using the given password", uex);
-	}
+            throws EncryptionException, IllegalStateException {
+        if (code == null)
+            return null;
+        try {
+            byte[] candidate = decryptBytes(code);
+            return new String(candidate, "UTF-8");
+        } catch (UnsupportedEncodingException uex) {
+            throw new IllegalStateException("UTF-8 is not supported!", uex);
+        }
     }
 }

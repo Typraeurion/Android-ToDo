@@ -100,7 +100,7 @@ public class RepeatYearlyOnDay extends RepeatMonthlyOnDay {
     public LocalDate computeNextDueDate(
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
         TemporalAdjuster adjustment = TemporalAdjusters.dayOfWeekInMonth(
-                (week < 4) ? (week + 1) : -1, day.getJavaDay());
+                week, day.getJavaDay());
         LocalDate startOfMonth = priorDueDate.withDayOfMonth(1)
                 .plusYears(increment);
         return checkEndDate(priorDueDate, startOfMonth.with(adjustment));

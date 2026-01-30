@@ -22,7 +22,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.util.Random;
 
 /**
@@ -45,7 +44,7 @@ public class StringEncryptionTests {
      * regardless of the Android API level.
      */
     @Test
-    public void testGenerateKey() throws GeneralSecurityException {
+    public void testGenerateKey() {
 
         // Fixed password and salt to check against a manually generated key.
         // The password includes extended UTF-8 characters in order to verify
@@ -89,7 +88,7 @@ public class StringEncryptionTests {
      * only care that the decrypted string matches the original.
      */
     @Test
-    public void testStringEncryption() throws GeneralSecurityException {
+    public void testStringEncryption() {
 
         String password = STRING_GEN.nextAlphabetic(5, 10);
         // Make sure the text we're encrypting uses
@@ -119,7 +118,7 @@ public class StringEncryptionTests {
      * only care that the decrypted byte array matches the original.
      */
     @Test
-    public void testByteEncryption() throws GeneralSecurityException {
+    public void testByteEncryption() {
 
         String password = STRING_GEN.nextAlphabetic(5, 10);
         byte[] originalBytes = new byte[8 + RAND.nextInt(9)];

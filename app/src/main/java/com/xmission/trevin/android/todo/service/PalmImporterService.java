@@ -17,13 +17,13 @@
 package com.xmission.trevin.android.todo.service;
 
 import java.io.*;
-import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
@@ -1419,9 +1419,9 @@ public class PalmImporterService extends IntentService implements
 			    values.put(ToDoSchema.ToDoItemColumns.NOTE, encryptedNote);
 			}
 			values.put(ToDoSchema.ToDoItemColumns.DESCRIPTION, encryptedDescription);
-		    } catch (GeneralSecurityException gsx) {
-			privacy = 1;
-		    }
+                    } catch (EncryptionException e) {
+                        privacy = 1;
+                    }
 		} else {
 		}
 		values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
@@ -1492,8 +1492,13 @@ public class PalmImporterService extends IntentService implements
 				ToDoItemColumns.REPEAT_MONTHLY_ON_DAY);
 			values.putNull(ToDoItemColumns.REPEAT_WEEK_DAYS);
 			values.put(ToDoSchema.ToDoItemColumns.REPEAT_DAY,
+                                // FIXME: Palm days are 0-based, but
+                                // Java days are 1-based!
 				dataToDos[i].repeat.dayOfWeek);
 			values.put(ToDoSchema.ToDoItemColumns.REPEAT_WEEK,
+                                // FIXME: Palm weeks are 0-based with 4
+                                // for the last week, but Java weeks are
+                                // 1-based with -1 for the last week
 				dataToDos[i].repeat.weekOfMonth);
 			break;
 		    case RepeatEvent.TYPE_REPEAT_BY_MONTH_DATE:

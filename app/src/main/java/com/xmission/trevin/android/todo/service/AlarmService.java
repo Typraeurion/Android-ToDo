@@ -16,7 +16,6 @@
  */
 package com.xmission.trevin.android.todo.service;
 
-import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -26,6 +25,7 @@ import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 import com.xmission.trevin.android.todo.ui.ToDoListActivity;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.app.*;
@@ -392,7 +392,7 @@ public class AlarmService extends IntentService {
                 if (showEncrypted) {
                     try {
                         descr = encryptor.decrypt(item.getEncryptedDescription());
-                    } catch (GeneralSecurityException gsx) {
+                    } catch (EncryptionException gsx) {
                         descr = getString(R.string.NotificationFormatEncrypted);
                     }
                 } else {

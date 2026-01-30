@@ -16,12 +16,13 @@
  */
 package com.xmission.trevin.android.todo.service;
 
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.util.AuthenticationException;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 
@@ -252,15 +253,21 @@ public class PasswordChangeService extends IntentService
 
             notifyObservers(true);
 
-	} catch (GeneralSecurityException gsx) {
-	    if (c != null)
-		c.close();
-            Log.e(TAG, "Error changing the password!", gsx);
-            showToast(gsx.getMessage());
-            notifyObservers(gsx);
-	} finally {
-	    StringEncryption.releaseGlobalEncryption();
-	}
+        } catch (AuthenticationException a) {
+            if (c != null)
+                c.close();
+            Log.e(TAG, "Error changing the password!", a);
+            showToast(a.getMessage());
+            notifyObservers(a);
+        } catch (EncryptionException e) {
+            if (c != null)
+                c.close();
+            Log.e(TAG, "Error changing the password!", e);
+            showToast(e.getMessage());
+            notifyObservers(e);
+        } finally {
+            StringEncryption.releaseGlobalEncryption();
+        }
     }
 
     /**

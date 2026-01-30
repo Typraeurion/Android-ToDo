@@ -36,10 +36,10 @@ import com.xmission.trevin.android.todo.provider.ToDoCursor;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import java.io.*;
-import java.security.GeneralSecurityException;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -1672,7 +1672,7 @@ public class PalmImportWorker extends Worker {
                     if (newRecord.getNote() != null)
                         newRecord.setEncryptedNote(newCrypt.encrypt(
                                 newRecord.getNote()));
-                } catch (GeneralSecurityException gsx) {
+                } catch (EncryptionException gsx) {
                     newRecord.setPrivate(1);
                 }
                 newRecord.setModTimeNow();
@@ -1721,8 +1721,18 @@ public class PalmImportWorker extends Worker {
                         case RepeatEvent.TYPE_REPEAT_BY_MONTH_DAY:
                             RepeatMonthlyOnDay rmdy = new RepeatMonthlyOnDay();
                             rmdy.setDay(WeekDays.fromValue(
-                                    dataToDos[i].repeat.dayOfWeek));
-                            rmdy.setWeek(dataToDos[i].repeat.weekOfMonth);
+                                    dataToDos[i].repeat.dayOfWeek
+                                            // Need to adjust Sunday base
+                                            // value; Palm used 0 for Sunday.
+                                            + WeekDays.SUNDAY.getValue()));
+                            rmdy.setWeek((dataToDos[i].repeat.weekOfMonth < 4)
+                                    // Need to adjust week base value;
+                                    // Palm used 0 for the first week
+                                    // while we use 1
+                                    ? dataToDos[i].repeat.weekOfMonth + 1
+                                    // and Palm used 4 for the last week
+                                    // while we use -1.
+                                    : -1);
                             repeat = rmdy;
                             break;
 

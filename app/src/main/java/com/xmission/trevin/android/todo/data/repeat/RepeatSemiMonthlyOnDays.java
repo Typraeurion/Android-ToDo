@@ -37,15 +37,14 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
     public static final int ID = REPEAT_SEMI_MONTHLY_ON_DAYS;
 
     /**
-     * The second week day on which this item repeats
+     * The second week day on which this item repeats.
      */
     @NonNull
     protected WeekDays day2;
 
     /**
      * The second week of the month on which this item repeats.
-     * 0 is the first week, 4 is the <i>last</i> week
-     * (regardless of the actual number of weeks in a month).
+     * 1 is the first week, 4 is the fourth week, -1 is the <i>last</i> week.
      */
     protected int week2;
 
@@ -72,11 +71,14 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
     public RepeatSemiMonthlyOnDays(@NonNull LocalDate due) {
         super(RepeatType.SEMI_MONTHLY_ON_DAYS, due);
         day2 = day;
-        if (week < 2) {
+        if ((week >= 0) && (week <= 2)) {
             week2 = week + 2;
         } else {
             week2 = week;
-            week = week2 - 2;
+            if (week2 < 0)
+                week = 2;
+            else
+                week = week2 - 2;
         }
     }
 
@@ -102,7 +104,8 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
 
     /**
      * @return the second week of the month on which this item repeats;
-     * 0 is the first week, 4 is the <i>last</i> week.
+     * 1 is the first week, 4 is the fourth week,
+     * -1 is the <i>last</i> week.
      */
     public int getWeek2() {
         return week2;
@@ -111,15 +114,19 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
     /**
      * Set the second week of the month on which this item repeats.
      *
-     * @param weekNum the week number (from 0)
+     * @param weekNum the week number: 1&ndash;4 for the first through
+     * fourth weeks, or -1 for the last week.
      *
      * @throws IllegalArgumentException if {@code weekNum} is
-     * less than 0 or greater than 4
+     * less than -1, 0, or greater than 4
      */
     public void setWeek2(int weekNum) {
-        if (weekNum < 0)
+        if (weekNum < -1)
             throw new IllegalArgumentException(
-                    "Week of the month cannot be negative");
+                    "Week of the month cannot be less than -1");
+        if (weekNum == 0)
+            throw new IllegalArgumentException(
+                    "Week of the month cannot be zero");
         if (weekNum > 4)
             throw new IllegalArgumentException(
                     "Week of the month cannot be greater than 4");
@@ -130,13 +137,16 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
     public boolean updateForDueDate(@NonNull LocalDate newDue) {
         // We have two dates to possibly match; check both.
         WeekDays newDay = WeekDays.fromJavaDay(newDue.getDayOfWeek());
-        int newWeek1 = (newDue.getDayOfMonth() - 1) / 7;
+        int newWeek1 = (newDue.getDayOfMonth() - 1) / 7 + 1;
+        // If this is in the fifth week, switch to negative.
+        if (newWeek1 >= 5)
+            newWeek1 = -1;
         // If this is in the last week but not the fifth week,
-        // allow matching either 3 or 4.
-        if ((newDue.getDayOfMonth() > newDue.lengthOfMonth() - 7) &&
-                newWeek1 == 3) {
-            if (week == 4)
-                newWeek1 = 4;
+        // allow matching either -1 or 4.
+        else if ((newWeek1 == 4) && (newDue.getDayOfMonth() >
+                newDue.lengthOfMonth() - 7)) {
+            if ((week == -1) || (week2 == -1))
+                newWeek1 = -1;
         }
         boolean dayChanged = true;
         if ((newDay == day) && (newWeek1 == week)) {
@@ -149,11 +159,22 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
             // Need to change.  Set the other week to 2 weeks before
             // or after the due date's, then use the earliest one
             // for our new week.  Both days will be the same.
-            int newWeek2 = (newWeek1 < 2) ? (newWeek1 + 2) : (newWeek1 - 2);
+            int newWeek2;
+            if (newWeek1 < 0)
+                newWeek2 = 2;
+            else if (newWeek1 <= 2)
+                newWeek2 = newWeek1 + 2;
+            else
+                newWeek2 = newWeek1 - 2;
             day = newDay;
             day2 = newDay;
-            week = Math.min(newWeek1, newWeek2);
-            week2 = Math.max(newWeek1, newWeek2);
+            if ((newWeek1 >= 0) && (newWeek1 < newWeek2)) {
+                week = newWeek1;
+                week2 = newWeek2;
+            } else {
+                week = newWeek2;
+                week2 = newWeek1;
+            }
         }
         return dayChanged;
     }
@@ -181,8 +202,7 @@ public class RepeatSemiMonthlyOnDays extends RepeatMonthlyOnDay {
     private LocalDate computeNextDueDate(
             WeekDays tentativeDay, int tentativeWeek, LocalDate priorDueDate) {
         TemporalAdjuster adjustment = TemporalAdjusters.dayOfWeekInMonth(
-                (tentativeWeek < 4) ? (tentativeWeek + 1) : -1,
-                tentativeDay.getJavaDay());
+                tentativeWeek, tentativeDay.getJavaDay());
         LocalDate startOfMonth = priorDueDate.withDayOfMonth(1);
         LocalDate candiDate = startOfMonth.with(adjustment);
         if (candiDate.isAfter(priorDueDate))

@@ -21,7 +21,6 @@ import static com.xmission.trevin.android.todo.ui.ToDoListActivity.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -39,6 +38,7 @@ import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
 import com.xmission.trevin.android.todo.provider.ToDoProvider;
+import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.app.IntentService;
@@ -842,7 +842,7 @@ public class XMLImporterService extends IntentService
      */
     void mergeToDos(ImportType importType, List<Element> items,
             boolean importPrivate, StringEncryption oldCrypt)
-                throws GeneralSecurityException, ParseException, SAXException {
+                throws EncryptionException, ParseException, SAXException {
         Log.d(LOG_TAG, ".mergeToDos(" + importType + ")");
         ContentResolver resolver = getContentResolver();
         StringEncryption newCrypt = StringEncryption.holdGlobalEncryption();

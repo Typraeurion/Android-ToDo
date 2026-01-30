@@ -42,6 +42,20 @@ public class RepeatSemiMonthlyOnDaysTests {
             DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH);
 
     /**
+     * Compare two week values to see whether the first week of the month
+     * is after the second week of the month, considering -1 to follow
+     * all positive values 1&ndash;4.
+     *
+     * @param week1 the first week to compare
+     * @param week2 the second week to compare
+     *
+     * @return true if week1 comes after week2, false otherwise
+     */
+    public static boolean isWeekAfter(int week1, int week2) {
+        return ((week1 < 0) ? 4 : week1) > ((week2 < 0) ? 4 : week2);
+    }
+
+    /**
      * Test a semimonthly repeating interval for early in the month (two of
      * the first three weeks), with no specified end date.  The new due date
      * should be the same days of the same weeks regardless of when the
@@ -55,7 +69,9 @@ public class RepeatSemiMonthlyOnDaysTests {
         WeekDays[] days = new WeekDays[2];
         int[] weeks = new int[2];
         days[0] = WeekDays.fromJavaDay(startDate.getDayOfWeek());
-        weeks[0] = (startDate.getDayOfMonth() - 1) / 7;
+        weeks[0] = (startDate.getDayOfMonth() - 1) / 7 + 1;
+        if (weeks[0] > 4)
+            weeks[0] = -1;
         LocalDate otherDate;
         // Choose our second date so that it lies on a different day of a
         // different week than our first date, and is at least 4 days apart.
@@ -64,7 +80,7 @@ public class RepeatSemiMonthlyOnDaysTests {
                 days[1] = WeekDays.values()[RAND.nextInt(WeekDays.values().length)];
             } while (days[1] == days[0]);
             do {
-                weeks[1] = RAND.nextInt(3);
+                weeks[1] = RAND.nextInt(3) + 1;
             } while (weeks[1] == weeks[0]);
             otherDate = RepeatMonthlyOnDayTests.setWeekAndDayForMonth(
                     startDate, weeks[1], days[1]);
@@ -79,7 +95,7 @@ public class RepeatSemiMonthlyOnDaysTests {
         for (int i = 1; i <= 30; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(50));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    (weeks[i%2] > weeks[(i+1)%2]) ?
+                    isWeekAfter(weeks[i%2], weeks[(i+1)%2]) ?
                             startDate : startDate.plusMonths(1),
                     weeks[i%2], days[i%2]);
             LocalDate actualDue = repeat
@@ -109,13 +125,13 @@ public class RepeatSemiMonthlyOnDaysTests {
         WeekDays[] days = new WeekDays[2];
         int[] weeks = new int[2];
         days[0] = WeekDays.fromJavaDay(startDate.getDayOfWeek());
-        weeks[0] = 3;
+        weeks[0] = 4;
         // Choose our second day so that it lies on a different day than
         // the first day, and in one of the first three weeks.
         do {
             days[1] = WeekDays.values()[RAND.nextInt(WeekDays.values().length)];
         } while (days[1] == days[0]);
-        weeks[1] = RAND.nextInt(3);
+        weeks[1] = RAND.nextInt(3) + 1;
         RepeatSemiMonthlyOnDays repeat = new RepeatSemiMonthlyOnDays(startDate);
         repeat.setDay(days[0]);
         repeat.setDay2(days[1]);
@@ -127,7 +143,7 @@ public class RepeatSemiMonthlyOnDaysTests {
         for (int i = 1; i <= 30; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(50));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    (weeks[i%2] > weeks[(i+1)%2]) ?
+                    isWeekAfter(weeks[i%2], weeks[(i+1)%2]) ?
                             startDate : startDate.plusMonths(1),
                     weeks[i%2], days[i%2]);
             LocalDate actualDue = repeat
@@ -158,13 +174,13 @@ public class RepeatSemiMonthlyOnDaysTests {
         WeekDays[] days = new WeekDays[2];
         int[] weeks = new int[2];
         days[0] = WeekDays.fromJavaDay(startDate.getDayOfWeek());
-        weeks[0] = 4;
+        weeks[0] = -1;
         // Choose our second day so that it lies on a different day than
         // the first day, and in one of the first three weeks.
         do {
             days[1] = WeekDays.values()[RAND.nextInt(WeekDays.values().length)];
         } while (days[1] == days[0]);
-        weeks[1] = RAND.nextInt(3);
+        weeks[1] = RAND.nextInt(3) + 1;
         RepeatSemiMonthlyOnDays repeat = new RepeatSemiMonthlyOnDays(startDate);
         repeat.setDay(days[0]);
         repeat.setDay2(days[1]);
@@ -176,7 +192,7 @@ public class RepeatSemiMonthlyOnDaysTests {
         for (int i = 1; i <= 30; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(50));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    (weeks[i%2] > weeks[(i+1)%2]) ?
+                    isWeekAfter(weeks[i%2], weeks[(i+1)%2]) ?
                             startDate : startDate.plusMonths(1),
                     weeks[i%2], days[i%2]);
             LocalDate actualDue = repeat
@@ -209,9 +225,13 @@ public class RepeatSemiMonthlyOnDaysTests {
                 WeekDays.fromJavaDay(otherDate.getDayOfWeek())
         };
         int[] weeks = new int[] {
-                (startDate.getDayOfMonth() - 1) / 7,
-                (otherDate.getDayOfMonth() - 1) / 7
+                (startDate.getDayOfMonth() - 1) / 7 + 1,
+                (otherDate.getDayOfMonth() - 1) / 7 + 1
         };
+        if (weeks[0] > 4)
+            weeks[0] = -1;
+        if (weeks[1] > 4)
+            weeks[1] = -1;
         String[] stndrd = new String[] {
                 ordinalWeek(weeks[0]), ordinalWeek(weeks[1])
         };
@@ -224,7 +244,7 @@ public class RepeatSemiMonthlyOnDaysTests {
         for (int i = 1; i <= 30; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(50));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    (weeks[i%2] > weeks[(i+1)%2]) ?
+                    isWeekAfter(weeks[i%2], weeks[(i+1)%2]) ?
                             startDate : startDate.plusMonths(1),
                     weeks[i%2], days[i%2]);
             if (expectedDue.isAfter(endDate))
@@ -258,9 +278,13 @@ public class RepeatSemiMonthlyOnDaysTests {
                 WeekDays.fromJavaDay(otherDate.getDayOfWeek())
         };
         int[] weeks = new int[] {
-                (startDate.getDayOfMonth() - 1) / 7,
-                (otherDate.getDayOfMonth() - 1) / 7
+                (startDate.getDayOfMonth() - 1) / 7 + 1,
+                (otherDate.getDayOfMonth() - 1) / 7 + 1
         };
+        if (weeks[0] > 4)
+            weeks[0] = -1;
+        if (weeks[1] > 4)
+            weeks[1] = -1;
         String[] stndrd = new String[] {
                 ordinalWeek(weeks[0]), ordinalWeek(weeks[1])
         };
@@ -274,7 +298,7 @@ public class RepeatSemiMonthlyOnDaysTests {
         for (int i = 1; i <= 30; i++) {
             LocalDate completed = startDate.plusDays(RAND.nextInt(50));
             LocalDate expectedDue = setWeekAndDayForMonth(
-                    (weeks[i%2] > weeks[(i+1)%2]) ?
+                    isWeekAfter(weeks[i%2], weeks[(i+1)%2]) ?
                             startDate : startDate.plusMonths(increment),
                     weeks[i%2], days[i%2]);
             LocalDate actualDue = repeat

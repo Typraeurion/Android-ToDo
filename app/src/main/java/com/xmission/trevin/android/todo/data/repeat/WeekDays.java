@@ -33,13 +33,13 @@ import java.util.TreeSet;
  */
 public enum WeekDays {
 
-    SUNDAY(DayOfWeek.SUNDAY, REPEAT_SUNDAYS, 0, "Sunday"),
-    MONDAY(DayOfWeek.MONDAY, REPEAT_MONDAYS, 1, "Monday"),
-    TUESDAY(DayOfWeek.TUESDAY, REPEAT_TUESDAYS, 2, "Tuesday"),
-    WEDNESDAY(DayOfWeek.WEDNESDAY, REPEAT_WEDNESDAYS, 3, "Wednesday"),
-    THURSDAY(DayOfWeek.THURSDAY, REPEAT_THURSDAYS, 4, "Thursday"),
-    FRIDAY(DayOfWeek.FRIDAY, REPEAT_FRIDAYS, 5, "Friday"),
-    SATURDAY(DayOfWeek.SATURDAY, REPEAT_SATURDAYS, 6, "Saturday");
+    SUNDAY(DayOfWeek.SUNDAY, REPEAT_SUNDAYS, 1, "Sunday"),
+    MONDAY(DayOfWeek.MONDAY, REPEAT_MONDAYS, 2, "Monday"),
+    TUESDAY(DayOfWeek.TUESDAY, REPEAT_TUESDAYS, 3, "Tuesday"),
+    WEDNESDAY(DayOfWeek.WEDNESDAY, REPEAT_WEDNESDAYS, 4, "Wednesday"),
+    THURSDAY(DayOfWeek.THURSDAY, REPEAT_THURSDAYS, 5, "Thursday"),
+    FRIDAY(DayOfWeek.FRIDAY, REPEAT_FRIDAYS, 6, "Friday"),
+    SATURDAY(DayOfWeek.SATURDAY, REPEAT_SATURDAYS, 7, "Saturday");
 
     /** The set of all week days */
     public static final Set<WeekDays> ALL;
@@ -55,7 +55,13 @@ public enum WeekDays {
     private final DayOfWeek javaDay;
     /** The bit used to flag this day&rsquo;s entry */
     private final int bitValue;
-    /** The value of this day when stored as a discrete number */
+    /**
+     * The value of this day when stored as a discrete number.
+     * This is 1-based with Sunday first, as used by Java&rsquo;s
+     * {@link java.util.Calendar} week.  This differs from
+     * {@link java.time.DayOfWeek} which is 1-based but starts
+     * on Monday and ends Sunday.
+     */
     private final int value;
     /** Display name of the day; exclusively for logging purposes */
     @NonNull
