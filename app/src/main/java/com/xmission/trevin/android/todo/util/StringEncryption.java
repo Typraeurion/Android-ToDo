@@ -46,6 +46,21 @@ public class StringEncryption {
 
     public static final String LOG_TAG = "StringEncryption";
 
+    /** Privacy level indicating plain text (no encryption) */
+    public static final int NO_ENCRYPTION = 1;
+
+    /**
+     * Privacy level indicating our initial encryption implementation:
+     * Password-Based Encryption Key with our bundled
+     * {@link PKCS5S2ParametersGenerator} configured with a salt length,
+     * key length, and key iterator count that are oll stored
+     * with the password hash; and the AES cypher.
+     */
+    public static final int BUNDLED_ENCRYPTION = 2;
+
+    /** Maximum encryption type currently supported by the app */
+    public static final int MAX_SUPPORTED_ENCRYPTION = BUNDLED_ENCRYPTION;
+
     /** Global encryption object */
     private static StringEncryption globalEncryption = null;
 
@@ -334,7 +349,9 @@ public class StringEncryption {
         byte[] storedHash;
         int hLen = 0;
         try {
-            if (bb.get() != 2)
+            int crypType = bb.get() & 0xff;
+            if ((crypType <= NO_ENCRYPTION) ||
+                    (crypType > MAX_SUPPORTED_ENCRYPTION))
                 throw new InvalidPasswordHashException(
                         "Unsupported encryption method");
             salt = new byte[(bb.get() & 0xff) + 2];
@@ -402,7 +419,7 @@ public class StringEncryption {
 
 	byte[] header = new byte[6];
 	ByteBuffer bb = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
-	bb.put((byte) 2);
+	bb.put((byte) BUNDLED_ENCRYPTION);
 	bb.put((byte) (salt.length - 2));
 	bb.putShort((short) (keyLength / 8 - 2));
 	bb.putShort((short) (keyIterationCount - 1));
@@ -461,7 +478,7 @@ public class StringEncryption {
 
         byte[] header = new byte[6];
         ByteBuffer bb = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
-        bb.put((byte) 2);
+        bb.put((byte) BUNDLED_ENCRYPTION);
         bb.put((byte) (salt.length - 2));
         bb.putShort((short) (keyLength / 8 - 2));
         bb.putShort((short) (keyIterationCount - 1));
@@ -523,6 +540,14 @@ public class StringEncryption {
             throw new IllegalStateException(String.format(
                     "%d records are still encrypted", count));
         repository.deleteMetadata(METADATA_PASSWORD_HASH);
+    }
+
+    /**
+     * Return the encryption type used to generate the encryption key
+     * and encrypt text.
+     */
+    public static int encryptionType() {
+        return BUNDLED_ENCRYPTION;
     }
 
     /**

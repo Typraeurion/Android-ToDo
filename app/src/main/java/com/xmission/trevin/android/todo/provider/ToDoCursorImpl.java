@@ -26,6 +26,7 @@ import android.util.Log;
 import com.xmission.trevin.android.todo.data.ToDoAlarm;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.repeat.*;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -200,7 +201,7 @@ public class ToDoCursorImpl implements ToDoCursor {
 
         if (descriptionColumn >= 0) {
             // How we read this column depends on whether the item is encrypted
-            if (item.getPrivate() <= 1) {
+            if (item.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                 // Plain text
                 item.setDescription(dbCursor.getString(descriptionColumn));
             } else {
@@ -211,7 +212,7 @@ public class ToDoCursorImpl implements ToDoCursor {
         }
 
         if (noteColumn >= 0) {
-            if (item.getPrivate() <= 1) {
+            if (item.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                 item.setNote(dbCursor.getString(noteColumn));
             } else {
                 item.setEncryptedNote(dbCursor.getBlob(noteColumn));

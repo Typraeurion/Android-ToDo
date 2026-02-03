@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ToDoApp version="2" db-version="3" exported="2026-02-02T21:41:08.642Z" total-records="2">
+  <Preferences count="0">
+  </Preferences>
+  <Metadata count="0">
+  </Metadata>
+  <Categories count="1">
+    <category id="0">Unfiled</category>
+  </Categories>
+  <ToDoList count="1">
+    <to-do id="12001" checked="false" category="0" priority="1">
+      <description>Repeat every 10 months on the next Tuesday through Friday after the 10th and 22nd</description>
+      <created time="2012-06-17T22:06:07.209Z"/>
+      <modified time="2018-09-12T05:08:12.020Z"/>
+      <due date="2020-10-10">
+	<repeat interval="6" name="SEMI_MONTHLY_ON_DATES" increment="10" week-days="TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" weekday-direction="NEXT" day1="10" day2="22" end="2021-06-09"/>
+      </due>
+    </to-do>
+  </ToDoList>
+</ToDoApp>

@@ -55,6 +55,7 @@ import com.xmission.trevin.android.todo.data.repeat.RepeatYearlyOnDate;
 import com.xmission.trevin.android.todo.data.repeat.RepeatYearlyOnDay;
 import com.xmission.trevin.android.todo.data.repeat.WeekDays;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 /**
  * Run-time implementation of the To Do repository.
@@ -1073,10 +1074,12 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      *
      * @throws IllegalArgumentException if the {@code private} field
      * is not; if the {@code description} field is empty
-     * (if {@code private} &le; 1) or {@code encryptedDescription}
-     * is empty (if {@code private} > 1); if a note is present and only
-     * encrypted (if {@code private} &le; 1) or only unencrypted
-     * (if {@code private} > 1).
+     * (if {@code private} &le; {@value StringEncryption#NO_ENCRYPTION})
+     * or {@code encryptedDescription} is empty (if {@code private} >
+     * {@value StringEncryption#NO_ENCRYPTION}); if a note is present and
+     * only encrypted (if {@code private} &le;
+     * {@value StringEncryption#NO_ENCRYPTION}) or only unencrypted
+     * (if {@code private} > {@value StringEncryption#NO_ENCRYPTION}).
      */
     private ContentValues todoToContentValues(ToDoItem item) {
         if (!item.isEncrypted()) {

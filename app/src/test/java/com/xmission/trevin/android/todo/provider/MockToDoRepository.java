@@ -28,6 +28,7 @@ import androidx.annotation.NonNull;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.*;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -232,8 +233,8 @@ public class MockToDoRepository implements ToDoRepository {
         }
         @Override
         public int compare(ToDoItem item1, ToDoItem item2) {
-            if (item1.getPrivate() <= 1) {
-                if (item2.getPrivate() <= 1) {
+            if (item1.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
+                if (item2.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                     // Both items are plain; we can compare the fields directly
                     if (item1.getDescription() == null) {
                         if (item2.getDescription() == null)
@@ -254,7 +255,7 @@ public class MockToDoRepository implements ToDoRepository {
                     return (item1.getDescription() == null) ? 0 : 1;
                 return -1;
             }
-            if (item2.getPrivate() <= 1) {
+            if (item2.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                 // First item is encrypted, second item is plain.
                 // Check for nulls.
                 if (item2.getDescription() == null)
@@ -475,8 +476,8 @@ public class MockToDoRepository implements ToDoRepository {
         }
         @Override
         public int compare(ToDoItem item1, ToDoItem item2) {
-            if (item1.getPrivate() <= 1) {
-                if (item2.getPrivate() <= 1) {
+            if (item1.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
+                if (item2.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                     // Both items are plain; we can compare the fields directly
                     if (item1.getNote() == null) {
                         if (item2.getNote() == null)
@@ -497,7 +498,7 @@ public class MockToDoRepository implements ToDoRepository {
                     return (item1.getNote() == null) ? 0 : 1;
                 return -1;
             }
-            if (item2.getPrivate() <= 1) {
+            if (item2.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                 // First item is encrypted, second item is plain.
                 // Check for nulls.
                 if (item2.getNote() == null)

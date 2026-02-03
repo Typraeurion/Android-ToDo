@@ -60,7 +60,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         implements Runnable {
 
     /** Tag for the debug logger */
-    public static final String LOG_TAG = "XMLExporter";
+    public static final String LOG_TAG = "XMLImporter";
 
     /**
      * Flag indicating how to merge items from the XML file
@@ -148,6 +148,8 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         CREATED(TODO_CREATED, TODO_HEAD, false),
         /** Modification time */
         MODIFIED(TODO_MODIFIED, TODO_HEAD, false),
+        /** Completion time */
+        COMPLETED(TODO_COMPLETED, TODO_HEAD, false),
         /** Note */
         NOTE(TODO_NOTE, TODO_HEAD, true),
         /** Due date */
@@ -442,6 +444,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                     fileName, inStream, importType, importPrivate,
                     decryptor, encryptor, progressUpdater);
             repository.runInTransaction(importer);
+            // Final update of the progress meter (unthrottled)
+            progressUpdater.updateProgress(modeText.get(OpMode.FINISH),
+                    importer.processedRecords, importer.totalRecords, false);
         } catch (UncaughtIOException ue) {
             throw ue.getCause();
         } finally {
@@ -886,7 +891,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
     /**
      * Attempt to parse a string attribute from an element describing
      * a single day of the week.  For version 1 XML files, we expect
-     * an integer with a value from 0 (Sunday) to 6 (Saturday).  For
+     * an integer with a value from 1 (Sunday) to 7 (Saturday).  For
      * version 2 we expect the enum name.
      *
      * @param attributes the attributes of the element
@@ -1211,9 +1216,26 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         attributes, TODO_MODIFIED, ATTR_TIME, true));
                 break;
 
+            case COMPLETED:
+                currentToDoItem.setCompleted(parseTimestampAttribute(
+                        attributes, TODO_COMPLETED, ATTR_TIME, true));
+                break;
+
             case DUE:
-                currentToDoItem.setDue(parseDateAttribute(attributes,
-                        TODO_DUE, ATTR_DATE, false));
+                // Version 1 stored the due "date" as a full timestamp.
+                if (version <= 1) {
+                    Instant dueTime = parseTimestampAttribute(attributes,
+                            TODO_DUE, ATTR_TIME, false);
+                    if (dueTime != null) {
+                        currentToDoItem.setDue(dueTime.atZone(assumedZone)
+                                .toLocalDate());
+                    }
+                }
+                // As of version 2, we just store the date part.
+                else {
+                    currentToDoItem.setDue(parseDateAttribute(attributes,
+                            TODO_DUE, ATTR_DATE, false));
+                }
                 break;
 
             case HIDE:
@@ -1257,7 +1279,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                                     REPEAT_NONE, REPEAT_YEAR_AFTER));
                     repeatType = repeat.getType();
                 }
-                // As of version to, we can identify them by name
+                // As of version 2, we can identify them by name
                 else {
                     attrValue = getRequiredStringAttribute(attributes,
                             DUE_REPEAT, ATTR_NAME);
@@ -1460,6 +1482,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             case PREFERENCE:
                 prefsMap.put(preferenceName, textContent);
                 preferenceName = null;
+                processedRecords++;
+                progressUpdater.updateProgress(modeText.get(OpMode.SETTINGS),
+                        processedRecords, totalRecords, true);
                 break;
 
             case METADATA:
@@ -1471,6 +1496,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 metadatum.setValue(decodeBase64(textContent));
                 metadata.put(metadatum.getName(), metadatum.getValue());
                 metadatum = null;
+                processedRecords++;
+                progressUpdater.updateProgress(modeText.get(OpMode.SETTINGS),
+                        processedRecords, totalRecords, true);
                 break;
 
             case CATEGORIES:
@@ -1698,6 +1726,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      */
     private void mergeCategories() {
         Log.d(LOG_TAG, ".mergeCategories(" + importType + ")");
+        String opText = modeText.get(OpMode.CATEGORIES);
         long maxId = -1;
         for (CategoryEntry category : categories) {
             if (category.id > maxId)
@@ -1719,72 +1748,91 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             }
         }
 
-        for (CategoryEntry fileCategory : categories) {
-            fileCategory.newID = fileCategory.id;
-            categoriesByID.put(fileCategory.id, fileCategory);
-            // Skip the Unfiled category
-            if (fileCategory.id == ToDoCategory.UNFILED) {
-                processedRecords++;
-                continue;
-            }
+        switch (importType) {
 
-            ToDoCategory localCategory;
-            switch (importType) {
+            case CLEAN:
+                // There are no pre-existing categories
+                for (CategoryEntry fileCategory : categories) {
+                    // Skip the Unfiled category
+                    if (fileCategory.id == ToDoCategory.UNFILED) {
+                        fileCategory.newID = fileCategory.id;
+                    } else {
+                        Log.d(LOG_TAG, String.format(
+                                ".mergeCategories: adding %d \"%s\"",
+                                fileCategory.id, fileCategory.name));
+                        ToDoCategory localCategory = new ToDoCategory();
+                        localCategory.setId(fileCategory.id);
+                        localCategory.setName(fileCategory.name);
+                        localCategory = repository.insertCategory(localCategory);
+                        fileCategory.newID = localCategory.getId();
+                    }
+                    categoriesByID.put(fileCategory.id, fileCategory);
+                    processedRecords++;
+                    progressUpdater.updateProgress(opText,
+                            processedRecords, totalRecords, true);
+                }
+                break;
 
-                case CLEAN:
-                    // There are no pre-existing categories
-                    Log.d(LOG_TAG, String.format(
-                            ".mergeCategories: adding %d \"%s\"",
-                            fileCategory.id, fileCategory.name));
-                    localCategory = new ToDoCategory();
-                    localCategory.setId(fileCategory.id);
-                    localCategory.setName(fileCategory.name);
-                    repository.insertCategory(localCategory);
-                    break;
-
-                case REVERT:
-                    // Always overwrite
-                    if (categoryNameMap.containsKey(fileCategory.name) &&
-                            (categoryNameMap.get(fileCategory.name) !=
-                                    fileCategory.id)) {
+            case REVERT:
+                /*
+                 * First remove all conflicting names.
+                 * DO NOT add new categories in the same loop,
+                 * as that may lead to inconsistencies between
+                 * what's in the database and our maps.
+                 */
+                for (CategoryEntry fileCategory : categories) {
+                    if ((categoryNameMap.containsKey(fileCategory.name)) &&
+                            (categoryNameMap.get(fileCategory.name)
+                                    != fileCategory.id)) {
                         long oldId = categoryNameMap.get(fileCategory.name);
                         Log.d(LOG_TAG, String.format(Locale.US,
                                 ".mergeCategories: \"%s\" already exists"
-                                + " with ID %d; deleting it.",
+                                        + " with ID %d; deleting it.",
                                 fileCategory.name, oldId));
                         repository.deleteCategory(oldId);
                         categoryIDMap.remove(oldId);
                         categoryNameMap.remove(fileCategory.name);
                     }
-                    if (categoryIDMap.containsKey(fileCategory.id) &&
-                            !categoryIDMap.get(fileCategory.id)
-                                    .equals(fileCategory.name)) {
-                        Log.d(LOG_TAG, String.format(Locale.US,
-                                ".mergeCategories: replacing"
-                                + " \"%s\" with \"%s\"",
-                                categoryIDMap.get(fileCategory.id),
-                                fileCategory.name));
-                        repository.updateCategory(fileCategory.id,
-                                fileCategory.name);
+                }
+                for (CategoryEntry fileCategory : categories) {
+                    if (categoryIDMap.containsKey(fileCategory.id)) {
+                        if (!categoryIDMap.get(fileCategory.id)
+                                .equals(fileCategory.name)) {
+                            Log.d(LOG_TAG, String.format(Locale.US,
+                                    ".mergeCategories: replacing"
+                                            + " \"%s\" with \"%s\"",
+                                    categoryIDMap.get(fileCategory.id),
+                                    fileCategory.name));
+                            repository.updateCategory(fileCategory.id,
+                                    fileCategory.name);
+                        }
+                        fileCategory.newID = fileCategory.id;
                     }
                     else {
                         Log.d(LOG_TAG, String.format(Locale.US,
                                 ".mergeCategories: adding %d \"%s\"",
                                 fileCategory.id, fileCategory.name));
-                        localCategory = new ToDoCategory();
+                        ToDoCategory localCategory = new ToDoCategory();
                         localCategory.setId(fileCategory.id);
                         localCategory.setName(fileCategory.name);
-                        repository.insertCategory(localCategory);
+                        localCategory = repository.insertCategory(localCategory);
+                        fileCategory.newID = localCategory.getId();
                     }
-                    break;
+                    categoriesByID.put(fileCategory.id, fileCategory);
+                    processedRecords++;
+                    progressUpdater.updateProgress(opText,
+                            processedRecords, totalRecords, true);
+                }
+                break;
 
-                case UPDATE:
-                    /*
-                     * Overwrite if newer.  But since categories
-                     * have no time stamp, this item acts like merge.
-                     */
-                case MERGE:
-                case ADD:
+            case UPDATE:
+                /*
+                 * Overwrite if newer.  But since categories
+                 * have no time stamp, this item acts like merge.
+                 */
+            case MERGE:
+            case ADD:
+                for (CategoryEntry fileCategory : categories) {
                     if (categoryNameMap.containsKey(fileCategory.name)) {
                         fileCategory.newID =
                                 categoryNameMap.get(fileCategory.name);
@@ -1792,29 +1840,33 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         Log.d(LOG_TAG, String.format(Locale.US,
                                 ".mergeCategories: adding \"%s\"",
                                 fileCategory.name));
-                        localCategory = new ToDoCategory();
+                        ToDoCategory localCategory = new ToDoCategory();
                         localCategory.setId(fileCategory.id);
                         localCategory.setName(fileCategory.name);
                         // Use a new ID if there is a conflict
-                        if (categoryIDMap.containsKey(fileCategory.id)) {
+                        if (categoryIDMap.containsKey(fileCategory.id))
                             localCategory.setId(++maxId);
-                            localCategory = repository.insertCategory(
-                                    localCategory);
-                            fileCategory.newID = localCategory.getId();
-                        } else {
-                            repository.insertCategory(localCategory);
-                        }
+                        localCategory = repository.insertCategory(localCategory);
+                        fileCategory.newID = localCategory.getId();
                     }
-                    break;
+                    categoriesByID.put(fileCategory.id, fileCategory);
+                    processedRecords++;
+                    progressUpdater.updateProgress(opText,
+                            processedRecords, totalRecords, true);
+                }
+                break;
 
-                case TEST:
-                    // Do nothing.
-                    break;
+            case TEST:
+                // Do nothing.
+                for (CategoryEntry fileCategory : categories) {
+                    fileCategory.newID = fileCategory.id;
+                    categoriesByID.put(fileCategory.newID, fileCategory);
+                }
+                processedRecords += categories.size();
+                progressUpdater.updateProgress(opText,
+                        processedRecords, totalRecords, true);
+                break;
             }
-            processedRecords++;
-            progressUpdater.updateProgress(modeText.get(OpMode.CATEGORIES),
-                    processedRecords, totalRecords, true);
-        }
 
         categoriesRead = true;
     }
@@ -1874,7 +1926,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                     currentToDoItem.setNote(decryptor.decrypt(
                             currentToDoItem.getEncryptedNote()));
                 // Temporarily mark unencrypted
-                currentToDoItem.setPrivate(1);
+                currentToDoItem.setPrivate(StringEncryption.NO_ENCRYPTION);
             } catch (EncryptionException e) {
                 throw new EncryptionException(String.format(Locale.US,
                         "Failed to decrypt To Do item #%d",
@@ -1886,9 +1938,13 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             try {
                 currentToDoItem.setEncryptedDescription(encryptor.encrypt(
                         currentToDoItem.getDescription()));
-                if (currentToDoItem.getNote() != null)
+                currentToDoItem.setDescription(null);
+                if (currentToDoItem.getNote() != null) {
                     currentToDoItem.setEncryptedNote(encryptor.encrypt(
                             currentToDoItem.getNote()));
+                    currentToDoItem.setNote(null);
+                }
+                currentToDoItem.setPrivate(StringEncryption.encryptionType());
             } catch (EncryptionException e) {
                 throw new EncryptionException(String.format(Locale.US,
                         "Failed to encrypt To Do item #%d",

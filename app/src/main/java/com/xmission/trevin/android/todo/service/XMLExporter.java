@@ -124,6 +124,9 @@ public class XMLExporter {
     /** The name of the modification time sub-element */
     public static final String TODO_MODIFIED = "modified";
 
+    /** The name of the completed time sub-element */
+    public static final String TODO_COMPLETED = "completed";
+
     /** The time attribute name */
     public static final String ATTR_TIME = "time";
 
@@ -488,6 +491,11 @@ public class XMLExporter {
                 TODO_MODIFIED, ATTR_TIME,
                 item.getModTime().atOffset(ZoneOffset.UTC)
                         .format(DateTimeFormatter.ISO_INSTANT));
+        if (item.getCompleted() != null)
+            out.printf(Locale.US, "      <%s %s=\"%s\"/>\n",
+                    TODO_COMPLETED, ATTR_TIME,
+                    item.getCompleted().atOffset(ZoneOffset.UTC)
+                            .format(DateTimeFormatter.ISO_INSTANT));
 
         // The hide, alarm, repeat interval, and notification timestamp
         // are all contingent on having a due date.

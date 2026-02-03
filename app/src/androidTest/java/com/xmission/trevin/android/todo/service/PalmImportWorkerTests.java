@@ -821,7 +821,8 @@ public class PalmImportWorkerTests {
     }
 
     /**
-     * Categories used by the &ldquo;Palm-todos-v1.dat&rdquo; file
+     * Categories used by the &ldquo;Palm-todos-v1.dat&rdquo;
+     * and &ldquo;Palm-todos-SGv2.dat&rdquo; files.
      */
     public static final List<ToDoCategory> TEST_CATEGORIES_2;
     static {
@@ -923,7 +924,7 @@ public class PalmImportWorkerTests {
         todo.setId(165);
         todo.setDescription("Find Dr. No");
         todo.setPriority(1);
-        todo.setPrivate(1);
+        todo.setPrivate(StringEncryption.NO_ENCRYPTION);
         todo.setCategoryId(TEST_CATEGORIES_2.get(3).getId());
         todo.setCategoryName(TEST_CATEGORIES_2.get(3).getName());
         todo.setNote("John Strangways and his secretary have been murdered"
@@ -939,7 +940,7 @@ public class PalmImportWorkerTests {
         todo.setDue(LocalDate.of(2021, 9, 28));
         todo.setChecked(true);
         todo.setPriority(3);
-        todo.setPrivate(1);
+        todo.setPrivate(StringEncryption.NO_ENCRYPTION);
         todo.setCategoryId(TEST_CATEGORIES_2.get(3).getId());
         todo.setCategoryName(TEST_CATEGORIES_2.get(3).getName());
         todo.setNote("Most members presumed killed as of the release of"
@@ -1059,7 +1060,7 @@ public class PalmImportWorkerTests {
 
         todo = new ToDoItem();
         todo.setId(242);
-        todo.setPrivate(1);
+        todo.setPrivate(StringEncryption.NO_ENCRYPTION);
         todo.setDescription("Submit mission report");
         todo.setCategoryId(TEST_CATEGORIES_2.get(3).getId());
         todo.setCategoryName(TEST_CATEGORIES_2.get(3).getName());
@@ -1337,6 +1338,20 @@ public class PalmImportWorkerTests {
             errors.add(String.format("%s description expected:\"%s\""
                     + " but was:\"%s\"", message,
                     expected.getDescription(), actual.getDescription()));
+        if (!Arrays.equals(expected.getEncryptedDescription(),
+                actual.getEncryptedDescription())) {
+            if (expected.getEncryptedDescription() == null)
+                errors.add(String.format("%s encrypted description"
+                                + " expected:null but was:<%d bytes>",
+                        message, actual.getEncryptedDescription().length));
+            else if (actual.getEncryptedDescription() == null)
+                errors.add(String.format("%s encrypted description"
+                                + " expected:<%d bytes> but was:null",
+                        message, expected.getEncryptedDescription().length));
+            else
+                errors.add(String.format("%s encrypted descriptions differ",
+                        message));
+        }
         if (expected.getCreateTime() == Instant.MIN) {
             if (actual.getCreateTime().isBefore(timeStart) ||
                     actual.getCreateTime().isAfter(timeEnd)) {
@@ -1387,6 +1402,10 @@ public class PalmImportWorkerTests {
                 !expected.getNote().equals(actual.getNote()))
             errors.add(String.format("%s note expected:\"%s\" but was:\"%s\"",
                     message, expected.getNote(), actual.getNote()));
+        if (!Arrays.equals(expected.getEncryptedNote(),
+                actual.getEncryptedNote()))
+            errors.add(String.format("%s encrypted notes differ",
+                    message));
         if ((expected.getAlarm() == null) ? (actual.getAlarm() != null) :
                 !expected.getAlarm().equals(actual.getAlarm()))
             errors.add(String.format("%s alarm expected:%s but was:%s",

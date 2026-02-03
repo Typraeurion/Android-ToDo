@@ -24,6 +24,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.xmission.trevin.android.todo.data.AlarmInfo;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -149,7 +150,7 @@ public class AlarmInfoCursor {
 
         if (descriptionColumn >= 0) {
             // How we read this column depends on whether the item is encrypted
-            if (item.getPrivate() <= 1) {
+            if (item.getPrivate() <= StringEncryption.NO_ENCRYPTION) {
                 // Plain text
                 item.setDescription(dbCursor.getString(descriptionColumn));
             } else {

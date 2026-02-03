@@ -1659,7 +1659,8 @@ public class PalmImportWorker extends Worker {
 
                 // Set all of the other values
                 newRecord.setPrivate(dataToDos[i].isPrivate ?
-                        (newCrypt.hasKey() ? 2 : 1) : 0);
+                        (newCrypt.hasKey() ? StringEncryption.encryptionType()
+                                : StringEncryption.NO_ENCRYPTION) : 0);
                 newRecord.setDescription(dataToDos[i].description
                         .replace("\r", ""));
                 if ((dataToDos[i].note != null) &&
@@ -1673,7 +1674,7 @@ public class PalmImportWorker extends Worker {
                         newRecord.setEncryptedNote(newCrypt.encrypt(
                                 newRecord.getNote()));
                 } catch (EncryptionException gsx) {
-                    newRecord.setPrivate(1);
+                    newRecord.setPrivate(StringEncryption.NO_ENCRYPTION);
                 }
                 newRecord.setModTimeNow();
                 if ((dataToDos[i].dueDate >= 0) &&

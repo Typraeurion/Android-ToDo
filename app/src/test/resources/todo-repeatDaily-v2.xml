@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ToDoApp version="2" db-version="3" exported="2026-02-02T18:20:31.975Z" total-records="2">
+  <Preferences count="0">
+  </Preferences>
+  <Metadata count="0">
+  </Metadata>
+  <Categories count="1">
+    <category id="0">Unfiled</category>
+  </Categories>
+  <ToDoList count="1">
+    <to-do id="6804" checked="false" category="0" priority="1">
+      <description>Repeat every 6 days except Thursday</description>
+      <created time="2013-05-14T15:16:37.277Z"/>
+      <modified time="2025-03-04T22:01:47.450Z"/>
+      <due date="2011-11-01">
+	<repeat interval="1" name="DAILY" increment="6" week-days="SUNDAY,MONDAY,TUESDAY,WEDNESDAY,FRIDAY,SATURDAY" weekday-direction="CLOSEST_OR_NEXT" end="2019-03-05"/>
+      </due>
+    </to-do>
+  </ToDoList>
+</ToDoApp>

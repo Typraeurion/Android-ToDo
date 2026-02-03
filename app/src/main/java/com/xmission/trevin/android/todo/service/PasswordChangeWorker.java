@@ -326,7 +326,7 @@ public class PasswordChangeWorker extends Worker {
                                 item.getEncryptedNote()));
                         item.setEncryptedNote(null);
                     }
-                    item.setPrivate(1);
+                    item.setPrivate(StringEncryption.NO_ENCRYPTION);
                     countDecrypted++;
                 }
                 if (newEncryption != null) {
@@ -338,7 +338,7 @@ public class PasswordChangeWorker extends Worker {
                                 item.getNote()));
                         item.setNote(null);
                     }
-                    item.setPrivate(2);
+                    item.setPrivate(StringEncryption.encryptionType());
                     countEncrypted++;
                 }
                 repository.updateItem(item);

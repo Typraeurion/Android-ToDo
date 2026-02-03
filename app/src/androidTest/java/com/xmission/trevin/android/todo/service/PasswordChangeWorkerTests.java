@@ -145,7 +145,7 @@ public class PasswordChangeWorkerTests {
                 ToDoCategory.UNFILED).getName());
         mockRepo.insertItem(publicItem);
         ToDoItem privateItem = randomToDo();
-        privateItem.setPrivate(1);
+        privateItem.setPrivate(StringEncryption.NO_ENCRYPTION);
         privateItem.setCategoryName(mockRepo.getCategoryById(
                         ToDoCategory.UNFILED).getName());
         // Ensure we also have a note on the private item
@@ -216,7 +216,7 @@ public class PasswordChangeWorkerTests {
         if (clearNote == null)
             clearNote = randomParagraph();
         privateItem.setEncryptedNote(globalEncryption.encrypt(clearNote));
-        privateItem.setPrivate(2);
+        privateItem.setPrivate(StringEncryption.encryptionType());
         privateItem.setCategoryName(mockRepo.getCategoryById(
                         ToDoCategory.UNFILED).getName());
         mockRepo.insertItem(privateItem);
@@ -369,7 +369,7 @@ public class PasswordChangeWorkerTests {
             clearNote1 = randomParagraph();
             privateItem.setNote(clearNote1);
         }
-        privateItem.setPrivate(1);
+        privateItem.setPrivate(StringEncryption.NO_ENCRYPTION);
         privateItem.setCategoryName(mockRepo.getCategoryById(
                         ToDoCategory.UNFILED).getName());
         mockRepo.insertItem(privateItem);
@@ -379,7 +379,7 @@ public class PasswordChangeWorkerTests {
         if (clearNote2 == null) {
             clearNote2 = randomParagraph();
         }
-        encryptedItem.setPrivate(2);
+        encryptedItem.setPrivate(StringEncryption.encryptionType());
         encryptedItem.setCategoryName(mockRepo.getCategoryById(
                         ToDoCategory.UNFILED).getName());
         encryptedItem.setEncryptedDescription(

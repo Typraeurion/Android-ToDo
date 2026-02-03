@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import com.xmission.trevin.android.todo.data.repeat.RepeatInterval;
 import com.xmission.trevin.android.todo.data.repeat.RepeatType;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Test;
@@ -94,7 +95,7 @@ public class ToDoItemTests {
                 RAND.nextLong() % 3155760000L + 946684800L));
         item.setChecked(!EMPTY_ITEM.isChecked()); // We can only toggle a boolean
         item.setPriority(RAND.nextInt(10) + 2); // Default is 1
-        item.setPrivate(RAND.nextInt(5) + 1); // Default is 0
+        item.setPrivate(RAND.nextInt(StringEncryption.MAX_SUPPORTED_ENCRYPTION) + 1); // Default is 0
         item.setCategoryId(RAND.nextInt(100) + 1); // Default is 0 (Unfiled)
         item.setCategoryName(STRING_GEN.nextAlphabetic(
                 RAND.nextInt(10) + 5));
@@ -601,7 +602,7 @@ public class ToDoItemTests {
     @Test
     public void testPriorityClone() {
         ToDoItem itemOtherPriority = newEmptyItem();
-        itemOtherPriority.setPrivate(RAND.nextInt(10) + 2);
+        itemOtherPriority.setPriority(RAND.nextInt(10) + 2);
         ToDoItem clone = itemOtherPriority.clone();
         assertEquals("Clone of item priority",
                 itemOtherPriority.getPriority(), clone.getPriority());
@@ -610,7 +611,8 @@ public class ToDoItemTests {
     @Test
     public void testPrivateToString() {
         ToDoItem privateItem = newEmptyItem();
-        privateItem.setPrivate(RAND.nextInt(5) + 1);
+        privateItem.setPrivate(RAND.nextInt(
+                StringEncryption.MAX_SUPPORTED_ENCRYPTION) + 1);
         assertNotEquals("Items with different privacy",
                 EMPTY_ITEM.toString(), privateItem.toString());
     }
@@ -618,7 +620,8 @@ public class ToDoItemTests {
     @Test
     public void testPrivateHashCode() {
         ToDoItem privateItem = newEmptyItem();
-        privateItem.setPrivate(RAND.nextInt(5) + 1);
+        privateItem.setPrivate(RAND.nextInt(
+                StringEncryption.MAX_SUPPORTED_ENCRYPTION) + 1);
         assertNotEquals("Item hash codes with different privacy",
                 EMPTY_ITEM.hashCode(), privateItem.hashCode());
     }
@@ -626,7 +629,8 @@ public class ToDoItemTests {
     @Test
     public void testPrivateEquals() {
         ToDoItem privateItem = newEmptyItem();
-        privateItem.setPrivate(RAND.nextInt(5) + 1);
+        privateItem.setPrivate(RAND.nextInt(
+                StringEncryption.MAX_SUPPORTED_ENCRYPTION) + 1);
         assertFalse("Item equals item with different privacy",
                 EMPTY_ITEM.equals(privateItem));
     }
@@ -634,7 +638,8 @@ public class ToDoItemTests {
     @Test
     public void testPrivateClone() {
         ToDoItem privateItem = newEmptyItem();
-        privateItem.setPrivate(RAND.nextInt(5) + 1);
+        privateItem.setPrivate(RAND.nextInt(
+                StringEncryption.MAX_SUPPORTED_ENCRYPTION) + 1);
         ToDoItem clone = privateItem.clone();
         assertEquals("Clone of item privacy",
                 privateItem.getPrivate(), clone.getPrivate());

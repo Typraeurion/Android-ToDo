@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ToDoApp db-version="3" exported="2026-02-02T22:27:04.826Z">
+    <Preferences>
+    </Preferences>
+    <Metadata>
+    </Metadata>
+    <Categories>
+	<category id="0">Unfiled</category>
+    </Categories>
+    <ToDoList>
+	<to-do id="7831" checked="false" category="0" priority="1">
+	    <description>Repeat every month on the last Friday</description>
+	    <created time="2012-02-29T14:17:57.491Z"/>
+	    <modified time="2017-02-20T00:28:04.461Z"/>
+	    <due time="2017-09-29T04:06:37.229Z">
+		<repeat interval="7" increment="1" day1="6" week1="-1" end="1764641615045"/>
+	    </due>
+	</to-do>
+    </ToDoList>
+</ToDoApp>

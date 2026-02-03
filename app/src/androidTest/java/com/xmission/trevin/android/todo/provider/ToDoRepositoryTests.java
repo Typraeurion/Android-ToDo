@@ -38,6 +38,7 @@ import com.xmission.trevin.android.todo.data.repeat.RepeatSemiMonthlyOnDays;
 import com.xmission.trevin.android.todo.data.repeat.RepeatYearlyOnDate;
 import com.xmission.trevin.android.todo.data.repeat.WeekDays;
 import com.xmission.trevin.android.todo.data.repeat.WeekdayDirection;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -903,7 +904,7 @@ public class ToDoRepositoryTests {
     public void testEncryptedToDoCRUD() {
         ToDoItem expectedToDo = new ToDoItem();
         expectedToDo.setCategoryId(ToDoCategory.UNFILED);
-        expectedToDo.setPrivate(2);
+        expectedToDo.setPrivate(StringEncryption.encryptionType());
         expectedToDo.setCreateTimeNow();
         expectedToDo.setModTime(expectedToDo.getCreateTime());
         byte[] descriptionEncryption = new byte[64 + 32 * RAND.nextInt(8)];
@@ -1003,7 +1004,7 @@ public class ToDoRepositoryTests {
     public void testInsertEmptyEncryptedDescription() {
         ToDoItem emptyToDo = new ToDoItem();
         emptyToDo.setCategoryId(ToDoCategory.UNFILED);
-        emptyToDo.setPrivate(2);
+        emptyToDo.setPrivate(StringEncryption.encryptionType());
         emptyToDo.setCreateTimeNow();
         emptyToDo.setModTime(emptyToDo.getCreateTime());
         // Setting `description' should have no bearing

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ToDoApp version="2" db-version="3" exported="2026-02-02T20:24:06.284Z" total-records="2">
+  <Preferences count="0">
+  </Preferences>
+  <Metadata count="0">
+  </Metadata>
+  <Categories count="1">
+    <category id="0">Unfiled</category>
+  </Categories>
+  <ToDoList count="1">
+    <to-do id="24065" checked="false" category="0" priority="1">
+      <description>Repeat every 29 weeks on Sunday, Monday, Tuesday, and Friday</description>
+      <created time="2012-02-16T19:54:00.162Z"/>
+      <modified time="2014-02-04T02:29:28.611Z"/>
+      <due date="2024-09-08">
+	<repeat interval="3" name="WEEKLY" increment="29" week-days="SUNDAY,MONDAY,TUESDAY,FRIDAY" end="2025-07-16"/>
+      </due>
+    </to-do>
+  </ToDoList>
+</ToDoApp>

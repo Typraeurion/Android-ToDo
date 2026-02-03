@@ -19,6 +19,8 @@ package com.xmission.trevin.android.todo.data;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.xmission.trevin.android.todo.util.StringEncryption;
+
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -136,13 +138,17 @@ public class AlarmInfo implements Cloneable,
 
     /** @return true if this item is encrypted */
     public boolean isEncrypted() {
-        return privacy >= 2;
+        return privacy > StringEncryption.NO_ENCRYPTION;
     }
 
     /** Set the privacy level of this item */
     public void setPrivate(int privacyLevel) {
         if (privacyLevel < 0)
-            throw new IllegalArgumentException("Privacy level cannot be negative");
+            throw new IllegalArgumentException(
+                    "Privacy level cannot be negative");
+        if (privacyLevel > StringEncryption.MAX_SUPPORTED_ENCRYPTION)
+            throw new IllegalArgumentException(
+                    "Unsupported encryption type " + privacyLevel);
         this.privacy = privacyLevel;
     }
 

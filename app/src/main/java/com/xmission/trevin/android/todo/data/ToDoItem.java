@@ -22,6 +22,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.xmission.trevin.android.todo.data.repeat.RepeatInterval;
+import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -315,7 +316,7 @@ public class ToDoItem implements Cloneable, Serializable {
     /** @return true if the To Do item is encrypted */
     // Ignore for storage
     public boolean isEncrypted() {
-        return privacy > 1;
+        return privacy > StringEncryption.NO_ENCRYPTION;
     }
 
     /**
@@ -330,6 +331,12 @@ public class ToDoItem implements Cloneable, Serializable {
      * @param level the privacy level
      */
     public void setPrivate(int level) {
+        if (level < 0)
+            throw new IllegalArgumentException(
+                    "Privacy level cannot be negative");
+        if (level > StringEncryption.MAX_SUPPORTED_ENCRYPTION)
+            throw new IllegalArgumentException(
+                    "Unsupported encryption type " + level);
         privacy = level;
     }
 
@@ -478,7 +485,7 @@ public class ToDoItem implements Cloneable, Serializable {
             sb.append(_ID).append('=').append(_id).append(", ");
         if (description != null) {
             sb.append(DESCRIPTION).append('=');
-            if (privacy >= 1)
+            if (privacy > 0)
                 sb.append("[Private]");
             else if (description.length() <= 80)
                 sb.append('"').append(description).append('"');
