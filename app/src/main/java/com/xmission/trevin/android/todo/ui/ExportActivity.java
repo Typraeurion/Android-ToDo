@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,16 +32,23 @@ import android.content.*;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.*;
-import androidx.annotation.NonNull;
 import android.text.*;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Observer;
+import androidx.work.Data;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.service.ProgressReportingService;
-import com.xmission.trevin.android.todo.service.XMLExporterService;
+import com.xmission.trevin.android.todo.service.ProgressBarUpdater;
+import com.xmission.trevin.android.todo.service.XMLExportWorker;
 import com.xmission.trevin.android.todo.util.FileUtils;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
@@ -101,8 +109,11 @@ public class ExportActivity extends Activity {
     /** Progress message */
     TextView exportProgressMessage = null;
 
-    /** Progress reporting service */
-    ProgressReportingService progressService = null;
+    /** Live data for the progress dialog */
+    LiveData<WorkInfo> progressLiveData = null;
+
+    /** Progress observer */
+    ExportProgressObserver progressObserver = null;
 
     /** Shared preferences */
     private ToDoPreferences prefs;
@@ -111,6 +122,8 @@ public class ExportActivity extends Activity {
 
     /** The error dialog, if we need to show one */
     AlertDialog errorDialog;
+
+    private WorkManager workManager;
 
     /** Called when the activity is first created. */
     @Override
@@ -146,6 +159,8 @@ public class ExportActivity extends Activity {
 
         encryptor = StringEncryption.holdGlobalEncryption();
         prefs = ToDoPreferences.getInstance(this);
+
+        workManager = WorkManager.getInstance(this);
 
         // Set default values
         String directoryName = FileUtils.getDefaultStorageDirectory(this);
@@ -481,45 +496,62 @@ public class ExportActivity extends Activity {
                 fullName = exportDocUri.toString();
             }
 
-            Intent intent = new Intent(ExportActivity.this,
-                    XMLExporterService.class);
-            intent.putExtra(XMLExporterService.XML_DATA_FILENAME, fullName);
-            intent.putExtra(XMLExporterService.EXPORT_PRIVATE,
-                    exportPrivateCheckBox.isChecked());
-            ServiceConnection serviceConnection =
-                new XMLExportServiceConnection();
+//            Intent intent = new Intent(ExportActivity.this,
+//                    XMLExporterService.class);
+//            intent.putExtra(XMLExporterService.XML_DATA_FILENAME, fullName);
+//            intent.putExtra(XMLExporterService.EXPORT_PRIVATE,
+//                    exportPrivateCheckBox.isChecked());
+//            ServiceConnection serviceConnection =
+//                new XMLExportServiceConnection();
+            WorkRequest exportRequest = new OneTimeWorkRequest
+                    .Builder(XMLExportWorker.class)
+                    .setInputData(new Data.Builder()
+                            .putString(XMLExportWorker.XML_DATA_FILENAME, fullName)
+                            .putBoolean(XMLExportWorker.EXPORT_PRIVATE,
+                                    exportPrivateCheckBox.isChecked())
+                            .build())
+                    .build();
+            workManager.enqueue(exportRequest);
 
             // Set up a callback to update the progress bar
-            final Handler progressHandler = new Handler();
-            progressHandler.postDelayed(new Runnable() {
-                int oldMax = 0;
-                String oldMessage = "...";
-                @Override
-                public void run() {
-                    if (progressService != null) {
-                        String newMessage = progressService.getCurrentMode();
-                        int newMax = progressService.getMaxCount();
-                        int newProgress = progressService.getChangedCount();
-                        Log.d(TAG, ".Runnable: Updating the progress dialog to "
-                                + newMessage + " " + newProgress + "/" + newMax);
-                        if (!oldMessage.equals(newMessage)) {
-                            exportProgressMessage.setText(newMessage);
-                            oldMessage = newMessage;
-                        }
-                        if (newMax != oldMax) {
-                            exportProgressBar.setIndeterminate(newMax == 0);
-                            exportProgressBar.setMax(newMax);
-                            oldMax = newMax;
-                        }
-                        exportProgressBar.setProgress(newProgress);
-                        // To do: also display the values (if max > 0)
-                        progressHandler.postDelayed(this, 100);
-                    }
-                }
-            }, 100);
-            startService(intent);
-            Log.d(TAG, "ExportButtonOK.onClick: binding to the export service");
-            bindService(intent, serviceConnection, 0);
+//            final Handler progressHandler = new Handler();
+//            progressHandler.postDelayed(new Runnable() {
+//                int oldMax = 0;
+//                String oldMessage = "...";
+//                @Override
+//                public void run() {
+//                    if (progressService != null) {
+//                        String newMessage = progressService.getCurrentMode();
+//                        int newMax = progressService.getMaxCount();
+//                        int newProgress = progressService.getChangedCount();
+//                        Log.d(TAG, ".Runnable: Updating the progress dialog to "
+//                                + newMessage + " " + newProgress + "/" + newMax);
+//                        if (!oldMessage.equals(newMessage)) {
+//                            exportProgressMessage.setText(newMessage);
+//                            oldMessage = newMessage;
+//                        }
+//                        if (newMax != oldMax) {
+//                            exportProgressBar.setIndeterminate(newMax == 0);
+//                            exportProgressBar.setMax(newMax);
+//                            oldMax = newMax;
+//                        }
+//                        exportProgressBar.setProgress(newProgress);
+//                        // To do: also display the values (if max > 0)
+//                        progressHandler.postDelayed(this, 100);
+//                    }
+//                }
+//            }, 100);
+//            startService(intent);
+//            Log.d(TAG, "ExportButtonOK.onClick: binding to the export service");
+//            bindService(intent, serviceConnection, 0);
+            // Sanity checks
+            if ((progressLiveData != null) && (progressObserver != null))
+                progressLiveData.removeObserver(progressObserver);
+
+            progressObserver = new ExportProgressObserver();
+            progressLiveData = workManager.getWorkInfoByIdLiveData(
+                    exportRequest.getId());
+            progressLiveData.observeForever(progressObserver);
         }
     }
 
@@ -596,29 +628,70 @@ public class ExportActivity extends Activity {
         errorDialog.show();
     }
 
-    class XMLExportServiceConnection implements ServiceConnection {
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            String interfaceDescriptor;
-            try {
-                interfaceDescriptor = service.getInterfaceDescriptor();
-            } catch (RemoteException rx) {
-                interfaceDescriptor = rx.getMessage();
-            }
-            Log.d(TAG, String.format(".XMLExportServiceConnection.onServiceConnected(%s, %s)",
-                    name.getShortClassName(), interfaceDescriptor));
-            XMLExporterService.ExportBinder xbinder =
-                (XMLExporterService.ExportBinder) service;
-            progressService = xbinder.getService();
-        }
+//    class XMLExportServiceConnection implements ServiceConnection {
+//        public void onServiceConnected(ComponentName name, IBinder service) {
+//            String interfaceDescriptor;
+//            try {
+//                interfaceDescriptor = service.getInterfaceDescriptor();
+//            } catch (RemoteException rx) {
+//                interfaceDescriptor = rx.getMessage();
+//            }
+//            Log.d(TAG, String.format(".XMLExportServiceConnection.onServiceConnected(%s, %s)",
+//                    name.getShortClassName(), interfaceDescriptor));
+//            XMLExporterService.ExportBinder xbinder =
+//                (XMLExporterService.ExportBinder) service;
+//            progressService = xbinder.getService();
+//        }
+//
+//        /** Called when a connection to the service has been lost */
+//        public void onServiceDisconnected(ComponentName name) {
+//            Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
+//            xableFormElements(true);
+//            progressService = null;
+//            unbindService(this);
+//            // To do: was the export successful?
+//            ExportActivity.this.finish();
+//        }
+//    }
 
-        /** Called when a connection to the service has been lost */
-        public void onServiceDisconnected(ComponentName name) {
-            Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
-            xableFormElements(true);
-            progressService = null;
-            unbindService(this);
-            // To do: was the export successful?
-            ExportActivity.this.finish();
+    /** Observer of an export worker&rsquo;s progress. */
+    private class ExportProgressObserver implements Observer<WorkInfo> {
+        @Override
+        public void onChanged(@NonNull WorkInfo workInfo) {
+            if (exportProgressBar == null)
+                return;
+
+            if (workInfo.getState().isFinished()) {
+                Log.d("ExportProgressObserver", String.format(Locale.US,
+                        "Export %s", workInfo.getState().toString()));
+                xableFormElements(true);
+                progressLiveData.removeObserver(progressObserver);
+                progressObserver = null;
+                progressLiveData = null;
+                if (workInfo.getState() == WorkInfo.State.SUCCEEDED) {
+                    ExportActivity.this.finish();
+                } else {
+                    String message = workInfo.getOutputData()
+                            .getString("message");
+                    showAlertDialog(R.string.ErrorExportFailed, message);
+                }
+                return;
+            }
+
+            Data progress = workInfo.getProgress();
+            int max = progress.getInt(
+                    ProgressBarUpdater.PROGRESS_MAX_COUNT, -1);
+            if (max <= 0) {
+                exportProgressBar.setIndeterminate(true);
+            } else {
+                exportProgressBar.setIndeterminate(false);
+                exportProgressBar.setMax(max);
+                exportProgressBar.setProgress(progress.getInt(
+                        ProgressBarUpdater.PROGRESS_CURRENT_COUNT, 0));
+            }
+            exportProgressMessage.setText(progress.getString(
+                    ProgressBarUpdater.PROGRESS_CURRENT_MODE));
         }
     }
+
 }

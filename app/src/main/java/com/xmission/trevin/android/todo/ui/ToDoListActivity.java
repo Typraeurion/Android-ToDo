@@ -176,6 +176,9 @@ public class ToDoListActivity extends ListActivity {
     // Used to map To Do entries from the database to views
     ToDoCursorAdapter itemAdapter = null;
 
+    /** Used to map the next week's dates to a list */
+    DueDateSelectAdapter dueDateAdapter = null;
+
     /** Due date list dialog */
     Dialog dueDateListDialog = null;
 
@@ -812,28 +815,33 @@ public class ToDoListActivity extends ListActivity {
 	    return builder.create();
 
 	case DUEDATE_LIST_ID:
-	    Resources r = getResources();
-	    String[] dueDateOptionFormats =
-		r.getStringArray(R.array.DueDateFormatList);
-	    String[] dueDateListItems =
-		new String[dueDateOptionFormats.length + 2];
-	    Calendar c = Calendar.getInstance();
-	    for (int i = 0; i < dueDateOptionFormats.length; i++) {
-		SimpleDateFormat formatter =
-		    new SimpleDateFormat(dueDateOptionFormats[i],
-			    Locale.getDefault());
-		dueDateListItems[i] = formatter.format(c.getTime());
-		c.add(Calendar.DATE, 1);
-	    }
-	    dueDateListItems[dueDateOptionFormats.length] =
-		r.getString(R.string.DueDateNoDate);
-	    dueDateListItems[dueDateOptionFormats.length + 1] =
-		r.getString(R.string.DueDateOther);
-	    builder = new AlertDialog.Builder(this);
-	    builder.setItems(dueDateListItems,
-		    new DueDateListSelectionListener());
-	    dueDateListDialog = builder.create();
-	    return dueDateListDialog;
+            if (dueDateAdapter == null) {
+                dueDateAdapter = new DueDateSelectAdapter(this, prefs);
+            }
+//	    Resources r = getResources();
+//	    String[] dueDateOptionFormats =
+//		r.getStringArray(R.array.DueDateFormatList);
+//	    String[] dueDateListItems =
+//		new String[dueDateOptionFormats.length + 2];
+//	    Calendar c = Calendar.getInstance();
+//	    for (int i = 0; i < dueDateOptionFormats.length; i++) {
+//		SimpleDateFormat formatter =
+//		    new SimpleDateFormat(dueDateOptionFormats[i],
+//			    Locale.getDefault());
+//		dueDateListItems[i] = formatter.format(c.getTime());
+//		c.add(Calendar.DATE, 1);
+//	    }
+//	    dueDateListItems[dueDateOptionFormats.length] =
+//		r.getString(R.string.DueDateNoDate);
+//	    dueDateListItems[dueDateOptionFormats.length + 1] =
+//		r.getString(R.string.DueDateOther);
+            builder = new AlertDialog.Builder(this);
+            builder.setAdapter(dueDateAdapter,
+                    new DueDateListSelectionListener());
+//	    builder.setItems(dueDateListItems,
+//		    new DueDateListSelectionListener());
+            dueDateListDialog = builder.create();
+            return dueDateListDialog;
 
 	case DUEDATE_DIALOG_ID:
 	    dueDateDialog = new CalendarDatePickerDialog(this,
@@ -936,7 +944,11 @@ public class ToDoListActivity extends ListActivity {
     /** Called each time a dialog is shown */
     @Override
     public void onPrepareDialog(int id, Dialog dialog) {
-	switch (id) {
+        switch (id) {
+            case DUEDATE_LIST_ID:
+                dueDateAdapter.refreshDates();
+                return;
+
 	case DUEDATE_DIALOG_ID:
 	    final Uri itemUri = itemAdapter.getSelectedItemUri();
 	    if (itemUri == null) {
@@ -1306,6 +1318,9 @@ public class ToDoListActivity extends ListActivity {
 //	}
 //    }
 
+    /**
+     * Observer of the password change worker&rsquo;s progress.
+     */
     private class PasswordChangeProgressObserver implements Observer<WorkInfo> {
         @Override
         public void onChanged(@NonNull WorkInfo workInfo) {

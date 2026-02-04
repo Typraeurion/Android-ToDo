@@ -44,6 +44,7 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
  * @author Trevin Beattie
  *
  * @deprecated to be replaced by {@link XMLExportWorker}
+ * and {@link XMLExporter}.
  */
 public class XMLExporterService extends IntentService
         implements ProgressReportingService {

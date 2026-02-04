@@ -36,6 +36,8 @@ import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
  * list which pops up the category list activity.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated to be replaced by {@link CategoryFilterAdapter}
  */
 public class CategoryFilterCursorAdapter extends SimpleCursorAdapter {
 

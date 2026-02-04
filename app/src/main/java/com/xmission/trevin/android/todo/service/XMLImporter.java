@@ -68,21 +68,21 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
      */
     public enum ImportType {
         /** The database should be cleared before importing the XML file. */
-        CLEAN,
+        CLEAN(1),
 
         /**
          * Any items in the database with the same internal ID
          * as an item in the XML file should be overwritten,
          * regardless of which one is newer.
          */
-        REVERT,
+        REVERT(2),
 
         /**
          * Any item is the database with the same internal ID
          * as an item in the XML file should be overwritten if
          * the modification time of the item in the XML file is newer.
          */
-        UPDATE,
+        UPDATE(3),
 
         /**
          * Any items in the database with the same category and description
@@ -92,7 +92,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
          * match any item in the database but has the same ID as another
          * one, change the ID of the XML item to an unused value.
          */
-        MERGE,
+        MERGE(4),
 
         /**
          * Any items in the Palm database with the same internal ID as an
@@ -101,13 +101,48 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
          * database had been imported before, but is the safest option
          * if importing a different database.
          */
-        ADD,
+        ADD(5),
 
         /**
          * Don't actually write anything to the android database.
          * Just read the Palm database to verify the integrity of the data.
          */
-        TEST,
+        TEST(0);
+
+        private final int intValue;
+
+        ImportType(int value) {
+            intValue = value;
+        }
+
+        /**
+         * @return the value of this enum that can be passed
+         * as input data to the {@link XMLImporter}
+         */
+        public int getIntValue() {
+            return intValue;
+        }
+
+        /**
+         * Find the ImportType corresponding to an integer value that
+         * was passed in {@link XMLImporter}&rsquo;s input data
+         *
+         * @param value the numerical value of the ImportType
+         *
+         * @return the matching {@link ImportType}
+         *
+         * @throws IllegalArgumentException if {@code value} does not
+         * match any {@link ImportType} value.
+         */
+        public static ImportType fromInt(int value) {
+            for (ImportType type : values()) {
+                if (type.intValue == value)
+                    return type;
+            }
+            throw new IllegalArgumentException(
+                    "Unknown ImportType value: " + value);
+        }
+
     }
 
     /**

@@ -21,6 +21,9 @@ package com.xmission.trevin.android.todo.service;
  * their progress to the binding activity.
  *
  * @author Trevin Beattie
+ *
+ * @deprecated to be replaced by workers implementing
+ * {@link ProgressBarUpdater}.
  */
 public interface ProgressReportingService {
 

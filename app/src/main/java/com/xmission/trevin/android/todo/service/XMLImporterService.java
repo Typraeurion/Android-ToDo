@@ -37,7 +37,6 @@ import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
-import com.xmission.trevin.android.todo.provider.ToDoProvider;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
@@ -66,6 +65,9 @@ import android.widget.Toast;
  * </p>
  *
  * @author Trevin Beattie
+ *
+ * @deprecated to be replaced by {@link XMLImportWorker}
+ * and {@link XMLImporter}.
  */
 public class XMLImporterService extends IntentService
         implements ProgressReportingService {

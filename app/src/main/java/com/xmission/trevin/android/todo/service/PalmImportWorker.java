@@ -110,7 +110,7 @@ public class PalmImportWorker extends Worker {
          * change the ID of the Android item to an unused value and
          * add the Palm item as a new item.
          */
-        MERGE(3),
+        MERGE(4),
 
         /**
          * Any items in the Palm database with the same internal ID as an
@@ -119,7 +119,7 @@ public class PalmImportWorker extends Worker {
          * database had been imported before, but is the safest option
          * if importing a different database.
          */
-        ADD(4),
+        ADD(5),
 
         /**
          * Don't actually write anything to the android database.
