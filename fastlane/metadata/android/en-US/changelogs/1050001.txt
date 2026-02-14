@@ -1,0 +1,14 @@
+Version 1.5.0
+* Refactored the app to use an internal repository class instead of having
+  a Provider.  This enables more granular automated testing on emulators.
+* Added a new preference for selecting a time zone independently
+  of the system default.  This allows alarms to either
+  follow local time or remain in a fixed alternate zone.
+* Replaced all Service classes with equivalent Workers.  This
+  allows them to be tested independently of the application.
+* Added unit tests for the XML exporter, XML importer, and Palm importer
+  workers along with several test import files in older and newer formats.
+  Fixed some bugs from the previous Palm importer service when importing Palm
+  DB 2.0 files, as well as adding support for the old Palm DB 1.0 format.
+* Fixed a bug where the pop-up list of available due dates was not
+  updated after one or more days had passed since the app started.

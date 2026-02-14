@@ -27,7 +27,7 @@ import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.service.PasswordChangeService;
+import com.xmission.trevin.android.todo.service.PasswordChangeWorker;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -332,7 +332,7 @@ public interface ToDoRepository {
 
     /**
      * Get a list of ID&rsquo;s of private To Do items.  This is exclusively
-     * meant for use by the {@link PasswordChangeService} to select items
+     * meant for use by the {@link PasswordChangeWorker} to select items
      * whose encryption needs changing.
      *
      * @return an array of item ID&rsquo;s.

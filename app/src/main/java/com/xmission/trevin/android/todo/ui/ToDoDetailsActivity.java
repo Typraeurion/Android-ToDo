@@ -16,23 +16,34 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
+import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_ITEM_ID;
+
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.data.RepeatSettings;
-import com.xmission.trevin.android.todo.data.RepeatSettings.IntervalType;
+import com.xmission.trevin.android.todo.data.ToDoAlarm;
+import com.xmission.trevin.android.todo.data.ToDoCategory;
+import com.xmission.trevin.android.todo.data.ToDoItem;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.data.repeat.*;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 import android.app.*;
 import android.content.*;
-import android.content.res.Resources;
-import android.database.Cursor;
+import android.database.DataSetObserver;
 import android.database.SQLException;
-import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -41,6 +52,9 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Displays the details of a To Do item.  Will display the item from the
@@ -52,7 +66,8 @@ public class ToDoDetailsActivity extends Activity {
 
     private static final String TAG = "ToDoDetailsActivity";
 
-    static final int DUEDATE_LIST_ID = 2;
+    // Internal dialog ID's
+    private static final int DUEDATE_LIST_ID = 2;
     private static final int HIDEUNTIL_DIALOG_ID = 3;
     private static final int ALARM_DIALOG_ID = 4;
     private static final int ENDDATE_DIALOG_ID = 5;
@@ -61,92 +76,77 @@ public class ToDoDetailsActivity extends Activity {
     private static final int REPEAT_DIALOG_ID = 8;
 
     /**
-     * The columns we are interested in from the category table
+     * Request code to use when starting the note activity from the
+     * details activity.  This lets us know the note should be returned
+     * to the details rather than saved directly in the repository.
      */
-    private static final String[] CATEGORY_PROJECTION = new String[] {
-            ToDoCategoryColumns._ID,
-            ToDoCategoryColumns.NAME,
-    };
+    public static final int DETAILS_HANDOFF_REQUEST = 14;
 
     /**
-     * The columns we are interested in from the item table
+     * The ID of the To Do item we are editing; {@code null} for a new item.
      */
-    private static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItemColumns._ID,
-            ToDoItemColumns.DESCRIPTION,
-            ToDoItemColumns.CHECKED,
-            ToDoItemColumns.NOTE,
-            ToDoItemColumns.ALARM_DAYS_EARLIER,
-            ToDoItemColumns.ALARM_TIME,
-            ToDoItemColumns.HIDE_DAYS_EARLIER,
-            ToDoItemColumns.REPEAT_INTERVAL,
-            ToDoItemColumns.REPEAT_INCREMENT,
-            ToDoItemColumns.REPEAT_WEEK_DAYS,
-            ToDoItemColumns.REPEAT_DAY,
-            ToDoItemColumns.REPEAT_DAY2,
-            ToDoItemColumns.REPEAT_WEEK,
-            ToDoItemColumns.REPEAT_WEEK2,
-            ToDoItemColumns.REPEAT_MONTH,
-            ToDoItemColumns.REPEAT_END,
-            ToDoItemColumns.DUE_TIME,
-            ToDoItemColumns.COMPLETED_TIME,
-            ToDoItemColumns.CATEGORY_ID,
-            ToDoItemColumns.PRIORITY,
-            ToDoItemColumns.PRIVATE,
-    };
+    private Long todoId;
 
-    /** These columns are used if we need to decrypt or encrypt the note */
-    private static final String[] ITEM_NOTE_PROJECTION = new String[] {
-	ToDoItemColumns._ID,
-	ToDoItemColumns.NOTE,
-	ToDoItemColumns.PRIVATE,
-    };
+    /**
+     * Copy of the To Do item we are editing.  This acts as a container
+     * for many of the fields the user can modify in this detail activity,
+     * along with preserving fields (like the {@code note}) which are
+     * not available in this UI.
+     */
+    private ToDoItem todo;
 
-    /** The URI by which we were started for the To-Do item */
-    private Uri todoUri = ToDoItemColumns.CONTENT_URI;
+    /** Whether we are creating a new To Do item (convenience value) */
+    private boolean isNewToDo;
 
-    /** The corresponding URI for the categories */
-    private Uri categoryUri = ToDoCategoryColumns.CONTENT_URI;
+    /** The To Do database */
+    ToDoRepository repository = null;
+
+    /**
+     * To Do application preferences; we mainly use this
+     * to obtain the current time zone.
+     */
+    ToDoPreferences prefs = null;
+
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
 
     /** Used to check whether we can post notifications */
     NotificationManager notificationManager;
 
-    /** The To Do item text */
+    /** The To Do item text (edit field) */
     EditText toDoDescription = null;
 
     /**
-     * A rating bar to select the priority
-     * (by inverting number of stars)
+     * A numeric field to select the priority
      */
     EditText priorityText = null;
 
     /** The due date button shows the due date */
     Button dueDateButton = null;
 
-    /** The due date */
-    Date dueDate = null;
-
-    /** Category filter spinner */
+    /** Category selection spinner */
     Spinner categoryList = null;
+
+    /** Adapter that provides entries for the category list */
+    CategorySelectAdapter categoryAdapter = null;
+
+    /** Adapter that provides a list of due dates in the near future */
+    DueDateSelectAdapter dueDateAdapter = null;
 
     /** The alarm time is also a button */
     Button alarmText = null;
 
-    /** The alarm details */
-    Integer alarmDaysInAdvance = null;
-    Long alarmTime = null;
-
     /** The repeat button shows the repeat interval */
     Button repeatButton = null;
 
-    /** The repeat details */
+    /**
+     * Repeat settings based on the interval.
+     * This is shared with the {@link RepeatEditorDialog}.
+     */
     RepeatSettings repeatSettings = null;
 
     /** The hide time is also a button */
     Button hideText = null;
-
-    /** The hiding details */
-    Integer hideDaysInAdvance = null;
 
     /** Checkbox for private records */
     CheckBox privateCheckBox = null;
@@ -155,7 +155,7 @@ public class ToDoDetailsActivity extends Activity {
     Dialog dueDateListDialog = null;
 
     /** Due Date dialog box */
-    Dialog dueDateDialog = null;
+    CalendarDatePickerDialog dueDateDialog = null;
 
     /** Hide Until dialog box */
     Dialog hideUntilDialog = null;
@@ -174,6 +174,13 @@ public class ToDoDetailsActivity extends Activity {
 
     /** OK button for the Hide Until dialog box */
     Button hideOKButton = null;
+
+    /**
+     * Copy of the item&rqsuo;s alarm in case the user disables it
+     * but re-enables it before saving, so we don&rsquo;t lose
+     * any extra data (i.e. the last notification time).
+     */
+    ToDoAlarm alarm;
 
     /** Alarm dialog box */
     Dialog alarmDialog = null;
@@ -200,40 +207,10 @@ public class ToDoDetailsActivity extends Activity {
     Dialog repeatListDialog = null;
 
     /** Repeat End Date dialog box */
-    Dialog repeatEndDialog = null;
+    CalendarDatePickerDialog repeatEndDialog = null;
 
     /** Repeat dialog box */
     RepeatEditorDialog repeatDialog = null;
-
-    /** Container for dialog form data when saving the instance state */
-    // To Do: Move this to the data package
-    private class FormData {
-	String description;
-	String priority;
-	String dueDateText;
-	Date dueDate;
-	boolean dueDateDialogIsShowing;
-	int categorySpinnerPosition;
-	String alarmText;
-	Integer alarmDaysInAdvance;
-	Long alarmTime;
-	String repeatText;
-	RepeatSettings repeatSettings;
-	RepeatSettings repeatDialogSettings;
-	boolean endDateDialogIsShowing;
-	String hideText;
-	Integer hideDaysInAdvance;
-	boolean hideDialogIsShowing;
-	Boolean hideEnabled;
-	String hideDaysText;
-	String showTimeText;
-	boolean alarmDialogIsShowing;
-	Boolean alarmEnabled;
-	String alarmDaysText;
-	Integer alarmHours;
-	Integer alarmMinutes;
-	boolean isPrivate;
-    }
 
     StringEncryption encryptor;
 
@@ -243,16 +220,26 @@ public class ToDoDetailsActivity extends Activity {
         super.onCreate(savedInstanceState);
         Log.d(TAG, ".onCreate");
 
-	setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
+        setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
         Intent intent = getIntent();
-        if (intent.getData() == null)
-            throw new NullPointerException("No data provided with the intent");
-        todoUri = intent.getData();
-        categoryUri = todoUri.buildUpon().encodedPath("/categories").build();
+        todoId = null;
+        if (intent.hasExtra(EXTRA_ITEM_ID)) {
+            todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+            isNewToDo = false;
+        } else {
+            isNewToDo = true;
+        }
+        Object savedData = getLastNonConfigurationInstance();
+        boolean hasSavedState = (savedData instanceof DetailFormData);
 
         notificationManager = (NotificationManager)
                 getSystemService(NOTIFICATION_SERVICE);
+
+        if (repository == null)
+            repository = ToDoRepositoryImpl.getInstance();
+        prefs = ToDoPreferences.getInstance(this);
+        encryptor = StringEncryption.holdGlobalEncryption();
 
         // Inflate our view so we can find our fields
         setContentView(R.layout.details);
@@ -261,188 +248,269 @@ public class ToDoDetailsActivity extends Activity {
         priorityText = (EditText) findViewById(R.id.DetailEditTextPriority);
         categoryList = (Spinner) findViewById(R.id.DetailSpinnerCategory);
         TextView completedDateText = (TextView)
-        findViewById(R.id.DetailTextCompletedDate);
+                findViewById(R.id.DetailTextCompletedDate);
         dueDateButton = (Button) findViewById(R.id.DetailButtonDueDate);
         alarmText = (Button) findViewById(R.id.DetailButtonAlarm);
         repeatButton = (Button) findViewById(R.id.DetailButtonRepeat);
         hideText = (Button) findViewById(R.id.DetailButtonHideUntil);
         privateCheckBox = (CheckBox) findViewById(R.id.DetailCheckBoxPrivate);
 
-        // Perform a managed query. The Activity will handle closing and
-        // requerying the cursor when needed.
-        Cursor categoryCursor = managedQuery(categoryUri,
-        	CATEGORY_PROJECTION, null, null,
-                ToDoCategoryColumns.DEFAULT_SORT_ORDER);
-
-        // If we are being re-created from a destroyed instance,
-        // restore the previous dialog state.
-        Object savedData = getLastNonConfigurationInstance();
-        if (savedData instanceof FormData) {
-            FormData data = (FormData) savedData;
-            toDoDescription.setText(data.description);
-            priorityText.setText(data.priority);
-            dueDateButton.setText(data.dueDateText);
-            dueDate = data.dueDate;
-            categoryList.setSelection(data.categorySpinnerPosition);
-            alarmText.setText(data.alarmText);
-            alarmDaysInAdvance = data.alarmDaysInAdvance;
-            alarmTime = data.alarmTime;
-            repeatButton.setText(data.repeatText);
-            hideText.setText(data.hideText);
-            hideDaysInAdvance = data.hideDaysInAdvance;
-            if (data.dueDateDialogIsShowing) {
-        	// To do: pop up and fill in the due date dialog
-            }
-            if (data.repeatDialogSettings != null) {
-        	// To do: pop up and fill in the repeat dialog
-            }
-            if (data.endDateDialogIsShowing) {
-        	// To do: pop up and fill in the end date dialog
-            }
-            if (data.hideDialogIsShowing) {
-        	// To do: pop up and fill in the hide dialog
-            }
-            if (data.alarmDialogIsShowing) {
-        	// To do: pop up and fill in the alarm dialog
-            }
-        }
-
-        else {
-            // Read the item details
-            Cursor itemCursor = getContentResolver().query(todoUri,
-        	    ITEM_PROJECTION, null, null, null);
-            if (!itemCursor.moveToFirst())
-        	throw new SQLiteDoneException();
-
-            int isPrivate = itemCursor.getInt(
-        	    itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
-            privateCheckBox.setChecked(isPrivate != 0);
-
-            encryptor = StringEncryption.holdGlobalEncryption();
-            int i = itemCursor.getColumnIndex(ToDoItemColumns.DESCRIPTION);
-            if (isPrivate > 1) {
-                if (encryptor.hasKey()) {
-                    try {
-                        toDoDescription.setText(encryptor.decrypt(itemCursor.getBlob(i)));
-                    } catch (EncryptionException e) {
-                        Toast.makeText(this, e.getMessage(),
-                                Toast.LENGTH_LONG).show();
-                        finish();
-                    }
-                } else {
-                    Toast.makeText(this, R.string.PasswordProtected,
-                            Toast.LENGTH_LONG).show();
-                    finish();
-                }
-            } else {
-                toDoDescription.setText(itemCursor.getString(i));
-            }
-
-            i = itemCursor.getColumnIndex(ToDoItemColumns.PRIORITY);
-            priorityText.setText(Integer.toString(itemCursor.getInt(i)));
-
-            // Used to map To Do categories from the database to a spinner
-            SimpleCursorAdapter categoryAdapter =
-        	new SimpleCursorAdapter(this,
-        		android.R.layout.simple_spinner_item,
-        		categoryCursor, new String[] { ToDoCategoryColumns.NAME },
-        		new int[] { android.R.id.text1 });
-            categoryAdapter.setDropDownViewResource(
-        	    R.layout.simple_spinner_dropdown_item);
-            categoryList.setAdapter(categoryAdapter);
-            // Select the item's current category
-            i = itemCursor.getColumnIndex(ToDoItemColumns.CATEGORY_ID);
-            setCategorySpinnerByID(itemCursor.getLong(i));
-
-            i = itemCursor.getColumnIndex(ToDoItemColumns.COMPLETED_TIME);
-            View lastCompletedTableRow = findViewById(R.id.LastCompletedTableRow);
-            if (itemCursor.isNull(i)) {
-        	completedDateText.setText("");
-        	if (lastCompletedTableRow != null)
-        	    lastCompletedTableRow.setVisibility(View.GONE);
-            } else {
-        	DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
-        	completedDateText.setText(df.format(
-        		new Date(itemCursor.getLong(i))));
-        	if (lastCompletedTableRow != null)
-        	    lastCompletedTableRow.setVisibility(View.VISIBLE);
-            }
-
-            /*
-             * The due date pop-up has ten items:
-             * Today, Tomorrow, Sun-Sat (next 5 days), "In 1 week" (the first 8
-             * all prefixed with the short date), "No Date", and "Choose Date..."
-             */
-            i = itemCursor.getColumnIndex(ToDoItemColumns.DUE_TIME);
-            if (itemCursor.isNull(i)) {
-        	dueDate = null;
-            } else {
-        	dueDate = new Date(itemCursor.getLong(i));
-            }
-            updateDueDateButton();
-            dueDateButton.setOnClickListener(new DueDateButtonOnClickListener());
-
-            i = itemCursor.getColumnIndex(ToDoItemColumns.ALARM_DAYS_EARLIER);
-            if (itemCursor.isNull(i)) {
-        	alarmDaysInAdvance = null;
-            } else {
-        	alarmDaysInAdvance = itemCursor.getInt(i);
-        	i = itemCursor.getColumnIndex(ToDoItemColumns.ALARM_TIME);
-        	alarmTime = itemCursor.getLong(i);
-            }
-            updateAlarmButton();
-
-            /*
-             * The repeat pop-up has seven items:
-             * "None", "Daily until...", "Every Week", "Semi Monthly",
-             * "Every month", "Every year", "Other..."
-             */
-            repeatSettings = new RepeatSettings(itemCursor);
-            repeatButton.setOnClickListener(new RepeatButtonOnClickListener());
-            updateRepeatButton();
-
-            i = itemCursor.getColumnIndex(ToDoItemColumns.HIDE_DAYS_EARLIER);
-            if (itemCursor.isNull(i))
-        	hideDaysInAdvance = null;
-            else
-        	hideDaysInAdvance = itemCursor.getInt(i);
-            updateHideButton();
-
-            // Finished with the item ... for now
-            itemCursor.close();
-        }
-
-        // Set callbacks
-        hideText.setOnClickListener(new HideButtonOnClickListener());
-
-        alarmText.setOnClickListener(new AlarmButtonOnClickListener());
-
-	Button button = (Button) findViewById(R.id.DetailButtonOK);
-	button.setOnClickListener(new OKButtonOnClickListener());
-
-	button = (Button) findViewById(R.id.DetailButtonCancel);
-	button.setOnClickListener(new View.OnClickListener() {
+        categoryAdapter = new CategorySelectAdapter(this, repository);
+        categoryList.setAdapter(categoryAdapter);
+        categoryAdapter.registerDataSetObserver(new DataSetObserver() {
             @Override
-            public void onClick(View v) {
-        	Log.d(TAG, "DetailButtonCancel.onClick");
-        	ToDoDetailsActivity.this.finish();
+            public void onChanged() {
+                long categoryId = (todo == null) ? ToDoCategory.UNFILED
+                        : todo.getCategoryId();
+                categoryList.setSelection(categoryAdapter
+                        .getCategoryPosition(categoryId));
             }
         });
 
+        // If we are being re-created from a destroyed instance,
+        // restore the previous dialog state.
+        if (hasSavedState) {
+            restoreState((DetailFormData) savedData);
+        }
+
+        else {
+            // Initialize the default state for now; the OpenRepositoryRunner
+            // will load any item and update the form when it's ready.
+            todo = new ToDoItem();
+            privateCheckBox.setChecked(false);
+            toDoDescription.setText("");
+            priorityText.setText("1");
+            // The data set observer will set the selected category
+            // once the adapter has loaded its list.
+
+            completedDateText.setText("");
+            View lastCompletedTableRow = findViewById(R.id.LastCompletedTableRow);
+            if (lastCompletedTableRow != null)
+                lastCompletedTableRow.setVisibility(View.GONE);
+
+            updateDueDateButton();
+            updateHideButton();
+            updateAlarmButton();
+            repeatSettings = null;
+            updateRepeatButton();
+        }
+
+        // Set callbacks
+        dueDateButton.setOnClickListener(new DueDateButtonOnClickListener());
+        hideText.setOnClickListener(new HideButtonOnClickListener());
+        alarmText.setOnClickListener(new AlarmButtonOnClickListener());
+        repeatButton.setOnClickListener(new RepeatButtonOnClickListener());
+
+        // Disable the Done and Delete buttons until the repository is ready
+        Button button = (Button) findViewById(R.id.DetailButtonOK);
+        button.setEnabled(false);
         button = (Button) findViewById(R.id.DetailButtonDelete);
-        button.setOnClickListener(new DeleteButtonOnClickListener());
+        button.setEnabled(false);
 
         ImageButton noteButton = (ImageButton) findViewById(R.id.DetailButtonNote);
         noteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-        	Log.d(TAG, "DetailButtonNote.onClick");
-		Intent intent = new Intent(v.getContext(),
-			ToDoNoteActivity.class);
-		intent.setData(todoUri);
-		v.getContext().startActivity(intent);
+                Log.d(TAG, "DetailButtonNote.onClick");
+                Intent intent = new Intent(v.getContext(),
+                        ToDoNoteActivity.class);
+                intent.putExtra(ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION,
+                        toDoDescription.getText().toString());
+                intent.putExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE,
+                        (todo.getNote() == null) ? "" : todo.getNote());
+                if (todoId != null)
+                    intent.putExtra(EXTRA_ITEM_ID, todoId);
+                ToDoDetailsActivity.this.startActivityForResult(intent,
+                        DETAILS_HANDOFF_REQUEST);
             }
         });
+
+        // Connect to the database (on a non-UI thread) and populate the UI.
+        Runnable openRepo = new OpenRepositoryRunner(
+                !(isNewToDo || hasSavedState));
+        executor.submit(openRepo);
+    }
+
+    /**
+     * A runner to open the database on a non-UI thread
+     * (if on Honeycomb or later) and then load the To Do item into the UI.
+     */
+    private class OpenRepositoryRunner implements Runnable {
+        final boolean loadItem;
+        OpenRepositoryRunner(boolean loadItem) {
+            this.loadItem = loadItem;
+        }
+        @Override
+        public void run() {
+            repository.open(ToDoDetailsActivity.this);
+            if (loadItem)
+                todo = repository.getItemById(todoId);
+            runOnUiThread(new FinalizeUIRunner(loadItem));
+        }
+    }
+
+    /**
+     * Called (on the UI thread) after we&rsquo;ve established a
+     * connection to the databaase and read the To Do item (if any)
+     * to populate the UI and enable buttons.
+     */
+    private class FinalizeUIRunner implements Runnable {
+        @Nullable
+        final boolean refresh;
+        /**
+         * @param refreshToDo whether to update the UI elements from the
+         * class {@code todo} field.  This should be {@code true} if
+         * {@code todo} has been read from the database prior to calling
+         * this runner; pass {@code false} if we are creating a new item
+         * or restoring a saved state.
+         */
+        FinalizeUIRunner(boolean refreshToDo) {
+            refresh = refreshToDo;
+        }
+        @Override
+        public void run() {
+            if (refresh) {
+                privateCheckBox.setChecked(todo.isPrivate());
+                if (todo.isEncrypted()) {
+                    if (encryptor.hasKey()) {
+                        try {
+                            todo.setDescription(encryptor.decrypt(
+                                    todo.getEncryptedDescription()));
+                            if (todo.getEncryptedNote() != null)
+                                todo.setNote(encryptor.decrypt(
+                                        todo.getEncryptedNote()));
+                        } catch (EncryptionException e) {
+                            Toast.makeText(ToDoDetailsActivity.this,
+                                    e.getMessage(), Toast.LENGTH_LONG).show();
+                            finish();
+                            return;
+                        }
+                    } else {
+                        Toast.makeText(ToDoDetailsActivity.this,
+                                R.string.PasswordProtected,
+                                Toast.LENGTH_LONG).show();
+                        finish();
+                        return;
+                    }
+                }
+                toDoDescription.setText(todo.getDescription());
+
+                priorityText.setText(Integer.toString(todo.getPriority()));
+                categoryList.setSelection(categoryAdapter
+                        .getCategoryPosition(todo.getCategoryId()));
+
+                TextView completedDateText = (TextView)
+                        findViewById(R.id.DetailTextCompletedDate);
+                View lastCompletedTableRow =
+                        findViewById(R.id.LastCompletedTableRow);
+                if (todo.getCompleted() == null) {
+                    completedDateText.setText("");
+                    if (lastCompletedTableRow != null)
+                        lastCompletedTableRow.setVisibility(View.GONE);
+                } else {
+                    completedDateText.setText(todo.getCompleted()
+                            .atZone(prefs.getTimeZone()).format(
+                                    DateTimeFormatter.ofLocalizedDateTime(
+                                            FormatStyle.MEDIUM)));
+                    if (lastCompletedTableRow != null)
+                        lastCompletedTableRow.setVisibility(View.VISIBLE);
+                }
+
+                updateDueDateButton();
+                updateHideButton();
+                updateAlarmButton();
+                if (todo.getRepeatInterval() != null)
+                    repeatSettings = new RepeatSettings(
+                            todo.getRepeatInterval(), todo.getDue());
+                updateRepeatButton();
+            }
+
+            // Set more callbacks and enable the OK button
+            Button button = (Button) findViewById(R.id.DetailButtonOK);
+            button.setOnClickListener(new OKButtonOnClickListener());
+            button.setEnabled(true);
+
+            button = (Button) findViewById(R.id.DetailButtonCancel);
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Log.d(TAG, "DetailButtonCancel.onClick");
+                    ToDoDetailsActivity.this.finish();
+                }
+            });
+
+            // If this is a new item, remove the Delete button.
+            button = (Button) findViewById(R.id.DetailButtonDelete);
+            if (isNewToDo) {
+                button.setVisibility(View.GONE);
+                button.setEnabled(false);
+            } else {
+                button.setVisibility(View.VISIBLE);
+                button.setOnClickListener(new DeleteButtonOnClickListener());
+                button.setEnabled(true);
+            }
+        }
+    }
+
+    /**
+     * Restore the state of the activity from a saved configuration
+     *
+     * @param data the saved configuration data
+     */
+    private void restoreState(DetailFormData data) {
+        todoId = data.todoId;
+        todo = data.item;
+        toDoDescription.setText(todo.getDescription());
+        priorityText.setText(Integer.toString(todo.getPriority()));
+        updateDueDateButton();
+        categoryList.setSelection(categoryAdapter
+                .getCategoryPosition(todo.getCategoryId()));
+        alarm = data.alarm;
+        repeatSettings = data.repeatDialogSettings;
+        updateAlarmButton();
+        updateHideButton();
+        updateRepeatButton();
+        if (data.dueDateDialogIsShowing) {
+            showDialog(DUEDATE_DIALOG_ID);
+            // To do: pop up and fill in the due date dialog
+        }
+        if (data.repeatDialogSettings != null) {
+            showDialog(REPEAT_DIALOG_ID);
+            // To do: pop up and fill in the repeat dialog
+        }
+        if (data.endDateDialogIsShowing) {
+            showDialog(ENDDATE_DIALOG_ID);
+            // To do: pop up and fill in the end date dialog
+        }
+        if (data.hideDialogIsShowing) {
+            showDialog(HIDEUNTIL_DIALOG_ID);
+            // To do: pop up and fill in the hide dialog
+        }
+        if (data.alarmDialogIsShowing) {
+            showDialog(ALARM_DIALOG_ID);
+            // To do: pop up and fill in the alarm dialog
+        }
+    }
+
+    /**
+     * Called when {@link ToDoNoteActivity} returns a result
+     */
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, String.format(Locale.US,
+                ".onActivityResult(%d,%d)", requestCode, resultCode));
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != DETAILS_HANDOFF_REQUEST) {
+            Log.w(TAG, "Received a result from an unknown request; ignoring it.");
+            return;
+        }
+        if (resultCode != RESULT_OK)
+            return;
+        // Retrieve the note and update our local copy
+        String note = data.getStringExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE);
+        if (note.length() == 0)
+            note = null;
+        todo.setNote(note);
     }
 
     /**
@@ -450,550 +518,582 @@ public class ToDoDetailsActivity extends Activity {
      * and then immediately restarted (such as an orientation change).
      */
     @Override
-    public Object onRetainNonConfigurationInstance() {
-	// Save the current dialog state
-	FormData data = new FormData();
-	data.description = toDoDescription.getText().toString();
-	data.priority = priorityText.getText().toString();
-	data.dueDateText = dueDateButton.getText().toString();
-	data.dueDate = dueDate;
-	data.dueDateDialogIsShowing =
-	    (dueDateDialog != null) && dueDateDialog.isShowing();
-	data.categorySpinnerPosition = categoryList.getSelectedItemPosition();
-	data.alarmText = alarmText.getText().toString();
-	data.alarmDaysInAdvance = alarmDaysInAdvance;
-	data.alarmTime = alarmTime;
-	data.repeatText = repeatButton.getText().toString();
-	data.repeatSettings = repeatSettings;
-	if ((repeatDialog != null) && repeatDialog.isShowing())
-	    data.repeatDialogSettings = repeatDialog.getRepeatSettings();
-	data.endDateDialogIsShowing =
-	    (repeatEndDialog != null) && repeatEndDialog.isShowing();
-	data.hideText = hideText.getText().toString();
-	data.hideDaysInAdvance = hideDaysInAdvance;
-	data.hideDialogIsShowing =
-	    (hideUntilDialog != null) && hideUntilDialog.isShowing();
-	if (data.hideDialogIsShowing) {
-	    data.hideEnabled = hideCheckBox.isChecked();
-	    data.hideDaysText = hideEditDays.getText().toString();
-	    data.showTimeText = showTime.getText().toString();
-	}
-	data.alarmDialogIsShowing =
-	    (alarmDialog != null) && alarmDialog.isShowing();
-	if (data.alarmDialogIsShowing) {
-	    data.alarmEnabled = alarmCheckBox.isChecked();
-	    data.alarmDaysText = alarmEditDays.getText().toString();
-	    data.alarmHours = alarmTimePicker.getCurrentHour();
-	    data.alarmMinutes = alarmTimePicker.getCurrentMinute();
-	}
-	return data;
+    public DetailFormData onRetainNonConfigurationInstance() {
+        // Save the current dialog state
+        DetailFormData data = new DetailFormData();
+        data.todoId = todoId;
+        data.item = todo;
+        todo.setDescription(toDoDescription.getText().toString());
+        todo.setPriority(Integer.parseInt(priorityText.getText().toString()));
+        data.dueDateDialogIsShowing =
+                (dueDateDialog != null) && dueDateDialog.isShowing();
+        // FIXME: These should all be updated as we go!
+        todo.setCategoryId(categoryList.getSelectedItemId());
+        data.repeatDialogSettings = repeatSettings;
+        if ((repeatDialog != null) && repeatDialog.isShowing())
+            data.repeatDialogSettings = repeatDialog.getRepeatSettings();
+        data.endDateDialogIsShowing =
+                (repeatEndDialog != null) && repeatEndDialog.isShowing();
+        data.hideDialogIsShowing =
+                (hideUntilDialog != null) && hideUntilDialog.isShowing();
+        if (data.hideDialogIsShowing) {
+            data.hideEnabled = hideCheckBox.isChecked();
+            data.hideDaysText = hideEditDays.getText().toString();
+            data.showTimeText = showTime.getText().toString();
+        }
+        data.alarmDialogIsShowing =
+                (alarmDialog != null) && alarmDialog.isShowing();
+        data.alarm = todo.getAlarm();
+        if (data.alarmDialogIsShowing) {
+            if (data.alarm == null)
+                data.alarm = new ToDoAlarm();
+            data.alarm.setTime(LocalTime.of(alarmTimePicker.getCurrentHour(),
+                    alarmTimePicker.getCurrentMinute()));
+            data.alarm.setAlarmDaysEarlier(Integer.parseInt(
+                    alarmEditDays.getText().toString()));
+            if (alarmCheckBox.isChecked()) {
+                if (todo.getAlarm() == null)
+                    todo.setAlarm(data.alarm);
+            } else {
+                todo.setAlarm(null);
+            }
+        }
+        return data;
     }
 
     /** Called when the activity is about to be destroyed */
     @Override
     public void onDestroy() {
-	StringEncryption.releaseGlobalEncryption(this);
-	super.onDestroy();
+        repository.release(this);
+        StringEncryption.releaseGlobalEncryption(this);
+        super.onDestroy();
     }
 
     /** Look up the spinner item corresponding to a category ID and select it. */
     void setCategorySpinnerByID(long id) {
-	for (int position = 0; position < categoryList.getCount(); position++) {
-	    if (categoryList.getItemIdAtPosition(position) == id) {
-		categoryList.setSelection(position);
-		return;
-	    }
-	}
-	Log.w(TAG, "No spinner item found for category ID " + id);
-	if (id != ToDoCategoryColumns.UNFILED)
-	    setCategorySpinnerByID(ToDoCategoryColumns.UNFILED);
-	else
-	    categoryList.setSelection(0);
+        int position = categoryAdapter.getCategoryPosition(id);
+        categoryList.setSelection(position);
     }
 
     /** Set the date in the due date button */
     void updateDueDateButton() {
-	if (dueDate == null) {
-	    dueDateButton.setText(
-		    getResources().getString(R.string.DetailNotset));
-	    alarmText.setVisibility(View.GONE);
-	    repeatButton.setVisibility(View.GONE);
-	    hideText.setVisibility(View.GONE);
-	} else {
-	    // Find the number of days between today and the due date
-	    Calendar c1 = Calendar.getInstance();
-	    c1.setTime(dueDate);
-	    c1.set(Calendar.HOUR_OF_DAY, 13);
-	    c1.set(Calendar.MINUTE, 0);
-	    c1.set(Calendar.SECOND, 0);
-	    Calendar c0 = Calendar.getInstance();
-	    c0.set(Calendar.HOUR_OF_DAY, 11);
-	    c0.set(Calendar.MINUTE, 0);
-	    c0.set(Calendar.SECOND, 0);
-	    DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
-	    dueDateButton.setText(df.format(dueDate));
-	    alarmText.setVisibility(View.VISIBLE);
-	    repeatButton.setVisibility(View.VISIBLE);
-	    hideText.setVisibility(View.VISIBLE);
-	}
+        if (todo.getDue() == null) {
+            dueDateButton.setText(
+                    getResources().getString(R.string.DetailNotset));
+            alarmText.setVisibility(View.GONE);
+            repeatButton.setVisibility(View.GONE);
+            hideText.setVisibility(View.GONE);
+        } else {
+            dueDateButton.setText(todo.getDue().format(DateTimeFormatter
+                    .ofLocalizedDate(FormatStyle.MEDIUM)));
+            alarmText.setVisibility(View.VISIBLE);
+            repeatButton.setVisibility(View.VISIBLE);
+            hideText.setVisibility(View.VISIBLE);
+        }
     }
 
     /** Set the hide time in the hide button */
     void updateHideButton() {
-	if ((dueDate == null) || (hideDaysInAdvance == null))
-	    hideText.setText(getResources().getString(R.string.DetailNotset));
-	else
-	    hideText.setText(String.format(getResources().getQuantityString(
-		    R.plurals.DetailTextDaysEarlier, hideDaysInAdvance),
-		    hideDaysInAdvance));
+        if ((todo.getDue() == null) || (todo.getHideDaysEarlier() == null))
+            hideText.setText(getResources().getString(R.string.DetailNotset));
+        else
+            hideText.setText(String.format(getResources().getQuantityString(
+                            R.plurals.DetailTextDaysEarlier,
+                            todo.getHideDaysEarlier()),
+                    todo.getHideDaysEarlier()));
     }
 
     /** Set the alarm time in the alarm button */
     void updateAlarmButton() {
-	if ((dueDate == null) || (alarmDaysInAdvance == null))
-	    alarmText.setText(getResources().getString(R.string.DetailNotset));
-	else
-	    alarmText.setText(String.format(getResources().getQuantityString(
-		    R.plurals.DetailTextDaysEarlier, alarmDaysInAdvance),
-		    alarmDaysInAdvance));
+        if (todo.getAlarm() == null)
+            alarmText.setText(getResources().getString(R.string.DetailNotset));
+        else
+            alarmText.setText(String.format(getResources().getQuantityString(
+                            R.plurals.DetailTextDaysEarlier,
+                            todo.getAlarm().getAlarmDaysEarlier()),
+                    todo.getAlarm().getAlarmDaysEarlier()));
     }
 
     /** Set the repeat interval in the repeat button */
     void updateRepeatButton() {
-	if ((repeatSettings == null) ||
-		(repeatSettings.getIntervalType() == IntervalType.NONE)) {
-	    repeatButton.setText(
-		    getResources().getString(R.string.RepeatNone));
-	} else {
-	    switch (repeatSettings.getIntervalType()) {
-	    case DAILY:
-		if (repeatSettings.getEndDate() == null) {
-		    repeatButton.setText(getResources().getString(
-			    (repeatSettings.getIncrement() == 1)
-			    ? R.string.RepeatDaily
-			    : R.string.RepeatDailyDots));
-		} else {
-		    final DateFormat df =
-			DateFormat.getDateInstance(DateFormat.SHORT);
-		    String text = String.format(getResources().getString(
-			    R.string.RepeatDailyUntilWhen),
-			    df.format(repeatSettings.getEndDate()));
-		    repeatButton.setText(text);
-		}
-		break;
+        if ((todo.getRepeatInterval() == null) ||
+                (todo.getRepeatInterval().getType() == RepeatType.NONE)) {
+            repeatButton.setText(
+                    getResources().getString(R.string.RepeatNone));
+        } else {
+            AbstractRepeat ar = (AbstractRepeat) todo.getRepeatInterval();
+            switch (ar.getType()) {
+                case DAILY:
+                    if (ar.getEnd() == null) {
+                        repeatButton.setText(getResources().getString(
+                                (ar.getIncrement() == 1)
+                                        ? R.string.RepeatDaily
+                                        : R.string.RepeatDailyDots));
+                    } else {
+                        final DateFormat df =
+                                DateFormat.getDateInstance(DateFormat.SHORT);
+                        String text = String.format(getResources().getString(
+                                    R.string.RepeatDailyUntilWhen),
+                            df.format(ar.getEnd()));
+                        repeatButton.setText(text);
+                    }
+                    break;
 
-	    case DAY_AFTER:
-		repeatButton.setText(getResources().getString(
-			R.string.RepeatDailyDots));
-		break;
+                case DAY_AFTER:
+                    repeatButton.setText(getResources().getString(
+                            R.string.RepeatDailyDots));
+                    break;
 
-	    case WEEKLY:
-		if ((repeatSettings.getIncrement() == 1) &&
-			(repeatSettings.getFixedWeekDays().size() == 1))
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatEveryWeek));
-		else if ((repeatSettings.getIncrement() == 2) &&
-			(repeatSettings.getFixedWeekDays().size() == 1))
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatEveryOtherWeek));
-		else
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatWeeklyDots));
-		break;
+                case WEEKLY:
+                    RepeatWeekly rw = (RepeatWeekly) todo.getRepeatInterval();
+                    if ((ar.getIncrement() == 1) &&
+                            (rw.getWeekDays().size() == 1))
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatEveryWeek));
+                    else if ((ar.getIncrement() == 2) &&
+                            (rw.getWeekDays().size() == 1))
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatEveryOtherWeek));
+                    else
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatWeeklyDots));
+                    break;
 
-	    case WEEK_AFTER:
-		repeatButton.setText(getResources().getString(
-			R.string.RepeatWeeklyDots));
-		break;
+                case WEEK_AFTER:
+                    repeatButton.setText(getResources().getString(
+                            R.string.RepeatWeeklyDots));
+                    break;
 
-	    case SEMI_MONTHLY_ON_DATES:
-	    case SEMI_MONTHLY_ON_DAYS:
-		repeatButton.setText(getResources().getString(
-			R.string.RepeatSemiMonthlyDots));
-		break;
+                case SEMI_MONTHLY_ON_DATES:
+                case SEMI_MONTHLY_ON_DAYS:
+                    repeatButton.setText(getResources().getString(
+                            R.string.RepeatSemiMonthlyDots));
+                    break;
 
-	    case MONTHLY_ON_DATE:
-	    case MONTHLY_ON_DAY:
-		if (repeatSettings.getIncrement() == 1)
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatEveryMonth));
-		else if (repeatSettings.getIncrement() == 2)
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatEveryOtherMonth));
-		else
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatMonthlyDots));
-		break;
+                case MONTHLY_ON_DATE:
+                case MONTHLY_ON_DAY:
+                    if (ar.getIncrement() == 1)
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatEveryMonth));
+                    else if (ar.getIncrement() == 2)
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatEveryOtherMonth));
+                    else
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatMonthlyDots));
+                    break;
 
-	    case MONTH_AFTER:
-		repeatButton.setText(getResources().getString(
-			R.string.RepeatMonthlyDots));
-		break;
+                case MONTH_AFTER:
+                    repeatButton.setText(getResources().getString(
+                            R.string.RepeatMonthlyDots));
+                    break;
 
-	    case YEARLY_ON_DATE:
-	    case YEARLY_ON_DAY:
-		if (repeatSettings.getIncrement() == 1)
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatEveryYear));
-		else if (repeatSettings.getIncrement() == 2)
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatEveryOtherYear));
-		else
-		    repeatButton.setText(getResources().getString(
-			    R.string.RepeatYearlyDots));
-		break;
+                case YEARLY_ON_DATE:
+                case YEARLY_ON_DAY:
+                    if (ar.getIncrement() == 1)
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatEveryYear));
+                    else if (ar.getIncrement() == 2)
+                        repeatButton.setText(getResources().getString(
+                            R.string.RepeatEveryOtherYear));
+                    else
+                        repeatButton.setText(getResources().getString(
+                                R.string.RepeatYearlyDots));
+                    break;
 
-	    case YEAR_AFTER:
-		repeatButton.setText(getResources().getString(
-			R.string.RepeatYearlyDots));
-		break;
-	    }
-	}
+                case YEAR_AFTER:
+                    repeatButton.setText(getResources().getString(
+                            R.string.RepeatYearlyDots));
+                    break;
+            }
+        }
     }
 
     /** Called when opening one of the dialogs for the first time */
     @Override
     public Dialog onCreateDialog(int id) {
-	Log.d(TAG, ".onCreateDialog(" + id + ")");
-	switch (id) {
-	default:
-	    Log.e(TAG, ".onCreateDialog: undefined dialog ID " + id);
-	    return null;
+        Log.d(TAG, String.format(Locale.US, ".onCreateDialog(%d)", id));
+        AlertDialog.Builder builder;
+        switch (id) {
+            default:
+                Log.e(TAG, ".onCreateDialog: undefined dialog ID " + id);
+                return null;
 
-	case DUEDATE_LIST_ID:
-	    Resources r = getResources();
-	    String[] dueDateOptionFormats =
-		r.getStringArray(R.array.DueDateFormatList);
-	    String[] dueDateListItems =
-		new String[dueDateOptionFormats.length + 2];
-	    Calendar c = Calendar.getInstance();
-	    for (int i = 0; i < dueDateOptionFormats.length; i++) {
-		SimpleDateFormat formatter =
-		    new SimpleDateFormat(dueDateOptionFormats[i]);
-		dueDateListItems[i] = formatter.format(c.getTime());
-		c.add(Calendar.DATE, 1);
-	    }
-	    dueDateListItems[dueDateOptionFormats.length] =
-		r.getString(R.string.DueDateNoDate);
-	    dueDateListItems[dueDateOptionFormats.length + 1] =
-		r.getString(R.string.DueDateOther);
-	    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-	    builder.setItems(dueDateListItems,
-		    new DueDateListSelectionListener());
-	    dueDateListDialog = builder.create();
-	    return dueDateListDialog;
+            case DUEDATE_LIST_ID:
+                if (dueDateAdapter == null)
+                    dueDateAdapter = new DueDateSelectAdapter(this, prefs);
+                builder = new AlertDialog.Builder(this);
+                builder.setAdapter(dueDateAdapter,
+                        new DueDateListSelectionListener());
+                dueDateListDialog = builder.create();
+                return dueDateListDialog;
 
-	case HIDEUNTIL_DIALOG_ID:
-	    hideUntilDialog = new Dialog(this);
-	    hideUntilDialog.setContentView(R.layout.hide_time);
-	    hideUntilDialog.setTitle(R.string.HideTitle);
-	    hideCheckBox = (CheckBox)
-		hideUntilDialog.findViewById(R.id.HideCheckBox);
-	    hideEditDays = (EditText)
-		hideUntilDialog.findViewById(R.id.HideEditDaysEarlier);
-	    showTime = (TextView)
-		hideUntilDialog.findViewById(R.id.HideTextTime);
-	    hideOKButton = (Button)
-		hideUntilDialog.findViewById(R.id.HideButtonOK);
-	    hideCheckBox.setOnCheckedChangeListener(
-		    new CompoundButton.OnCheckedChangeListener() {
-		@Override
-		public void onCheckedChanged(CompoundButton button,
-			boolean isChecked) {
-		    hideEditDays.setEnabled(isChecked);
-		    hideOKButton.setEnabled((hideEditDays.length() > 0)
-			    || !isChecked);
-		    showTime.setVisibility(isChecked
-			    ? View.VISIBLE : View.INVISIBLE);
-		}
-	    });
-	    hideEditDays.addTextChangedListener(new TextWatcher() {
-		@Override
-		public void beforeTextChanged(CharSequence s,
-			int start, int count, int after) {
-		}
-		@Override
-		public void onTextChanged(CharSequence s,
-			int start, int before, int count) {
-		}
-		@Override
-		public void afterTextChanged(Editable e) {
-		    boolean hasText = e.length() > 0;
-		    hideOKButton.setEnabled(hasText);
-		    if (hasText) {
-			StringBuilder sb = new StringBuilder(showTime
-				.getResources().getString(R.string.HideTextShow));
-			sb.append('\n');
-			Calendar c = Calendar.getInstance();
-			if (dueDate != null)
-			    c.setTime(dueDate);
-			c.add(Calendar.DATE, -Integer.parseInt(e.toString()));
-			DateFormat df = DateFormat.getDateInstance(
-				DateFormat.FULL);
-			sb.append(df.format(c.getTime()));
-			showTime.setText(sb.toString());
-		    } else {
-			showTime.setText("");
-		    }
-		}
-	    });
-	    hideOKButton.setOnClickListener(new View.OnClickListener() {
-		@Override
-		public void onClick(View v) {
-		    Log.d(TAG, "hideOKButton.onClick: " +
-			    (hideCheckBox.isChecked()
-				    ? hideEditDays.getText().toString()
-				    : "disable"));
-		    if (hideCheckBox.isChecked())
-			hideDaysInAdvance =
-			    Integer.parseInt(hideEditDays.getText().toString());
-		    else
-			hideDaysInAdvance = null;
-		    hideUntilDialog.dismiss();
-		    updateHideButton();
-		}
-	    });
-	    Button hideCancelButton = (Button)
-		hideUntilDialog.findViewById(R.id.HideButtonCancel);
-	    hideCancelButton.setOnClickListener(new View.OnClickListener() {
-		@Override
-		public void onClick(View v) {
-		    hideUntilDialog.dismiss();
-		}
-	    });
-	    return hideUntilDialog;
+            case DUEDATE_DIALOG_ID:
+                dueDateDialog = new CalendarDatePickerDialog(this,
+                        getText(R.string.DatePickerTitleDueDate),
+                        new RepeatEndPickListener());
+                return dueDateDialog;
 
-	case ALARM_DIALOG_ID:
-	    alarmDialog = new Dialog(this);
-	    alarmDialog.setContentView(R.layout.alarm_time);
-	    alarmDialog.setTitle(R.string.AlarmTitle);
-	    alarmCheckBox = (CheckBox)
-		alarmDialog.findViewById(R.id.AlarmCheckBox);
-	    alarmEditDays = (EditText)
-		alarmDialog.findViewById(R.id.AlarmEditDaysEarlier);
-	    alarmTimePicker = (TimePicker)
-		alarmDialog.findViewById(R.id.AlarmTimePicker);
-	    alarmNextTime = (TextView)
-		alarmDialog.findViewById(R.id.AlarmTextTime);
-	    alarmOKButton = (Button)
-		alarmDialog.findViewById(R.id.AlarmButtonOK);
-	    alarmCheckBox.setOnCheckedChangeListener(
-		    new CompoundButton.OnCheckedChangeListener() {
-		@Override
-		public void onCheckedChanged(CompoundButton button,
-			boolean isChecked) {
-		    alarmEditDays.setEnabled(isChecked);
-		    alarmTimePicker.setEnabled(isChecked);
-		    alarmOKButton.setEnabled((alarmEditDays.length() > 0)
-			    || !isChecked);
-		}
-	    });
-	    alarmEditDays.addTextChangedListener(new TextWatcher() {
-		@Override
-		public void beforeTextChanged(CharSequence s,
-			int start, int count, int after) {
-		}
-		@Override
-		public void onTextChanged(CharSequence s,
-			int start, int before, int count) {
-		}
-		@Override
-		public void afterTextChanged(Editable e) {
-		    boolean hasText = e.length() > 0;
-		    alarmOKButton.setEnabled(hasText);
-		    if (hasText) {
-			StringBuilder sb = new StringBuilder(
-				alarmNextTime.getResources().getString(
-					R.string.AlarmTextNextAlarm));
-			sb.append('\n');
-			Calendar c = Calendar.getInstance();
-			if (dueDate != null)
-			    c.setTime(dueDate);
-			c.add(Calendar.DATE, -Integer.parseInt(e.toString()));
-			DateFormat df = DateFormat.getDateInstance(
-				DateFormat.FULL);
-			sb.append(df.format(c.getTime()));
-			alarmNextTime.setText(sb.toString());
-		    } else {
-			alarmNextTime.setText("");
-		    }
-		}
-	    });
-	    alarmOKButton.setOnClickListener(new View.OnClickListener() {
-		@Override
-		public void onClick(View v) {
-		    if (alarmCheckBox.isChecked()) {
-                        checkNotifyPermission();
-			alarmDaysInAdvance =
-			    Integer.parseInt(alarmEditDays.getText().toString());
-			alarmTime = (alarmTimePicker.getCurrentHour() * 60
-				+ alarmTimePicker.getCurrentMinute()) * 60000L;
-		    } else {
-			alarmDaysInAdvance = null;
-			alarmTime = null;
-		    }
-		    alarmDialog.dismiss();
-		    updateAlarmButton();
-		}
-	    });
-	    Button alarmCancelButton = (Button)
-		alarmDialog.findViewById(R.id.AlarmButtonCancel);
-	    alarmCancelButton.setOnClickListener(new View.OnClickListener() {
-		@Override
-		public void onClick(View v) {
-		    alarmDialog.dismiss();
-		}
-	    });
-	    return alarmDialog;
+            case HIDEUNTIL_DIALOG_ID:
+                hideUntilDialog = new Dialog(this);
+                hideUntilDialog.setContentView(R.layout.hide_time);
+                hideUntilDialog.setTitle(R.string.HideTitle);
+                hideCheckBox = (CheckBox)
+                        hideUntilDialog.findViewById(R.id.HideCheckBox);
+                hideEditDays = (EditText)
+                        hideUntilDialog.findViewById(R.id.HideEditDaysEarlier);
+                showTime = (TextView)
+                        hideUntilDialog.findViewById(R.id.HideTextTime);
+                hideOKButton = (Button)
+                        hideUntilDialog.findViewById(R.id.HideButtonOK);
+                hideCheckBox.setOnCheckedChangeListener(
+                        new HideCheckBoxOnChangeListener());
+                hideEditDays.addTextChangedListener(
+                        new HideDaysEarlierTextWatcher());
+                hideOKButton.setOnClickListener(new HideOKOnClickListener());
+                Button hideCancelButton = (Button)
+                        hideUntilDialog.findViewById(R.id.HideButtonCancel);
+                hideCancelButton.setOnClickListener(
+                        new HideCancelOnClickListener());
+                return hideUntilDialog;
 
-	case REPEAT_LIST_ID:
-	    r = getResources();
-	    String[] repeatListStrings = r.getStringArray(R.array.RepeatList);
-	    builder = new AlertDialog.Builder(this);
-	    builder.setItems(repeatListStrings,
-		    new RepeatListSelectionListener());
-	    repeatListDialog = builder.create();
-	    return repeatListDialog;
+            case ALARM_DIALOG_ID:
+                alarmDialog = new Dialog(this);
+                alarmDialog.setContentView(R.layout.alarm_time);
+                alarmDialog.setTitle(R.string.AlarmTitle);
+                alarmCheckBox = (CheckBox)
+                        alarmDialog.findViewById(R.id.AlarmCheckBox);
+                alarmEditDays = (EditText)
+                        alarmDialog.findViewById(R.id.AlarmEditDaysEarlier);
+                alarmTimePicker = (TimePicker)
+                        alarmDialog.findViewById(R.id.AlarmTimePicker);
+                alarmNextTime = (TextView)
+                        alarmDialog.findViewById(R.id.AlarmTextTime);
+                alarmOKButton = (Button)
+                        alarmDialog.findViewById(R.id.AlarmButtonOK);
+                alarmCheckBox.setOnCheckedChangeListener(
+                        new AlarmCheckBoxOnChangeListener());
+                alarmEditDays.addTextChangedListener(
+                        new AlarmDaysEarlierTextWatcher());
+                alarmOKButton.setOnClickListener(new AlarmOKClickListener());
+                Button alarmCancelButton = (Button)
+                        alarmDialog.findViewById(R.id.AlarmButtonCancel);
+                alarmCancelButton.setOnClickListener(
+                        new AlarmCancelOnClickListener());
+                return alarmDialog;
 
-	case ENDDATE_DIALOG_ID:
-	    c = Calendar.getInstance();
-	    c.setTime((repeatSettings.getEndDate() == null) ? ((dueDate == null)
-		    ? new Date() : dueDate) : repeatSettings.getEndDate());
-	    repeatEndDialog = new CalendarDatePickerDialog(this,
-		    getText(R.string.DatePickerTitleEndingOn),
-		    new CalendarDatePickerDialog.OnDateSetListener() {
-		@Override
-		public void onDateSet(CalendarDatePicker dp,
-			int year, int month, int day) {
-		    Calendar c = new GregorianCalendar(year, month, day);
-		    c.set(Calendar.HOUR_OF_DAY, 0);
-		    c.set(Calendar.MINUTE, 0);
-		    c.set(Calendar.SECOND, 0);
-		    repeatSettings.setEndDate(c.getTime());
-		    updateRepeatButton();
-		}
-	    }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DATE));
-	    return repeatEndDialog;
+            case REPEAT_LIST_ID:
+                String[] repeatListStrings =
+                        getResources().getStringArray(R.array.RepeatList);
+                builder = new AlertDialog.Builder(this);
+                builder.setItems(repeatListStrings,
+                        new RepeatListSelectionListener());
+                repeatListDialog = builder.create();
+                return repeatListDialog;
 
-	case DUEDATE_DIALOG_ID:
-	    c = Calendar.getInstance();
-	    c.setTime((dueDate == null) ? new Date() : dueDate);
-	    dueDateDialog = new CalendarDatePickerDialog(this,
-		    getText(R.string.DatePickerTitleDueDate),
-		    new CalendarDatePickerDialog.OnDateSetListener() {
-		@Override
-		public void onDateSet(CalendarDatePicker dp,
-			int year, int month, int day) {
-		    Calendar c = new GregorianCalendar(year, month, day);
-		    c.set(Calendar.HOUR_OF_DAY, 23);
-		    c.set(Calendar.MINUTE, 59);
-		    c.set(Calendar.SECOND, 59);
-		    dueDate = c.getTime();
-		    if (repeatSettings != null)
-			repeatSettings.setDueDate(dueDate);
-		    updateDueDateButton();
-		}
-	    }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DATE));
-	    return dueDateDialog;
+            case ENDDATE_DIALOG_ID:
+                repeatEndDialog = new CalendarDatePickerDialog(this,
+                    getText(R.string.DatePickerTitleEndingOn),
+                    new RepeatEndPickListener());
+            return repeatEndDialog;
 
-	case REPEAT_DIALOG_ID:
-	    repeatDialog = new RepeatEditorDialog(this,
-		    new RepeatEditorDialog.OnRepeatSetListener() {
-		@Override
-		public void onRepeatSet(RepeatEditor re, RepeatSettings s) {
-		    repeatSettings = s.clone();
-		    updateRepeatButton();
-		}
-	    });
-	    return repeatDialog;
-	}
+            case REPEAT_DIALOG_ID:
+                repeatDialog = new RepeatEditorDialog(this,
+                        new RepeatSetListener());
+                if (repeatSettings != null)
+                    repeatDialog.restoreRepeatSettings(repeatSettings);
+                return repeatDialog;
+        }
     }
 
     /** Called when displaying an existing dialog */
     @Override
     public void onPrepareDialog(int id, Dialog dialog) {
-	final DateFormat df = DateFormat.getDateInstance(DateFormat.FULL);
-	Calendar c;
-	switch (id) {
-	default: break;
+        Log.d(TAG, String.format(Locale.US, ".onPrepareDialog(%d)", id));
+        final DateTimeFormatter df = DateTimeFormatter
+                .ofLocalizedDate(FormatStyle.FULL);
+        LocalDate d;
+        ZoneId zone = prefs.getTimeZone();
+        StringBuilder sb;
+        switch (id) {
 
-	case DUEDATE_LIST_ID:
-	    // To do: We can't actually replace the dialog here.
-	    // How does one update the existing dialog text?
-	    break;
+            case DUEDATE_LIST_ID:
+                dueDateAdapter.refreshDates();
+                break;
 
-	case HIDEUNTIL_DIALOG_ID:
-	    hideCheckBox.setChecked(hideDaysInAdvance != null);
-	    hideEditDays.setText((hideDaysInAdvance == null)
-		    ? "0" : hideDaysInAdvance.toString());
-	    c = Calendar.getInstance();
-	    if (dueDate != null)
-		c.setTime(dueDate);
-	    if (hideDaysInAdvance != null)
-		c.add(Calendar.DATE, -hideDaysInAdvance);
-	    StringBuilder sb = new StringBuilder(showTime
-		    .getResources().getString(R.string.HideTextShow));
-	    sb.append('\n');
-	    sb.append(df.format(c.getTime()));
-	    showTime.setText(sb.toString());
-	    break;
+            case DUEDATE_DIALOG_ID:
+                LocalDate tentativeDueDate = (todo.getDue() == null)
+                        ? LocalDate.now(prefs.getTimeZone()) : todo.getDue();
+                dueDateDialog.setDate(tentativeDueDate);
+                dueDateDialog.setTimeZone(prefs.getTimeZone());
+                break;
 
-	case ALARM_DIALOG_ID:
-	    alarmCheckBox.setChecked(alarmDaysInAdvance != null);
-	    alarmEditDays.setText((alarmDaysInAdvance == null)
-		    ? "0" : alarmDaysInAdvance.toString());
-	    if (alarmTime != null) {
-		alarmTimePicker.setCurrentHour((int) (alarmTime / 3600000) % 60);
-		alarmTimePicker.setCurrentMinute((int) (alarmTime / 60000) % 60);
-	    } else {
-		alarmTimePicker.setCurrentHour(8);
-		alarmTimePicker.setCurrentMinute(0);
-	    }
-	    c = Calendar.getInstance();
-	    if (dueDate != null)
-		c.setTime(dueDate);
-	    if (alarmDaysInAdvance != null)
-		c.add(Calendar.DATE, -alarmDaysInAdvance);
-	    sb = new StringBuilder(alarmNextTime
-		    .getResources().getString(R.string.AlarmTextNextAlarm));
-	    sb.append('\n');
-	    sb.append(df.format(c.getTime()));
-	    alarmNextTime.setTag(sb.toString());
-	    break;
+            case HIDEUNTIL_DIALOG_ID:
+                hideCheckBox.setChecked(todo.getHideDaysEarlier() != null);
+                hideEditDays.setText((todo.getHideDaysEarlier() == null)
+                        ? "0" : todo.getHideDaysEarlier().toString());
+                d = (todo.getDue() == null)
+                        ? LocalDate.now(zone) : todo.getDue();
+                if (todo.getHideDaysEarlier() != null)
+                    d = d.minusDays(todo.getHideDaysEarlier());
+                sb = new StringBuilder(showTime
+                        .getResources().getString(R.string.HideTextShow));
+                sb.append('\n');
+                sb.append(d.format(df));
+                showTime.setText(sb.toString());
+                break;
 
-	case REPEAT_DIALOG_ID:
-	    // Update the repeat settings
-	    repeatDialog.setRepeatSettings(repeatSettings);
-	    break;
-	}
-    }
+            case ALARM_DIALOG_ID:
+                boolean hasAlarm = (todo.getAlarm() != null);
+                alarmCheckBox.setChecked(hasAlarm);
+                d = (todo.getDue() == null)
+                        ? LocalDate.now(zone) : todo.getDue();
+                if (hasAlarm) {
+                    alarm = todo.getAlarm();
+                } else if (alarm == null) {
+                    alarm = new ToDoAlarm();
+                    alarm.setTime(LocalTime.of(8, 0));
+                }
+                alarmEditDays.setText(Integer.toString(
+                        alarm.getAlarmDaysEarlier()));
+                alarmTimePicker.setCurrentHour(alarm.getTime().getHour());
+                alarmTimePicker.setCurrentMinute(alarm.getTime().getMinute());
+                d = d.minusDays(alarm.getAlarmDaysEarlier());
+                sb = new StringBuilder(alarmNextTime
+                        .getResources().getString(R.string.AlarmTextNextAlarm));
+                sb.append('\n');
+                sb.append(d.format(df));
+                alarmNextTime.setTag(sb.toString());
+                break;
 
-    /** Called when the user clicks the due date button */
-    class DueDateButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "DetailButtonDueDate.onClick");
-	    showDialog(DUEDATE_LIST_ID);
-	}
+            case REPEAT_DIALOG_ID:
+                // Update the repeat settings
+                repeatDialog.setTimeZone(zone);
+                repeatDialog.setRepeat(todo.getRepeatInterval(), todo.getDue());
+                break;
+
+            case ENDDATE_DIALOG_ID:
+                LocalDate tentativeEndDate = null;
+                if (todo.getRepeatInterval() instanceof AbstractRepeat)
+                    tentativeEndDate = ((AbstractRepeat)
+                            todo.getRepeatInterval()).getEnd();
+                if (tentativeEndDate == null)
+                    tentativeEndDate = (todo.getDue() == null)
+                            ? LocalDate.now(prefs.getTimeZone()) : todo.getDue();
+                repeatEndDialog.setDate(tentativeEndDate);
+                repeatEndDialog.setTimeZone(prefs.getTimeZone());
+                break;
+
+            default: break;
+        }
     }
 
     /** Called when the user clicks the Hide button */
     class HideButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "DetailButtonHideUntil.onClick");
-	    showDialog(HIDEUNTIL_DIALOG_ID);
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonHideUntil.onClick");
+            showDialog(HIDEUNTIL_DIALOG_ID);
+        }
+    }
+
+    /** Called when the user toggles the hide checkbox */
+    class HideCheckBoxOnChangeListener
+            implements CompoundButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(CompoundButton button,
+                                     boolean isChecked) {
+            hideEditDays.setEnabled(isChecked);
+            hideOKButton.setEnabled((hideEditDays.length() > 0)
+                    || !isChecked);
+            showTime.setVisibility(isChecked
+                    ? View.VISIBLE : View.INVISIBLE);
+        }
+    }
+
+    /**
+     * Called when the content of the &ldquo;hide days earlier&rdquo;
+     * text entry box changes
+     */
+    class HideDaysEarlierTextWatcher implements TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s,
+                                      int start, int count, int after) {
+        }
+        @Override
+        public void onTextChanged(CharSequence s,
+                                  int start, int before, int count) {
+        }
+        @Override
+        public void afterTextChanged(Editable e) {
+            boolean hasText = e.length() > 0;
+            hideOKButton.setEnabled(hasText);
+            if (hasText) {
+                StringBuilder sb = new StringBuilder(showTime
+                        .getResources().getString(R.string.HideTextShow));
+                sb.append('\n');
+                LocalDate targetDate = ((todo.getDue() == null)
+                        ? LocalDate.now(prefs.getTimeZone()) : todo.getDue())
+                        .minusDays(Integer.parseInt(e.toString()));
+                sb.append(targetDate.format(DateTimeFormatter
+                        .ofLocalizedDate(FormatStyle.FULL)));
+                showTime.setText(sb.toString());
+            } else {
+                showTime.setText("");
+            }
+        }
+    }
+
+    /**
+     * Called when the user clicks OK on the &ldquo;hide until&rdquo; dialog.
+     */
+    class HideOKOnClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "hideOKButton.onClick: " +
+                    (hideCheckBox.isChecked()
+                            ? hideEditDays.getText().toString()
+                            : "disable"));
+            if (hideCheckBox.isChecked())
+                todo.setHideDaysEarlier(
+                        Integer.parseInt(hideEditDays.getText().toString()));
+            else
+                todo.setHideDaysEarlier(null);
+            hideUntilDialog.dismiss();
+            updateHideButton();
+        }
+    }
+
+    /** Called when the user cancels the &ldquo;hide until&rdquo; dialog. */
+    class HideCancelOnClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            hideUntilDialog.dismiss();
+        }
+    }
+
+    /** Called when the user clicks the due date button */
+    class DueDateButtonOnClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonDueDate.onClick");
+            showDialog(DUEDATE_LIST_ID);
+        }
     }
 
     /** Called when the user clicks the Alarm button */
     class AlarmButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "DetailButtonAlarm.onClick");
-	    showDialog(ALARM_DIALOG_ID);
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonAlarm.onClick");
+            showDialog(ALARM_DIALOG_ID);
+        }
     }
+
+    /** Called when the user toggles the alarm checkbox */
+    class AlarmCheckBoxOnChangeListener
+            implements CompoundButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(CompoundButton button,
+                                     boolean isChecked) {
+            alarmEditDays.setEnabled(isChecked);
+            alarmTimePicker.setEnabled(isChecked);
+            alarmOKButton.setEnabled((alarmEditDays.length() > 0)
+                    || !isChecked);
+        }
+    }
+
+    /**
+     * Called when the content of the &ldquo;alarm days earlier&rdquo;
+     * text entry box changes
+     */
+    class AlarmDaysEarlierTextWatcher implements TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s,
+                                      int start, int count, int after) {
+        }
+        @Override
+        public void onTextChanged(CharSequence s,
+                                  int start, int before, int count) {
+        }
+        @Override
+        public void afterTextChanged(Editable e) {
+            boolean hasText = e.length() > 0;
+            alarmOKButton.setEnabled(hasText);
+            if (hasText) {
+                StringBuilder sb = new StringBuilder(
+                        alarmNextTime.getResources().getString(
+                                R.string.AlarmTextNextAlarm));
+                sb.append('\n');
+                LocalDate targetDate = ((todo.getDue() == null)
+                        ? LocalDate.now(prefs.getTimeZone()) : todo.getDue())
+                        .minusDays(Integer.parseInt(e.toString()));
+                sb.append(targetDate.format(DateTimeFormatter
+                        .ofLocalizedDate(FormatStyle.FULL)));
+                alarmNextTime.setText(sb.toString());
+            } else {
+                alarmNextTime.setText("");
+            }
+        }
+    }
+
+    /** Called when the user clicks OK on the alarm dialog. */
+    class AlarmOKClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            if (alarmCheckBox.isChecked()) {
+                checkNotifyPermission();
+                alarm.setAlarmDaysEarlier(Integer.parseInt(
+                        alarmEditDays.getText().toString()));
+                alarm.setTime(LocalTime.of(alarmTimePicker.getCurrentHour(),
+                        alarmTimePicker.getCurrentMinute()));
+                todo.setAlarm(alarm);
+            } else {
+                todo.setAlarm(null);
+            }
+            alarmDialog.dismiss();
+            updateAlarmButton();
+        }
+    }
+
+    /** Called when the user clicks Cancel on the alarm dialog. */
+    class AlarmCancelOnClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            alarmDialog.dismiss();
+        }
+    }
+
+    /** Called when the user picks an end date for a repeating interval */
+    class RepeatEndPickListener
+            implements CalendarDatePickerDialog.OnDateSetListener {
+        @Override
+        public void onDateSet(CalendarDatePicker dp, LocalDate day) {
+            if (repeatSettings != null)
+                repeatSettings.setEndDate(day);
+            if (todo.getRepeatInterval() instanceof AbstractRepeat)
+                ((AbstractRepeat) todo.getRepeatInterval()).setEnd(day);
+            updateRepeatButton();
+        }
+    }
+
+    /** Called when the user configures a new repeating interval. */
+    class RepeatSetListener implements RepeatEditorDialog.OnRepeatSetListener {
+        @Override
+        public void onRepeatSet(RepeatEditor re, RepeatInterval r) {
+            todo.setRepeatInterval(r);
+            updateRepeatButton();
+        }
+    }
+
+    /** Generic dialog dismissal listener */
+    static final DialogInterface.OnClickListener DISMISS_LISTENER =
+            new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            };
 
     /**
      * Check whether the user has granted us permission to show notifications.
@@ -1015,18 +1115,11 @@ public class ToDoDetailsActivity extends Activity {
                 + " requesting permission from the user");
         // Fix Me: Android does not provide any way to programatically
         // request notification permission until SDK 33 (Tiramisu)!!
-        final DialogInterface.OnClickListener dismissListener =
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int item) {
-                        dialog.dismiss();
-                    }
-                };
         new AlertDialog.Builder(this)
                 .setIcon(android.R.drawable.ic_dialog_info)
                 .setTitle(R.string.PermissionRequiredTitle)
                 .setMessage(R.string.PermissionToPostNotificationRationale)
-                .setNeutralButton(R.string.ConfirmationButtonOK, dismissListener)
+                .setNeutralButton(R.string.ConfirmationButtonOK, DISMISS_LISTENER)
                 .create().show();
 
         return false;
@@ -1035,342 +1128,286 @@ public class ToDoDetailsActivity extends Activity {
 
     /** Called when the user clicks the repeat button */
     class RepeatButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "DetailButtonRepeat.onClick");
-	    showDialog(REPEAT_LIST_ID);
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonRepeat.onClick");
+            showDialog(REPEAT_LIST_ID);
+        }
     }
 
     /** Called when the user selects a new due date */
     class DueDateListSelectionListener
-    implements DialogInterface.OnClickListener {
-	@Override
-	public void onClick(DialogInterface dialog, int which) {
-	    Log.d(TAG, "DueDateListSelectionListener.onClick(" + which + ")");
-	    switch (which) {
-	    default:
-		Calendar c = Calendar.getInstance();
-		c.add(Calendar.DATE, which);
-		c.set(Calendar.HOUR_OF_DAY, 23);
-		c.set(Calendar.MINUTE, 59);
-		c.set(Calendar.SECOND, 59);
-		dueDate = c.getTime();
-		if (repeatSettings != null)
-		    repeatSettings.setDueDate(dueDate);
-		updateDueDateButton();
-		break;
+            implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            Log.d(TAG, "DueDateListSelectionListener.onClick(" + which + ")");
+            switch (which) {
+                default:
+                    todo.setDue(LocalDate.now(prefs.getTimeZone())
+                            .plusDays(which));
+                    if (repeatSettings != null)
+                        repeatSettings.setDueDate(todo.getDue());
+                    updateDueDateButton();
+                    break;
 
-	    case 8:	// No date
-		dueDate = null;
-		updateDueDateButton();
-		break;
+                case 8:	// No date
+                    todo.setDue(null);
+                    if (repeatSettings != null)
+                        repeatSettings.setDueDate(null);
+                    updateDueDateButton();
+                    break;
 
-	    case 9:	// Other
-		showDialog(DUEDATE_DIALOG_ID);
-		break;
-	    }
-	    // I don't see any other way to clear up its resources.
-	    dueDateDialog = null;
-	}
+                case 9:	// Other
+                    showDialog(DUEDATE_DIALOG_ID);
+                    break;
+            }
+        }
     }
 
-    /** Called when the user selects a new due date */
+    /**
+     * Called when the user selects a new repeat
+     * interval from the pre-defined interval list.
+     */
     class RepeatListSelectionListener
-    implements DialogInterface.OnClickListener {
-	@Override
-	public void onClick(DialogInterface dialog, int which) {
-	    Log.d(TAG, "RepeatListSelectionListener.onClick(" + which + ")");
+            implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            Log.d(TAG, String.format(Locale.US,
+                    "RepeatListSelectionListener.onClick(%d)", which));
 
-	    final int[] ALL_WEEK_DAYS = { Calendar.SUNDAY,
-		    Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY,
-		    Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY };
+            LocalDate referenceDate = (todo.getDue() == null)
+                    ? LocalDate.now(prefs.getTimeZone())
+                    : todo.getDue();
 
-	    switch (which) {
-	    case 0:	// None
-		repeatSettings.setIntervalType(IntervalType.NONE);
-		updateRepeatButton();
-		break;
+            switch (which) {
+                case 0:	// None
+                    todo.setRepeatInterval(new RepeatNone());
+                    updateRepeatButton();
+                    break;
 
-	    case 1:	// Daily until...
-		repeatSettings.setIntervalType(IntervalType.DAILY);
-		repeatSettings.setIncrement(1);
-		repeatSettings.setOnAllowedWeekdays(ALL_WEEK_DAYS);
-		repeatButton.setText(
-			getResources().getString(R.string.RepeatDaily));
-		showDialog(ENDDATE_DIALOG_ID);
-		break;
+                case 1:	// Daily until...
+                    todo.setRepeatInterval(new RepeatDaily());
+                    repeatButton.setText(
+                            getResources().getString(R.string.RepeatDaily));
+                    showDialog(ENDDATE_DIALOG_ID);
+                    break;
 
-	    case 2:	// Weekly
-		Calendar c = Calendar.getInstance();
-		if (dueDate != null)
-		    c.setTime(dueDate);
-		repeatSettings.setIntervalType(IntervalType.WEEKLY);
-		repeatSettings.setIncrement(1);
-		repeatSettings.setOnFixedWeekday(
-			c.get(Calendar.DAY_OF_WEEK), true);
-		updateRepeatButton();
-		break;
+                case 2:	// Weekly
+                    todo.setRepeatInterval(new RepeatWeekly(referenceDate));
+                    updateRepeatButton();
+                    break;
 
-	    case 3:	// Semi-monthly
-		c = Calendar.getInstance();
-		if (dueDate != null)
-		    c.setTime(dueDate);
-		repeatSettings.setIntervalType(
-			IntervalType.SEMI_MONTHLY_ON_DATES);
-		repeatSettings.setIncrement(1);
-		repeatSettings.setOnAllowedWeekdays(ALL_WEEK_DAYS);
-		int d1 = c.get(Calendar.DATE);
-		repeatSettings.setDate(0, d1);
-		if (d1 < 15)
-		    repeatSettings.setDate(1, d1 + 15);
-		else if (d1 == 15)
-		    repeatSettings.setDate(1, 31);
-		else if (d1 < 30)
-		    repeatSettings.setDate(1, d1 - 15);
-		else
-		    repeatSettings.setDate(1, 15);
-		updateRepeatButton();
-		break;
+                case 3:	// Semi-monthly
+                    todo.setRepeatInterval(
+                            new RepeatSemiMonthlyOnDates(referenceDate));
+                    updateRepeatButton();
+                    break;
 
-	    case 4:	// Monthly
-		c = Calendar.getInstance();
-		if (dueDate != null)
-		    c.setTime(dueDate);
-		repeatSettings.setIntervalType(IntervalType.MONTHLY_ON_DATE);
-		repeatSettings.setIncrement(1);
-		repeatSettings.setOnAllowedWeekdays(ALL_WEEK_DAYS);
-		repeatSettings.setDate(c.get(Calendar.DATE));
-		updateRepeatButton();
-		break;
+                case 4:	// Monthly
+                    todo.setRepeatInterval(
+                            new RepeatMonthlyOnDate(referenceDate));
+                    updateRepeatButton();
+                    break;
 
-	    case 5:	// Yearly
-		c = Calendar.getInstance();
-		if (dueDate != null)
-		    c.setTime(dueDate);
-		repeatSettings.setIntervalType(IntervalType.YEARLY_ON_DATE);
-		repeatSettings.setIncrement(1);
-		repeatSettings.setOnAllowedWeekdays(Calendar.SUNDAY,
-			Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY,
-			Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY);
-		repeatSettings.setDate(c.get(Calendar.DATE));
-		repeatSettings.setMonth(c.get(Calendar.MONTH));
-		updateRepeatButton();
-		break;
+                case 5:	// Yearly
+                    todo.setRepeatInterval(
+                            new RepeatYearlyOnDate(referenceDate));
+                    updateRepeatButton();
+                    break;
 
-	    case 6:	// Other...
-		showDialog(REPEAT_DIALOG_ID);
-		break;
-	    }
-	}
+                case 6:	// Other...
+                    showDialog(REPEAT_DIALOG_ID);
+                    break;
+            }
+        }
     }
 
     /** Called when the user clicks OK to save all changes */
     class OKButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "DetailButtonOK.onClick");
-	    // Collect the current values
-	    ContentValues values = new ContentValues();
-	    List<String> validationErrors = new LinkedList<>();
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonOK.onClick");
+            // Collect the current values
+            List<String> validationErrors = new LinkedList<>();
 
-	    /*
-	     * We need to compare the new value of the privacy
-	     * checkbox with the old private flag in the record.
-	     * If it has changed, we'll have to change the
-	     * encryption of the note as well as the description.
-	     */
-	    Cursor itemCursor = getContentResolver().query(todoUri,
-		    ITEM_NOTE_PROJECTION, null, null, null);
-	    if (!itemCursor.moveToFirst())
-		throw new SQLiteDoneException();
-	    int wasPrivate = itemCursor.getInt(
-		    itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
-	    String note = null;
-	    if (((wasPrivate > 1) != privateCheckBox.isChecked()) &&
-		    !itemCursor.isNull(itemCursor.getColumnIndex(ToDoItemColumns.NOTE))) {
-                if (wasPrivate > 1) {
+            todo.setDescription(toDoDescription.getText().toString());
+            if (todo.getDescription().length() > 0) {
+                if (privateCheckBox.isChecked()) {
+                    todo.setPrivate(StringEncryption.NO_ENCRYPTION);
                     if (encryptor.hasKey()) {
                         try {
-                            note = encryptor.decrypt(itemCursor.getBlob(
-                                    itemCursor.getColumnIndex(ToDoItemColumns.NOTE)));
+                            todo.setEncryptedDescription(encryptor.encrypt(
+                                    todo.getDescription()));
+                            if (todo.getNote() != null)
+                                todo.setEncryptedNote(encryptor.encrypt(
+                                        todo.getEncryptedNote()));
+                            todo.setPrivate(StringEncryption.BUNDLED_ENCRYPTION);
                         } catch (EncryptionException e) {
-                            itemCursor.close();
                             Toast.makeText(ToDoDetailsActivity.this,
                                     e.getMessage(), Toast.LENGTH_LONG).show();
-                            return;
                         }
-                    } else {
-                        Toast.makeText(ToDoDetailsActivity.this,
-                                R.string.PasswordProtected, Toast.LENGTH_LONG).show();
                     }
                 } else {
-                    note = itemCursor.getString(
-                            itemCursor.getColumnIndex(ToDoItemColumns.NOTE));
+                    todo.setPrivate(0);
                 }
-	    }
-	    itemCursor.close();
+            } else {
+                validationErrors.add(getResources().getString(
+                        R.string.ErrorDescriptionBlank));
+            }
 
-	    String description = toDoDescription.getText().toString();
-	    if (description.length() > 0) {
-		int privacy = 0;
-		values.put(ToDoItemColumns.DESCRIPTION, description);
-		if (note != null)
-		    values.put(ToDoItemColumns.NOTE, note);
-                if (privateCheckBox.isChecked()) {
-                    privacy = 1;
-                    if (encryptor.hasKey()) {
-                        try {
-                            values.put(ToDoItemColumns.DESCRIPTION,
-                                    encryptor.encrypt(description));
-                            if (note != null)
-                                values.put(ToDoItemColumns.NOTE,
-                                        encryptor.encrypt(note));
-                            privacy = 2;
-                        } catch (EncryptionException e) {
-                            Toast.makeText(ToDoDetailsActivity.this,
-                                    e.getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    }
+            try {
+                todo.setPriority(Integer.parseInt(
+                        priorityText.getText().toString()));
+                if (todo.getPriority() <= 0)
+                    validationErrors.add(getResources().getString(
+                            R.string.ErrorPriority));
+            } catch (NumberFormatException nfx) {
+                validationErrors.add(getResources().getString(
+                        R.string.ErrorPriority));
+            }
+
+            todo.setCategoryId(categoryList.getSelectedItemId());
+            if (todo.getCategoryId() == AdapterView.INVALID_ROW_ID)
+                validationErrors.add(getResources().getString(
+                        R.string.ErrorCategoryID));
+
+            if (todo.getDue() == null)
+                todo.setRepeatInterval(null);
+
+            if (validationErrors.size() > 0) {
+                // Show an alert dialog
+                AlertDialog.Builder builder =
+                        new AlertDialog.Builder(ToDoDetailsActivity.this);
+                builder.setIcon(android.R.drawable.ic_dialog_alert);
+                builder.setNeutralButton(R.string.ConfirmationButtonOK,
+                        DISMISS_LISTENER);
+                StringBuilder sb = new StringBuilder();
+                for (String error : validationErrors) {
+                    if (sb.length() > 0)
+                        sb.append("  ");
+                    sb.append(error);
                 }
-		values.put(ToDoItemColumns.PRIVATE, privacy);
-	    } else {
-		validationErrors.add(getResources().getString(
-			R.string.ErrorDescriptionBlank));
-	    }
+                builder.setMessage(sb.toString());
+                builder.create().show();
+            } else {
+                // Disable the Done and Delete buttons
+                // until the save is finished
+                Button button = (Button) findViewById(R.id.DetailButtonOK);
+                button.setEnabled(false);
+                button = (Button) findViewById(R.id.DetailButtonDelete);
+                button.setEnabled(false);
 
-	    int priority = -1;
-	    try {
-		priority = Integer.parseInt(priorityText.getText().toString());
-	    } catch (NumberFormatException nfx) {}
-	    if (priority > 0)
-		values.put(ToDoItemColumns.PRIORITY, priority);
-	    else
-		validationErrors.add(getResources().getString(
-			R.string.ErrorPriority));
+                // Write and commit the changes
+                executor.submit(new SaveToDoItemRunner(todo, isNewToDo));
+            }
+        }
+    }
 
-	    long categoryID = categoryList.getSelectedItemId();
-	    if (categoryID != AdapterView.INVALID_ROW_ID)
-		values.put(ToDoItemColumns.CATEGORY_ID, categoryID);
-	    else
-		validationErrors.add(getResources().getString(
-			R.string.ErrorCategoryID));
-
-	    if (dueDate == null)
-		values.putNull(ToDoItemColumns.DUE_TIME);
-	    else
-		values.put(ToDoItemColumns.DUE_TIME, dueDate.getTime());
-
-	    if ((dueDate == null) || (hideDaysInAdvance == null))
-		values.putNull(ToDoItemColumns.HIDE_DAYS_EARLIER);
-	    else
-		values.put(ToDoItemColumns.HIDE_DAYS_EARLIER, hideDaysInAdvance);
-
-	    if ((dueDate == null) || (alarmDaysInAdvance == null)) {
-		values.putNull(ToDoItemColumns.ALARM_DAYS_EARLIER);
-		values.putNull(ToDoItemColumns.ALARM_TIME);
-		values.putNull(ToDoItemColumns.NOTIFICATION_TIME);
-	    } else {
-		values.put(ToDoItemColumns.ALARM_DAYS_EARLIER, alarmDaysInAdvance);
-		values.put(ToDoItemColumns.ALARM_TIME, alarmTime);
-		/*
-		 * We don't overwrite any previous notification time here.
-		 * If the user was previously notified, and subsequently
-		 * changes the alarm, it does not take effect until the
-		 * next occurrence of that alarm time.
-		 */
-	    }
-
-	    if (dueDate == null) {
-		new RepeatSettings(RepeatSettings.IntervalType.NONE)
-			.store(values);
-	    } else {
-		repeatSettings.store(values);
-	    }
-
-	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
-
-	    if (validationErrors.size() > 0) {
-		// Show an alert dialog
-		AlertDialog.Builder builder =
-		    new AlertDialog.Builder(ToDoDetailsActivity.this);
-		builder.setIcon(android.R.drawable.ic_dialog_alert);
-		builder.setNeutralButton(R.string.ConfirmationButtonOK,
-			new DialogInterface.OnClickListener() {
-			    @Override
-			    public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-			    }
-			});
-		StringBuilder sb = new StringBuilder();
-		for (String error : validationErrors) {
-		    if (sb.length() > 0)
-			sb.append("  ");
-		    sb.append(error);
-		}
-		builder.setMessage(sb.toString());
-		builder.create().show();
-	    } else {
-		// Write and commit the changes
-		try {
-		    getContentResolver().update(todoUri, values, null, null);
-		    ToDoDetailsActivity.this.finish();
-		} catch (SQLException sx) {
-		    new AlertDialog.Builder(ToDoDetailsActivity.this)
-		    .setMessage(sx.getMessage())
-		    .setIcon(android.R.drawable.ic_dialog_alert)
-		    .setNeutralButton(R.string.ConfirmationButtonCancel,
-			    new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-			    dialog.dismiss();
-			}
-		    }).create().show();
-		}
-	    }
-	}
+    /**
+     * Saves changes to the To Do item on a non-UI thread.
+     * Closes the activity when finished.  If an error occurs,
+     * shows an alert (on the UI thread) instead.
+     */
+    private class SaveToDoItemRunner implements Runnable {
+        private final boolean isNew;
+        private final ToDoItem toSave;
+        SaveToDoItemRunner(@NonNull ToDoItem todo, boolean isNew) {
+            toSave = todo;
+            this.isNew = isNew;
+        }
+        @Override
+        public void run() {
+            try {
+                todo.setModTimeNow();
+                if (isNew) {
+                    todo.setCreateTime(todo.getModTime());
+                    repository.insertItem(toSave);
+                } else {
+                    repository.updateItem(toSave);
+                }
+                runOnUiThread(SAVE_FINISHED_RUNNER);
+            } catch (SQLException sx) {
+                runOnUiThread(new SaveExceptionAlertRunner(sx));
+            }
+        }
     }
 
     /** Called when the users clicks Delete... */
     class DeleteButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "DetailButtonDelete.onClick");
-	    AlertDialog.Builder builder =
-		new AlertDialog.Builder(ToDoDetailsActivity.this);
-	    builder.setIcon(android.R.drawable.ic_dialog_alert);
-	    builder.setMessage(R.string.ConfirmationTextDeleteToDo);
-	    builder.setNegativeButton(R.string.ConfirmationButtonCancel,
-		    new DialogInterface.OnClickListener() {
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-		    dialog.dismiss();
-		}
-	    });
-	    builder.setPositiveButton(R.string.ConfirmationButtonOK,
-		    new DialogInterface.OnClickListener() {
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-		    dialog.dismiss();
-		    try {
-			ToDoDetailsActivity.this.getContentResolver().delete(
-				ToDoDetailsActivity.this.todoUri, null, null);
-			ToDoDetailsActivity.this.finish();
-		    } catch (SQLException sx) {
-			new AlertDialog.Builder(ToDoDetailsActivity.this)
-			.setMessage(sx.getMessage())
-			.setIcon(android.R.drawable.ic_dialog_alert)
-			.setNeutralButton(R.string.ConfirmationButtonCancel,
-				new DialogInterface.OnClickListener() {
-			    @Override
-			    public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-			    }
-			}).create().show();
-		    }
-		}
-	    });
-	    builder.create().show();
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonDelete.onClick");
+            AlertDialog.Builder builder =
+                    new AlertDialog.Builder(ToDoDetailsActivity.this);
+            builder.setIcon(android.R.drawable.ic_dialog_alert);
+            builder.setMessage(R.string.ConfirmationTextDeleteToDo);
+            builder.setNegativeButton(R.string.ConfirmationButtonCancel,
+                    DISMISS_LISTENER);
+            builder.setPositiveButton(R.string.ConfirmationButtonOK,
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                            executor.submit(new DeleteToDoItemRunner(todoId));
+                        }
+                    });
+            builder.create().show();
+        }
     }
+
+    /**
+     * Delete the To Do item on a non-UI thread.
+     * Closes the activity when finished.  If an error occurs,
+     * shows an alert (on the UI thread) instead.
+     */
+    private class DeleteToDoItemRunner implements Runnable {
+        private final long itemId;
+        DeleteToDoItemRunner(long itemId) {
+            this.itemId = itemId;
+        }
+        @Override
+        public void run() {
+            try {
+                repository.deleteItem(itemId);
+                runOnUiThread(SAVE_FINISHED_RUNNER);
+            } catch (SQLException sx) {
+                runOnUiThread(new SaveExceptionAlertRunner(sx));
+            }
+        }
+    }
+
+    /**
+     * A runner to clean up the details activity and finish on the UI thread.
+     */
+    private final Runnable SAVE_FINISHED_RUNNER = new Runnable() {
+        @Override
+        public void run() {
+            todoId = null;
+            todo.setDescription(null);
+            todo.setNote(null);
+            todo = null;
+            ToDoDetailsActivity.this.finish();
+        }
+    };
+
+    /** A runner to display an exception message on the UI thread. */
+    class SaveExceptionAlertRunner implements Runnable {
+        private final Exception e;
+        SaveExceptionAlertRunner(Exception exception) {
+            e = exception;
+        }
+        @Override
+        public void run() {
+            new AlertDialog.Builder(ToDoDetailsActivity.this)
+                    .setMessage(e.getMessage())
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setNeutralButton(R.string.ConfirmationButtonCancel,
+                            DISMISS_LISTENER).create().show();
+            Button button = (Button) findViewById(R.id.DetailButtonOK);
+            button.setEnabled(true);
+            button = (Button) findViewById(R.id.DetailButtonDelete);
+            button.setEnabled(!isNewToDo);
+        }
+    }
+
 }

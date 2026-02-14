@@ -17,7 +17,10 @@
 package com.xmission.trevin.android.todo.ui;
 
 import java.io.IOException;
+import java.time.ZoneId;
+import java.time.format.TextStyle;
 import java.util.Arrays;
+import java.util.Locale;
 
 import android.Manifest;
 import android.app.*;
@@ -40,7 +43,6 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 /**
@@ -52,129 +54,69 @@ public class PreferencesActivity extends Activity {
 
     public static final String LOG_TAG = "PreferencesActivity";
 
+    /** ID of the time zone dialog */
+    private static final int TIMEZONE_LIST_DIALOG_ID = 20;
+
     private ToDoPreferences prefs;
 
     CheckBox privateCheckBox = null;
-    // EditText passwordEditText = null;
+    Button timeZoneButton = null;
 
-    /** The global encryption object */
-    StringEncryption encryptor;
+    /** Adapter which provides the grouped list of time zones */
+    TimeZoneSelectAdapter timeZoneAdapter = null;
+    ExpandableListView timeZoneListView = null;
+    Dialog timeZoneDialog = null;
 
     /** Used to play sample alarm sounds */
     MediaPlayer player = null;
 
     String[] SOUND_PROJECTION = {
-	    AudioColumns._ID,
-	    AudioColumns.IS_ALARM,
-	    AudioColumns.IS_NOTIFICATION,
-	    AudioColumns.IS_RINGTONE,
-	    AudioColumns.TITLE,
+            AudioColumns._ID,
+            AudioColumns.IS_ALARM,
+            AudioColumns.IS_NOTIFICATION,
+            AudioColumns.IS_RINGTONE,
+            AudioColumns.TITLE,
     };
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-	super.onCreate(savedInstanceState);
+        super.onCreate(savedInstanceState);
 
-	Log.d(LOG_TAG, ".onCreate");
+        Log.d(LOG_TAG, ".onCreate");
 
-	setContentView(R.layout.preferences);
+        setContentView(R.layout.preferences);
 
-	prefs = ToDoPreferences.getInstance(this);
+        prefs = ToDoPreferences.getInstance(this);
 
-	Spinner spinner = (Spinner) findViewById(R.id.PrefsSpinnerSortBy);
-	setSpinnerByID(spinner, prefs.getSortOrder());
-	spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-	    @Override
-	    public void onNothingSelected(AdapterView<?> parent) {
-		// Do nothing
-	    }
-	    @Override
-	    public void onItemSelected(AdapterView<?> parent, View child,
-		    int position, long id) {
-		Log.d(LOG_TAG, "spinnerSortBy.onItemSelected("
-			+ position + "," + id + ")");
-		if (position >= ToDoItemColumns.USER_SORT_ORDERS.length)
-		    Log.e(LOG_TAG, "Unknown sort order selected");
-		else
-		    prefs.setSortOrder(position);
-	    }
-	});
+        Spinner spinner = (Spinner) findViewById(R.id.PrefsSpinnerSortBy);
+        setSpinnerByID(spinner, prefs.getSortOrder());
+        spinner.setOnItemSelectedListener(SORT_ORDER_SELECTED_LISTENER);
 
-	CheckBox checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowChecked);
-	checkBox.setChecked(prefs.showChecked());
-	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxShowCompleted.onCheckedChanged("
-			+ isChecked + ")");
-		prefs.setShowChecked(isChecked);
-	    }
-	});
+        CheckBox checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowChecked);
+        checkBox.setChecked(prefs.showChecked());
+        checkBox.setOnCheckedChangeListener(SHOW_CHECKED_CHANGED_LISTENER);
 
-	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowDueDate);
-	checkBox.setChecked(prefs.showDueDate());
-	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxShowDueDate.onCheckedChanged("
-			+ isChecked + ")");
-		prefs.setShowDueDate(isChecked);
-	    }
-	});
+        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowDueDate);
+        checkBox.setChecked(prefs.showDueDate());
+        checkBox.setOnCheckedChangeListener(SHOW_DUE_CHANGED_LISTENER);
 
-	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPriority);
-	checkBox.setChecked(prefs.showPriority());
-	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxShowPriority.onCheckedChanged("
-			+ isChecked + ")");
-		prefs.setShowPriority(isChecked);
-	    }
-	});
+        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPriority);
+        checkBox.setChecked(prefs.showPriority());
+        checkBox.setOnCheckedChangeListener(SHOW_PRIORITIES_CHANGED_LISTENER);
 
-	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowCategory);
-	checkBox.setChecked(prefs.showCategory());
-	checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxShowCategory.onCheckedChanged("
-			+ isChecked + ")");
-		prefs.setShowCategory(isChecked);
-	    }
-	});
+        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowCategory);
+        checkBox.setChecked(prefs.showCategory());
+        checkBox.setOnCheckedChangeListener(SHOW_CATEGORIES_CHANGED_LISTENER);
 
-	encryptor = StringEncryption.holdGlobalEncryption();
-	privateCheckBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPrivate);
-	privateCheckBox.setChecked(prefs.showPrivate());
-	privateCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-	    @Override
-	    public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-		Log.d(LOG_TAG, "prefsCheckBoxShowPrivate.onCheckedChanged("
-			+ isChecked + ")");
-		prefs.setShowPrivate(isChecked);
-	    }
-	});
+        privateCheckBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPrivate);
+        privateCheckBox.setChecked(prefs.showPrivate());
+        privateCheckBox.setOnCheckedChangeListener(SHOW_PRIVATE_CHANGED_LISTENER);
 
-	checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxAlarmVibrate);
+        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxAlarmVibrate);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             checkBox.setChecked(prefs.notificationVibrate());
-            checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    Log.d(LOG_TAG, "prefsCheckBoxAlarmVibrate.onCheckChanged("
-                            + isChecked + ")");
-                    if (!checkVibratePermission()) {
-                        // Warn the user that vibration is not granted
-                        Toast.makeText(PreferencesActivity.this,
-                                R.string.ToastVibrateNotPermitted, Toast.LENGTH_LONG).show();
-                        buttonView.setChecked(false);
-                        return;
-                    }
-                    prefs.setNotificationVibrate(isChecked);
-                }
-            });
+            checkBox.setOnCheckedChangeListener(ALARM_VIBRATE_CHANGED_LISTENER);
 
             player = new MediaPlayer();
             setVolumeControlStream(AudioManager.STREAM_NOTIFICATION);
@@ -187,39 +129,14 @@ public class PreferencesActivity extends Activity {
                     Media.INTERNAL_CONTENT_URI, SOUND_PROJECTION,
                     where.toString(), null, AudioColumns.TITLE);
             NoSelectionCursorAdapter soundAdapter =
-                    new NoSelectionCursorAdapter(this, audioCursor, AudioColumns.TITLE,
+                    new NoSelectionCursorAdapter(this,
+                            audioCursor, AudioColumns.TITLE,
                             getString(R.string.PrefTextNoSound));
             spinner = (Spinner) findViewById(R.id.PrefsSpinnerAlarmSound);
             spinner.setAdapter(soundAdapter);
             final long initialSound = prefs.getNotificationSound();
             setSpinnerByID(spinner, initialSound);
-            spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-                long lastSound = initialSound;
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View child,
-                                           int position, long id) {
-                    // Play a sample of the sound for the user
-                    if ((id >= 0) && (id != lastSound)) {
-                        try {
-                            player.reset();
-                            player.setDataSource(PreferencesActivity.this,
-                                    Uri.withAppendedPath(Media.INTERNAL_CONTENT_URI,
-                                            Long.toString(id)));
-                            player.prepare();
-                            player.start();
-                            lastSound = id;
-                        } catch (IOException iox) {
-                            // Silence.  Oh, well.
-                        } catch (Exception anyx) {
-                            Toast.makeText(PreferencesActivity.this,
-                                    anyx.getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    }
-                    prefs.setNotificationSound(id);
-                }
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {}
-            });
+            spinner.setOnItemSelectedListener(SOUND_SELECTED_LISTENER);
         } else {
             // As of Oreo, we don't control vibration or sound through
             // our own preferences; the user has to set these in the
@@ -231,7 +148,270 @@ public class PreferencesActivity extends Activity {
                 ((View) soundParent).setVisibility(View.GONE);
             }
         }
+
+        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxLocalZone);
+        checkBox.setChecked(prefs.useLocalTimeZone());
+        checkBox.setOnCheckedChangeListener(LOCAL_ZONE_CHANGED_LISTENER);
+        timeZoneButton = (Button) findViewById(R.id.PrefsButtonTimeZone);
+        timeZoneButton.setText(prefs.getTimeZone().getDisplayName(
+                TextStyle.FULL, Locale.getDefault()));
+        timeZoneButton.setEnabled(!prefs.useLocalTimeZone());
+        timeZoneButton.setOnClickListener(TIME_ZONE_CLICK_LISTENER);
+
     }
+
+    /** Called when opening a dialog for the first time. */
+    @Override
+    public Dialog onCreateDialog(int id) {
+        Log.d(LOG_TAG, String.format(Locale.US, ".onCreateDialog(%d)", id));
+        if (id != TIMEZONE_LIST_DIALOG_ID) {
+            // We don't support any other dialogs from here
+            Log.e(LOG_TAG, "Undefined dialog ID " + id);
+            return null;
+        }
+
+        if (timeZoneDialog != null) {
+            Log.w(LOG_TAG, "Dialog was already created!");
+            return timeZoneDialog;
+        }
+        if (timeZoneAdapter == null)
+            timeZoneAdapter = new TimeZoneSelectAdapter(this);
+        View rootView = getLayoutInflater().inflate(
+                R.layout.timezone_dialog, null);
+        if (rootView == null) {
+            Log.e(LOG_TAG, ".onCreateDialog: failed to inflate"
+                    + " timezone dialog view!");
+            return null;
+        }
+        timeZoneListView = (ExpandableListView)
+                rootView.findViewById(R.id.TimeZoneList);
+        timeZoneListView.setAdapter(timeZoneAdapter);
+        timeZoneListView.setOnChildClickListener(TIME_ZONE_LIST_LISTENER);
+        timeZoneListView.setOnGroupExpandListener(TIME_ZONE_EXPAND_LISTENER);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.PrefTextTimeZone);
+        builder.setView(rootView);
+        timeZoneDialog = builder.create();
+        return timeZoneDialog;
+    }
+
+    /** Called when an item is selected in the sort order list. */
+    private final OnItemSelectedListener SORT_ORDER_SELECTED_LISTENER =
+            new OnItemSelectedListener() {
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    // Do nothing
+                }
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View child,
+                                           int position, long id) {
+                    Log.d(LOG_TAG, String.format(Locale.US,
+                            "SortOrderSelectedListener.onItemSelected(%d,%d)",
+                            position, id));
+                    if (position >= ToDoItemColumns.USER_SORT_ORDERS.length)
+                        Log.e(LOG_TAG, "Unknown sort order selected");
+                    else
+                        prefs.setSortOrder(position);
+                }
+            };
+
+    /**
+     * Called when the user toggles the &ldquo;Show completed
+     * and hidden tasks&rdquo; preference.
+     */
+    private final OnCheckedChangeListener SHOW_CHECKED_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "ShowCheckedChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            prefs.setShowChecked(isChecked);
+        }
+    };
+
+    /**
+     * Called when the user toggles the &ldquo;Show due dates&rdquo;
+     * preference.
+     */
+    private final OnCheckedChangeListener SHOW_DUE_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "ShowDueChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            prefs.setShowDueDate(isChecked);
+        }
+    };
+
+    /**
+     * Called when the user toggles the &ldquo;Show priorities&rdquo;
+     * preference.
+     */
+    private final OnCheckedChangeListener SHOW_PRIORITIES_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "ShowPrioritiesChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            prefs.setShowPriority(isChecked);
+        }
+    };
+
+    /**
+     * Called when the user toggles the &ldquo;Show categories&rdquo;
+     * preference.
+     */
+    private final OnCheckedChangeListener SHOW_CATEGORIES_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "ShowCategoriesChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            prefs.setShowCategory(isChecked);
+        }
+    };
+
+    /**
+     * Called when the user toggles the &ldquo;Show private records&rdquo;
+     * preference.
+     */
+    private final OnCheckedChangeListener SHOW_PRIVATE_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "ShowPrivateChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            prefs.setShowPrivate(isChecked);
+        }
+    };
+
+    /**
+     * Called when the user toggles the &ldquo;Alarm vibrate&rdquo;
+     * preference.
+     */
+    private final OnCheckedChangeListener ALARM_VIBRATE_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "AlarmVibrateChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            if (!checkVibratePermission()) {
+                // Warn the user that vibration is not granted
+                Toast.makeText(PreferencesActivity.this,
+                        R.string.ToastVibrateNotPermitted, Toast.LENGTH_LONG).show();
+                button.setChecked(false);
+                return;
+            }
+            prefs.setNotificationVibrate(isChecked);
+        }
+    };
+
+    /** Called when the user selects a notification sound. */
+    private final OnItemSelectedListener SOUND_SELECTED_LISTENER
+            = new OnItemSelectedListener() {
+        long lastSound = 0;
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+        }
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View child,
+                                   int position, long id) {
+            // Play a sample of the sound for the user
+            if ((id >= 0) && (id != lastSound)) {
+                try {
+                    player.reset();
+                    player.setDataSource(PreferencesActivity.this,
+                            Uri.withAppendedPath(Media.INTERNAL_CONTENT_URI,
+                                    Long.toString(id)));
+                    player.prepare();
+                    player.start();
+                    lastSound = id;
+                } catch (IOException iox) {
+                    // Silence.  Oh, well.
+                } catch (Exception anyx) {
+                    Toast.makeText(PreferencesActivity.this,
+                            anyx.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            }
+            prefs.setNotificationSound(id);
+        }
+    };
+
+    /**
+     * Called when the user toggles the &ldquo;Use system
+     * time zone&rdquo; preference.
+     */
+    private final OnCheckedChangeListener LOCAL_ZONE_CHANGED_LISTENER
+            = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "LocalZoneChangedListener.onCheckedChanged(%s)",
+                    isChecked));
+            // Toggling this option always reverts us to the local time zone
+            ZoneId localZone = ZoneId.systemDefault();
+            if (isChecked)
+                prefs.setTimeZoneLocal();
+            else
+                prefs.setTimeZone(localZone);
+            timeZoneButton.setText(localZone.getDisplayName(
+                    TextStyle.FULL, Locale.getDefault()));
+            timeZoneButton.setEnabled(!isChecked);
+        }
+    };
+
+    /**
+     * Called when the user clicks the time zone button.
+     */
+    private final View.OnClickListener TIME_ZONE_CLICK_LISTENER
+            = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Log.d(LOG_TAG, "TimeZoneClickListener.onClick()");
+            showDialog(TIMEZONE_LIST_DIALOG_ID);
+        }
+    };
+
+    /**
+     * Called when the user expands a time zone region.
+     * We automatically collapse any other open regions.
+     */
+    private final ExpandableListView.OnGroupExpandListener TIME_ZONE_EXPAND_LISTENER
+            = new ExpandableListView.OnGroupExpandListener() {
+        @Override
+        public void onGroupExpand(int groupPosition) {
+            for (int i = 0; i < timeZoneAdapter.getGroupCount(); i++) {
+                if (i != groupPosition)
+                    timeZoneListView.collapseGroup(i);
+            }
+        }
+    };
+    /** Called when the user selects a new time zone */
+    private final ExpandableListView.OnChildClickListener TIME_ZONE_LIST_LISTENER
+            = new ExpandableListView.OnChildClickListener() {
+        @Override
+        public boolean onChildClick(ExpandableListView parent,
+                                 View v, int groupPosition,
+                                 int childPosition, long childId) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    "TimeZoneClickListener.onChildClick(%d, %d, %s)",
+                    groupPosition, childPosition, Long.toHexString(childId)));
+            ZoneId zone = timeZoneAdapter.getChild(
+                    groupPosition, childPosition);
+            prefs.setTimeZone(zone);
+            timeZoneButton.setText(zone.getDisplayName(
+                    TextStyle.FULL, Locale.getDefault()));
+            timeZoneDialog.dismiss();
+            return true;
+        }
+    };
 
     /**
      * Check whether the user has granted us permission to vibrate.
@@ -242,22 +422,22 @@ public class PreferencesActivity extends Activity {
      */
     private boolean checkVibratePermission() {
 
-	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
-	    // In Lollipop and earlier, permissions are granted at install time.
-	    return PermissionChecker.checkSelfPermission(this,
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            // In Lollipop and earlier, permissions are granted at install time.
+            return PermissionChecker.checkSelfPermission(this,
                     Manifest.permission.VIBRATE) ==
                     PermissionChecker.PERMISSION_GRANTED;
 
-	if (ContextCompat.checkSelfPermission(this,
+        if (ContextCompat.checkSelfPermission(this,
             Manifest.permission.VIBRATE)
             == PackageManager.PERMISSION_GRANTED)
-	    return true;
+            return true;
 
-	// To Do: Request the vibrate permission
-	requestPermissions(new String[] { Manifest.permission.VIBRATE },
+        // To Do: Request the vibrate permission
+        requestPermissions(new String[] { Manifest.permission.VIBRATE },
                 R.id.PrefsCheckBoxAlarmVibrate);
 
-	return false;
+        return false;
 
     }
 
@@ -320,30 +500,31 @@ public class PreferencesActivity extends Activity {
     /** Called when the user presses the Back button */
     @Override
     public void onBackPressed() {
-	Log.d(LOG_TAG, ".onBackPressed()");
-	super.onBackPressed();
+        Log.d(LOG_TAG, ".onBackPressed()");
+        super.onBackPressed();
     }
 
     /** Called when the activity is about to be destroyed */
     @Override
     public void onDestroy() {
-	Log.d(LOG_TAG, ".onDestroy()");
-	StringEncryption.releaseGlobalEncryption(this);
+        Log.d(LOG_TAG, ".onDestroy()");
         if (player != null)
             player.release();
-	super.onDestroy();
+        super.onDestroy();
     }
 
-    /** Look up the spinner item corresponding to a category ID and select it. */
+    /**
+     * Look up the spinner item corresponding to a row ID and select it.
+     */
     void setSpinnerByID(Spinner spinner, long id) {
-	for (int position = 0; position < spinner.getCount(); position++) {
-	    if (spinner.getItemIdAtPosition(position) == id) {
-		spinner.setSelection(position);
-		return;
-	    }
-	}
-	Log.w(LOG_TAG, "No spinner item found for ID " + id);
-	spinner.setSelection(0);
+        for (int position = 0; position < spinner.getCount(); position++) {
+            if (spinner.getItemIdAtPosition(position) == id) {
+                spinner.setSelection(position);
+                return;
+            }
+        }
+        Log.w(LOG_TAG, "No spinner item found for ID " + id);
+        spinner.setSelection(0);
     }
 
 }

@@ -22,6 +22,6 @@ managed in the system settings.
 <li>Mark items as private and optionally encrypt them with a password.</li>
 <li>Export lists to a local XML file.</li>
 <li>Import lists from either XML or a Palm Pilot data file.</li>
-<li>Backwards compatible with Android 2.2 (Froyo) and up.</li>
+<li>Backwards compatible with Android 4 (Ice Cream Sandwich) and up.</li>
 </ul>
 </div>

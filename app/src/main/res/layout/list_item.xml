@@ -20,7 +20,9 @@
     android:layout_width="fill_parent">
       <TextView style="@style/ListText.Entry"
        android:id="@+id/ToDoEditDescription"
+       android:ellipsize="none"
        android:layout_weight="10"
+       android:scrollbars="horizontal"
        android:width="1000sp">
       </TextView>
       <!-- To do: Replace all stock photos with PoV-ray generated images -->

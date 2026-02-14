@@ -16,7 +16,6 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import android.app.AlarmManager;
 import android.content.Context;
 import android.database.DataSetObserver;
 import android.util.Log;
@@ -51,17 +50,6 @@ public class DueDateSelectAdapter extends BaseAdapter {
 
     public static final String TAG = "DueDateSelectAdapter";
 
-    /**
-     * The name of the Intent action to use for waking
-     * up the receiver when the current date changes.
-     */
-    public static final String ACTION_CHANGE_DATE =
-            "com.xmission.trevin.android.todo.action.CHANGE_DATE";
-
-    private final Context context;
-
-    private final AlarmManager alarmManager;
-
     private final LayoutInflater inflater;
 
     /** Shared preferences */
@@ -70,7 +58,7 @@ public class DueDateSelectAdapter extends BaseAdapter {
     private final List<DataSetObserver> observers = new ArrayList<>();
 
     /** View types (internal use) */
-    private enum ViewType {
+    public enum ViewType {
         /** Imminent date items */
         WEEK,
         /** The No Date item */
@@ -147,7 +135,7 @@ public class DueDateSelectAdapter extends BaseAdapter {
     private final DateTimeFormatter[] dateFormatters;
 
     /** The list of dates shown by this adapter */
-    private List<SelectedDate> dates;
+    private final List<SelectedDate> dates;
 
     /**
      * Weak map of views that have been used and the view type
@@ -169,10 +157,7 @@ public class DueDateSelectAdapter extends BaseAdapter {
     public DueDateSelectAdapter(@NonNull Context context,
                                 @NonNull ToDoPreferences preferences) {
         Log.d(TAG, "created");
-        this.context = context;
         prefs = preferences;
-        alarmManager = (AlarmManager) context.getSystemService(
-                Context.ALARM_SERVICE);
         inflater = (LayoutInflater) context.getSystemService(
                 Context.LAYOUT_INFLATER_SERVICE);
 
@@ -281,23 +266,6 @@ public class DueDateSelectAdapter extends BaseAdapter {
     }
 
     /**
-     * @return the type of {@link View} that will be created by
-     * {@link #getView(int, View, ViewGroup)} for the specified item.
-     * We have three types: one for fixed dates, one for
-     * &ldquo;No Date&rdquo;, and one for &ldquo;Choose Date&hellip;&rdquo;.
-     * <p>
-     * As of API 19 (Lollipop), Spinner only supports a single view type (0).
-     * Therefore this method is only used internally; we do <i>not</i>
-     * override the corresponding interface method.
-     * </p>
-     *
-     * @see android.widget.BaseAdapter#getItemViewType(int)
-     */
-    private ViewType internalItemViewType(int position) {
-        return dates.get(position).getViewType();
-    }
-
-    /**
      * Get a View that displays the date at the specified position
      * in the data set.
      *
@@ -316,7 +284,7 @@ public class DueDateSelectAdapter extends BaseAdapter {
             cvDesc = String.format("%s@%s(\"%s\")", cvDesc,
                     Integer.toHexString(System.identityHashCode(convertView)),
                     ((TextView) convertView).getText().toString());
-        Log.d(TAG, String.format(".getView(%d,%s,%s)",
+        Log.d(TAG, String.format(Locale.US, ".getView(%d,%s,%s)",
                 position, cvDesc, parent));
         SelectedDate date = getItem(position);
         TextView tv;

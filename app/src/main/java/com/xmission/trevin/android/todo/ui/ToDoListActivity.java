@@ -16,27 +16,27 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static com.xmission.trevin.android.todo.service.AlarmWorker.EXTRA_ITEM_CATEGORY_ID;
-import static com.xmission.trevin.android.todo.service.AlarmWorker.EXTRA_ITEM_ID;
+import static com.xmission.trevin.android.todo.data.ToDoPreferences.*;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.ToDoCategory;
+import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.service.AlarmWorker;
 import com.xmission.trevin.android.todo.util.AuthenticationException;
 import com.xmission.trevin.android.todo.util.PasswordMismatchException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
+import com.xmission.trevin.android.todo.provider.ItemLoaderCallbacks;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
-import com.xmission.trevin.android.todo.provider.ToDoProvider;
 //import com.xmission.trevin.android.todo.service.AlarmService;
 //import com.xmission.trevin.android.todo.service.PasswordChangeService;
 import com.xmission.trevin.android.todo.service.PasswordChangeWorker;
@@ -45,15 +45,10 @@ import com.xmission.trevin.android.todo.service.PasswordChangeWorker;
 import android.annotation.SuppressLint;
 import android.app.*;
 import android.content.*;
-import android.content.res.Resources;
-import android.database.ContentObserver;
-import android.database.Cursor;
 import android.database.DataSetObserver;
 import android.database.SQLException;
-import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 //import android.os.IBinder;
 //import android.os.RemoteException;
 import android.text.InputType;
@@ -75,7 +70,7 @@ import androidx.work.WorkRequest;
 /**
  * Displays a list of To Do items.  Will display items from the {@link Uri}
  * provided in the intent if there is one, otherwise defaults to displaying the
- * contents of the {@link ToDoProvider}.
+ * contents of the {@link ToDoRepository}.
  *
  * @author Trevin Beattie
  */
@@ -85,8 +80,21 @@ public class ToDoListActivity extends ListActivity {
 
     private static final String TAG = "ToDoListActivity";
 
+    /**
+     * The name of the Intent extra data that holds the item category ID.
+     * This is a {@code long} value.
+     */
+    public static final String EXTRA_CATEGORY_ID =
+            "com.xmission.trevin.android.todo.CategoryId";
+    /**
+     * The name of the Intent extra data that holds the item ID.
+     * This is a {@code long} value.
+     */
+    public static final String EXTRA_ITEM_ID =
+            "com.xmission.trevin.android.todo.ItemId";
+
     private static final int ABOUT_DIALOG_ID = 1;
-    private static final int DUEDATE_LIST_ID = 2;
+    static final int DUEDATE_LIST_ID = 2;
     private static final int DUEDATE_DIALOG_ID = 7;
     private static final int PASSWORD_DIALOG_ID = 8;
     private static final int PROGRESS_DIALOG_ID = 9;
@@ -102,6 +110,8 @@ public class ToDoListActivity extends ListActivity {
 
     /**
      * The columns we are interested in from the item table
+     *
+     * @deprecated
      */
     static final String[] ITEM_PROJECTION = new String[] {
             ToDoItemColumns._ID,
@@ -128,39 +138,6 @@ public class ToDoListActivity extends ListActivity {
     /** Shared preferences */
     private ToDoPreferences prefs;
 
-    /** Preferences tag for the To Do application */
-    public static final String TODO_PREFERENCES = "ToDoPrefs";
-
-    /** Label for the preferences option "Sort order" */
-    public static final String TPREF_SORT_ORDER = "SortOrder";
-
-    /** Label for the preferences option "Show completed tasks" */
-    public static final String TPREF_SHOW_CHECKED = "ShowChecked";
-
-    /** Label for the preferences option "Show due dates" */
-    public static final String TPREF_SHOW_DUE_DATE = "ShowDueDate";
-
-    /** Label for the preferences option "Show priorities" */
-    public static final String TPREF_SHOW_PRIORITY = "ShowPriority";
-
-    /** Label for the preferences option "Show private records" */
-    public static final String TPREF_SHOW_PRIVATE = "ShowPrivate";
-
-    /** The preferences option for showing encrypted records */
-    public static final String TPREF_SHOW_ENCRYPTED = "ShowEncrypted";
-
-    /** Label for the preferences option "Show categories" */
-    public static final String TPREF_SHOW_CATEGORY = "ShowCategory";
-
-    /** Label for the preferences option "Alarm vibrate" */
-    public static final String TPREF_NOTIFICATION_VIBRATE = "NotificationVibrate";
-
-    /** Label for the preferred notification sound */
-    public static final String TPREF_NOTIFICATION_SOUND = "NotificationSound";
-
-    /** Label for the currently selected category */
-    public static final String TPREF_SELECTED_CATEGORY = "SelectedCategory";
-
     /** The URI by which we were started for the To-Do items */
     private Uri todoUri = ToDoItemColumns.CONTENT_URI;
 
@@ -170,10 +147,13 @@ public class ToDoListActivity extends ListActivity {
     /** Category filter spinner */
     Spinner categoryList = null;
 
-    // Used to map categories from the database to views
-    CategoryFilterCursorAdapter categoryAdapter = null;
+    /** The To Do database */
+    ToDoRepository repository = null;
 
-    // Used to map To Do entries from the database to views
+    /** Used to map categories from the database to views */
+    CategoryFilterAdapter categoryAdapter = null;
+
+    /** Used to map To Do entries from the database to views */
     ToDoCursorAdapter itemAdapter = null;
 
     /** Used to map the next week's dates to a list */
@@ -228,46 +208,10 @@ public class ToDoListActivity extends ListActivity {
     /** Encryption for private records */
     StringEncryption encryptor;
 
-    /**
-     * Keep track of changes so that we can
-     * update any alarms and update UI elements
-     * related to setting or clearing the password.
-     */
-    // FIXME: Replace this with a DataSetObserver
-    private class ToDoContentObserver extends ContentObserver {
-	public ToDoContentObserver() {
-	    super(new Handler());
-	}
+    private final ToDoDataObserver registeredObserver =
+            new ToDoDataObserver();
 
-	@Override
-	public boolean deliverSelfNotifications() {
-	    return false;
-	}
-
-	@Override
-	public void onChange(boolean selfChange) {
-	    Log.d(TAG, "ContentObserver.onChange()");
-            OneTimeWorkRequest req = new OneTimeWorkRequest
-                    .Builder(AlarmWorker.class)
-                    .setConstraints(new Constraints.Builder()
-                            .setRequiresDeviceIdle(true)
-                            .build())
-                    // Delay a minute to allow contents to settle
-                    .setInitialDelay(1, TimeUnit.MINUTES)
-                    .addTag("ChangeObserver")
-                    .build();
-            workManager.enqueueUniqueWork("AlarmChangeWork",
-                    ExistingWorkPolicy.REPLACE, req);
-            checkForPassword.run();
-	}
-    }
-    private final ToDoContentObserver registeredObserver =
-	new ToDoContentObserver();
-
-    /** Category Loader callbacks */
-    private CategoryLoaderCallbacks categoryLoaderCallbacks = null;
-
-    /** Item Loader callbacks for */
+    /** Item Loader callbacks */
     private ItemLoaderCallbacks itemLoaderCallbacks = null;
 
     private final ExecutorService executor =
@@ -283,25 +227,27 @@ public class ToDoListActivity extends ListActivity {
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        // If no data was given in the intent (because we were started
-	// as a MAIN activity), then use our default content provider.
-	Intent intent = getIntent();
-	if (intent.getData() == null) {
+        /*
+         * If no data was given in the intent (because we were started
+         * as a MAIN activity), then use our default content URI.
+         */
+        Intent intent = getIntent();
+        if (intent.getData() == null) {
             Log.d(TAG, String.format("No intent data; defaulting to %s",
                     ToDoItemColumns.CONTENT_URI.toString()));
-	    intent.setData(ToDoItemColumns.CONTENT_URI);
-	    todoUri = ToDoItemColumns.CONTENT_URI;
-	    categoryUri = ToDoCategoryColumns.CONTENT_URI;
-	} else {
+            intent.setData(ToDoItemColumns.CONTENT_URI);
+            todoUri = ToDoItemColumns.CONTENT_URI;
+            categoryUri = ToDoCategoryColumns.CONTENT_URI;
+        } else {
             Log.d(TAG, String.format("intent data = %s: %s",
                     intent.getAction(), intent.getDataString()));
             // Fix Me: what are the other actions that could lead here?
-	    todoUri = intent.getData();
-	    categoryUri = todoUri.buildUpon().encodedPath("/categories").build();
-	}
+            todoUri = intent.getData();
+            categoryUri = todoUri.buildUpon().encodedPath("/categories").build();
+        }
 
-	encryptor = StringEncryption.holdGlobalEncryption();
-	prefs = ToDoPreferences.getInstance(this);
+        encryptor = StringEncryption.holdGlobalEncryption();
+        prefs = ToDoPreferences.getInstance(this);
         prefs.registerOnToDoPreferenceChangeListener(
                 new ToDoPreferences.OnToDoPreferenceChangeListener() {
                     @Override
@@ -332,123 +278,135 @@ public class ToDoListActivity extends ListActivity {
 
         int selectedSortOrder = prefs.getSortOrder();
         if ((selectedSortOrder < 0) ||
-        	(selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length)) {
+                (selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length)) {
             prefs.setSortOrder(0);
-	}
+        }
 
         workManager = WorkManager.getInstance(this);
 
-        // To Do: When we switch from Content Resolver to a direct repository,
-        // replace this with checkForPassword on a separate thread.
-        hasPassword = encryptor.hasPassword(getContentResolver());
+        if (repository == null)
+            repository = ToDoRepositoryImpl.getInstance();
+        // Establish a connection to the database (on a non-UI thread)
+        Runnable openRepo = new OpenRepositoryRunner();
+        executor.submit(openRepo);
 
-	/*
-	 * Perform two managed queries.
-	 * On API level ≥ 11, you need to find a way to re-initialize
-	 * the cursor when the activity is restarted!
-	 */
-        categoryAdapter = new CategoryFilterCursorAdapter(this, 0);
-        Log.d(TAG, ".onCreate: initializing a category loader manager");
-        if (Log.isLoggable(TAG, Log.DEBUG))
-            LoaderManager.enableDebugLogging(true);
-        categoryLoaderCallbacks = new CategoryLoaderCallbacks(this,
-                prefs, categoryAdapter, categoryUri);
-        getLoaderManager().initLoader(ToDoCategoryColumns.CONTENT_TYPE.hashCode(),
-                null, categoryLoaderCallbacks);
-
+        categoryAdapter = new CategoryFilterAdapter(this, repository);
         itemAdapter = new ToDoCursorAdapter(
-                this, R.layout.list_item, null,
-                getContentResolver(), todoUri, this, encryptor,
+                this, null, null, encryptor,
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE));
         Log.d(TAG, ".onCreate: initializing a To Do item loader manager");
         itemLoaderCallbacks = new ItemLoaderCallbacks(this,
-                prefs, itemAdapter, todoUri);
+                prefs, itemAdapter, repository);
         getLoaderManager().initLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
                 null, itemLoaderCallbacks);
 
-        // Inflate our view so we can find our lists
-	setContentView(R.layout.list);
+        repository.registerDataSetObserver(registeredObserver);
 
-        categoryAdapter.setDropDownViewResource(
-        	R.layout.simple_spinner_dropdown_item);
+        // Inflate our view so we can find our lists
+        setContentView(R.layout.list);
+
         categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
         categoryList.setAdapter(categoryAdapter);
 
-	itemAdapter.setViewResource(R.layout.list_item);
-	ListView listView = getListView();
-	listView.setAdapter(itemAdapter);
-	listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-	    @Override
-	    public void onItemClick(AdapterView<?> parent,
-		    View view, int position, long id) {
-		Log.d(TAG, ".onItemClick(parent,view," + position + "," + id + ")");
-	    }
-	});
-	listView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-	    @Override
-	    public void onFocusChange(View v, boolean hasFocus) {
-		Log.d(TAG, ".onFocusChange(view," + hasFocus + ")");
-	    }
-	});
-	listView.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-	    @Override
-	    public void onItemSelected(AdapterView<?> parent,
-		    View v, int position, long id) {
-		Log.d(TAG, ".onItemSelected(parent,view," + position + "," + id + ")");
-	    }
-	    @Override
-	    public void onNothingSelected(AdapterView<?> parent) {
-		Log.d(TAG, ".onNothingSelected(parent)");
-	    }
-	});
+        ListView listView = getListView();
+        listView.setAdapter(itemAdapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent,
+                                    View view, int position, long id) {
+                Log.d(TAG, String.format(Locale.US,
+                        ".onItemClick(parent,view,%d,%d)",
+                        position, id));
+            }
+        });
+        listView.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                Log.d(TAG, String.format(Locale.US,
+                        ".onFocusChange(view,%s)", hasFocus));
+            }
+        });
+        listView.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent,
+                                       View v, int position, long id) {
+                Log.d(TAG, String.format(Locale.US,
+                        ".onItemSelected(parent,view,%d,%d)",
+                        position, id));
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                Log.d(TAG, ".onNothingSelected(parent)");
+            }
+        });
 
-	// Set a callback for the New button
-	Button newButton = (Button) findViewById(R.id.ListButtonNew);
-	newButton.setOnClickListener(new NewButtonListener());
+        // Set a callback for the New button
+        Button newButton = (Button) findViewById(R.id.ListButtonNew);
+        newButton.setOnClickListener(new NewButtonListener());
 
-	// Set a callback for the category filter
-	categoryList.setOnItemSelectedListener(new CategorySpinnerListener());
-	categoryAdapter.registerDataSetObserver(new DataSetObserver() {
-	    @Override
-	    public void onChanged() {
-		Log.d(TAG, ".DataSetObserver.onChanged");
-		long selectedCategory = prefs.getSelectedCategory();
-		if (categoryList.getSelectedItemId() != selectedCategory) {
-		    Log.w(TAG, "The category ID at the selected position has changed!");
-		}
-	    }
-	    @Override
-	    public void onInvalidated() {
-		Log.d(TAG, ".DataSetObserver.onInvalidated");
-		categoryList.setSelection(0);
-	    }
-	});
+        // Set a callback for the category filter
+        categoryList.setOnItemSelectedListener(new CategorySpinnerListener());
 
-	// Register this service's data set observer
-	getContentResolver().registerContentObserver(
-		ToDoItemColumns.CONTENT_URI, true, registeredObserver);
-
-	Log.d(TAG, ".onCreate finished.");
+        Log.d(TAG, ".onCreate finished.");
     }
 
+    /**
+     * A runner to open the database on a non-UI thread (if on Honeycomb
+     * or later) and then check whether a password has been set.
+     */
+    private class OpenRepositoryRunner implements Runnable {
+        @Override
+        public void run() {
+            repository.open(ToDoListActivity.this);
+            checkForPassword.run();
+        }
+    }
+
+    /**
+     * Keep track of changes so that we can
+     * update any alarms and update UI elements
+     * related to setting or clearing the password.
+     */
+    private class ToDoDataObserver extends DataSetObserver {
+        @Override
+        public void onChanged() {
+            Log.d(TAG, "ToDoDataObserver.onChanged()");
+            // Check whether the category has changed
+            long selectedCategory = prefs.getSelectedCategory();
+            if (categoryList.getSelectedItemId() != selectedCategory) {
+                Log.w(TAG, "The category ID at the selected position has changed!");
+                setCategorySpinnerByID(selectedCategory);
+            }
+
+            // Update our alarms
+            OneTimeWorkRequest req = new OneTimeWorkRequest
+                    .Builder(AlarmWorker.class)
+                    .setConstraints(new Constraints.Builder()
+                            .setRequiresDeviceIdle(true)
+                            .build())
+                    // Delay a minute to allow contents to settle
+                    .setInitialDelay(1, TimeUnit.MINUTES)
+                    .addTag("ChangeObserver")
+                    .build();
+            workManager.enqueueUniqueWork("AlarmChangeWork",
+                    ExistingWorkPolicy.REPLACE, req);
+
+            // Update UI elements related to the password
+            checkForPassword.run();
+        }
+    }
     /** Called when the activity is about to be started after having been stopped */
     @Override
     public void onRestart() {
-	Log.d(TAG, ".onRestart");
-	if (categoryLoaderCallbacks != null) {
-            getLoaderManager().restartLoader(ToDoCategoryColumns.CONTENT_TYPE.hashCode(),
-		    null, categoryLoaderCallbacks);
-	    getLoaderManager().restartLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
-		    null, itemLoaderCallbacks);
-	}
-	super.onRestart();
+        Log.d(TAG, ".onRestart");
+        super.onRestart();
     }
 
     /** Called when the activity is about to be started */
     @Override
     public void onStart() {
-	Log.d(TAG, ".onStart");
-	super.onStart();
+        Log.d(TAG, ".onStart");
+        super.onStart();
 
         // Check whether we were called with a specific item,
         // e.g. by the user clicking on an alarm notification.
@@ -470,7 +428,7 @@ public class ToDoListActivity extends ListActivity {
      */
     @Override
     protected void onNewIntent(Intent newIntent) {
-        Log.d(TAG, String.format(".onNewIntent(%s, extras=%s)",
+        Log.d(TAG, String.format(Locale.US, ".onNewIntent(%s, extras=%s)",
                 newIntent.getAction(), newIntent.getExtras()));
         super.onNewIntent(newIntent);
         setIntent(newIntent);
@@ -485,7 +443,7 @@ public class ToDoListActivity extends ListActivity {
      */
     private void showItemFromIntent(Intent intent) {
         if (intent.hasExtra(EXTRA_ITEM_ID)) {
-            long categoryId = intent.getLongExtra(EXTRA_ITEM_CATEGORY_ID, -1);
+            long categoryId = intent.getLongExtra(EXTRA_CATEGORY_ID, -1);
             long itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
             if ((categoryId >= 0) && (itemId >= 0))
                 showItemIfNeeded(categoryId, itemId);
@@ -511,99 +469,94 @@ public class ToDoListActivity extends ListActivity {
             prefs.setSelectedCategory(categoryId);
         }
 
-        //ListView listView = getListView();
+        ListView listView = getListView();
         Log.d(TAG, String.format("Target item for display is %d", itemId));
-        // Fix Me: We ought to scroll to the item that was in the
-        // notification, but we have to make sure the cursor's WHERE
-        // clause is update first.
-        //listView.smoothScrollToPosition(?);
+        int position = itemAdapter.getItemPosition(itemId);
+        listView.smoothScrollToPosition(position);
     }
 
     /** Called when the activity is ready for user interaction */
     @Override
     public void onResume() {
-	Log.d(TAG, ".onResume");
-	super.onResume();
+        Log.d(TAG, ".onResume");
+        super.onResume();
     }
 
     /** Called when the activity has lost focus. */
     @Override
     public void onPause() {
-	Log.d(TAG, ".onPause");
-	super.onPause();
+        Log.d(TAG, ".onPause");
+        super.onPause();
     }
 
     /** Called when the activity is obscured by another activity. */
     @Override
     public void onStop() {
-	Log.d(TAG, ".onStop");
-	super.onStop();
+        Log.d(TAG, ".onStop");
+        super.onStop();
     }
 
     /** Called when the activity is about to be destroyed */
     @Override
     public void onDestroy() {
-	getContentResolver().unregisterContentObserver(registeredObserver);
-	StringEncryption.releaseGlobalEncryption(this);
+        repository.unregisterDataSetObserver(registeredObserver);
+        repository.release(this);
+        StringEncryption.releaseGlobalEncryption(this);
         if (progressObserver != null) {
             progressLiveData.removeObserver(progressObserver);
             progressObserver = null;
             progressLiveData = null;
         }
-	super.onDestroy();
+        super.onDestroy();
     }
 
     /**
      * Generate the WHERE clause for the list query.
-     * This is used in both onCreate and onSharedPreferencesChanged.
+     * This is only used for logging; the repository does the
+     * actualy query generation when called by ToDoCursorLoader.
      */
-    // FIX ME: SQL should be moved to the data layer
     public String generateWhereClause() {
-	StringBuilder whereClause = new StringBuilder();
-	if (!prefs.showChecked()) {
-	    whereClause.append(ToDoItemColumns.CHECKED).append(" = 0")
-		.append(" AND (").append(ToDoItemColumns.HIDE_DAYS_EARLIER)
-		.append(" IS NULL OR (").append(ToDoItemColumns.DUE_TIME).append(" - ")
-		.append(ToDoItemColumns.HIDE_DAYS_EARLIER).append(" * 86400000 < ")
-		.append(System.currentTimeMillis()).append("))");
-	}
-	if (!prefs.showPrivate()) {
-	    if (whereClause.length() > 0)
-		whereClause.append(" AND ");
-	    whereClause.append(ToDoItemColumns.PRIVATE).append(" = 0");
-	}
-	long selectedCategory = prefs.getSelectedCategory();
-	if (selectedCategory >= 0) {
-	    if (whereClause.length() > 0)
-		whereClause.append(" AND ");
-	    whereClause.append(ToDoItemColumns.CATEGORY_ID).append(" = ")
-		.append(selectedCategory);
+        StringBuilder whereClause = new StringBuilder();
+        if (!prefs.showChecked()) {
+            whereClause.append(ToDoItemColumns.CHECKED).append(" = 0")
+                    .append(" AND (")
+                    .append(ToDoItemColumns.HIDE_DAYS_EARLIER)
+                    .append(" IS NULL OR (")
+                    .append(ToDoItemColumns.DUE_TIME).append(" - ")
+                    .append(ToDoItemColumns.HIDE_DAYS_EARLIER)
+                    .append(" * 86400000 < ")
+                    .append(System.currentTimeMillis()).append("))");
         }
-	return whereClause.toString();
+        if (!prefs.showPrivate()) {
+            if (whereClause.length() > 0)
+                whereClause.append(" AND ");
+            whereClause.append(ToDoItemColumns.PRIVATE).append(" = 0");
+        }
+        long selectedCategory = prefs.getSelectedCategory();
+        if (selectedCategory >= 0) {
+            if (whereClause.length() > 0)
+                whereClause.append(" AND ");
+            whereClause.append(ToDoItemColumns.CATEGORY_ID).append(" = ")
+                    .append(selectedCategory);
+        }
+        return whereClause.toString();
     }
 
     /** Event listener for the New button */
     class NewButtonListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, ".NewButtonListener.onClick");
-	    ContentValues values = new ContentValues();
-	    // This is the only time an empty description is allowed
-	    values.put(ToDoItemColumns.DESCRIPTION, "");
-	    long selectedCategory = prefs.getSelectedCategory();
-	    if (selectedCategory < 0)
-		selectedCategory = ToDoCategoryColumns.UNFILED;
-	    values.put(ToDoItemColumns.CATEGORY_ID, selectedCategory);
-	    Uri itemUri = getContentResolver().insert(todoUri, values);
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, ".NewButtonListener.onClick");
+            long selectedCategory = prefs.getSelectedCategory();
+            if (selectedCategory < ToDoCategory.UNFILED)
+                selectedCategory = ToDoCategory.UNFILED;
 
-	    // Immediately bring up the details dialog
-	    // until I figure out how
-	    // To do: proper in-line editing of item descriptions.
-	    Intent intent = new Intent(v.getContext(),
-		    ToDoDetailsActivity.class);
-	    intent.setData(itemUri);
-	    v.getContext().startActivity(intent);
-	}
+            // Immediately bring up the details dialog
+            Intent intent = new Intent(v.getContext(),
+                    ToDoDetailsActivity.class);
+            intent.putExtra(EXTRA_CATEGORY_ID, selectedCategory);
+            v.getContext().startActivity(intent);
+        }
     }
 
     /** Event listener for the category filter */
@@ -659,16 +612,10 @@ public class ToDoListActivity extends ListActivity {
 
     /** Look up the spinner item corresponding to a category ID and select it. */
     void setCategorySpinnerByID(long id) {
-	Log.w(TAG, "Changing category spinner to item " + id
-		+ " of " + categoryList.getCount());
-	for (int position = 0; position < categoryList.getCount(); position++) {
-	    if (categoryList.getItemIdAtPosition(position) == id) {
-		categoryList.setSelection(position);
-		return;
-	    }
-	}
-	Log.w(TAG, "No spinner item found for category ID " + id);
-	categoryList.setSelection(0);
+        Log.w(TAG, "Changing category spinner to item " + id
+                + " of " + categoryList.getCount());
+        int position = categoryAdapter.getCategoryPosition(id);
+        categoryList.setSelection(position);
     }
 
     /**
@@ -676,16 +623,17 @@ public class ToDoListActivity extends ListActivity {
      * filtering the To Do list
      */
     public void updateListFilter() {
-        String whereClause = generateWhereClause();
-
         int selectedSortOrder = prefs.getSortOrder();
         if ((selectedSortOrder < 0) ||
                 (selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length))
             selectedSortOrder = 0;
 
-        Log.d(TAG, ".updateListFilter: requerying the data where "
-                + whereClause + " ordered by "
-                + ToDoItemColumns.USER_SORT_ORDERS[selectedSortOrder]);
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Log.d(TAG, String.format(Locale.US, ".updateListFilter:"
+                    + " requerying the data where %s ordered by %s",
+                    generateWhereClause(),
+                    ToDoItemColumns.USER_SORT_ORDERS[selectedSortOrder]));
+        }
         getLoaderManager().restartLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
                 null, itemLoaderCallbacks);
         itemAdapter.notifyDataSetChanged();
@@ -707,7 +655,7 @@ public class ToDoListActivity extends ListActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         Log.d(TAG, "onCreateOptionsMenu");
-	getMenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
         MenuItem unlockItem = menu.findItem(R.id.menuUnlock);
         unlockItem.setVisible(hasPassword && prefs.showPrivate());
         unlockItem.setTitle(encryptor.hasKey()
@@ -715,8 +663,8 @@ public class ToDoListActivity extends ListActivity {
                 : R.string.MenuUnlock);
         menu.findItem(R.id.menuPassword).setTitle(hasPassword
                 ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
-	menu.findItem(R.id.menuSettings).setIntent(
-		new Intent(this, PreferencesActivity.class));
+        menu.findItem(R.id.menuSettings).setIntent(
+                new Intent(this, PreferencesActivity.class));
         menu.findItem(R.id.menuShowCompleted).setShowAsAction(
                 MenuItem.SHOW_AS_ACTION_IF_ROOM);
         this.menu = menu;
@@ -726,14 +674,14 @@ public class ToDoListActivity extends ListActivity {
     /** Called when the user selects a menu item. */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-	if (item.getItemId() == R.id.menuShowCompleted) {
-	    prefs.setShowChecked(!prefs.showChecked());
-	    return true;
+        if (item.getItemId() == R.id.menuShowCompleted) {
+            prefs.setShowChecked(!prefs.showChecked());
+            return true;
         }
 
         if (item.getItemId() == R.id.menuInfo) {
-	    showDialog(ABOUT_DIALOG_ID);
-	    return true;
+            showDialog(ABOUT_DIALOG_ID);
+            return true;
         }
 
         if (item.getItemId() == R.id.menuUnlock) {
@@ -750,20 +698,20 @@ public class ToDoListActivity extends ListActivity {
         }
 
         if (item.getItemId() == R.id.menuExport) {
-	    Intent intent = new Intent(this, ExportActivity.class);
-	    startActivity(intent);
-	    return true;
+            Intent intent = new Intent(this, ExportActivity.class);
+            startActivity(intent);
+            return true;
         }
 
         if (item.getItemId() == R.id.menuImport) {
-	    Intent intent = new Intent(this, ImportActivity.class);
-	    startActivity(intent);
-	    return true;
+            Intent intent = new Intent(this, ImportActivity.class);
+            startActivity(intent);
+            return true;
         }
 
         if (item.getItemId() == R.id.menuPassword) {
-	    showDialog(PASSWORD_DIALOG_ID);
-	    return true;
+            showDialog(PASSWORD_DIALOG_ID);
+            return true;
         }
 
         Log.w(TAG, "onOptionsItemSelected(" + item.getItemId()
@@ -800,21 +748,21 @@ public class ToDoListActivity extends ListActivity {
     /** Called when opening a dialog for the first time */
     @Override
     public Dialog onCreateDialog(int id) {
-	switch (id) {
-	case ABOUT_DIALOG_ID:
-	    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-	    builder.setTitle(R.string.about);
-	    builder.setMessage(getText(R.string.InfoPopupText));
-	    builder.setCancelable(true);
-	    builder.setNeutralButton(R.string.InfoButtonOK,
-		    new DialogInterface.OnClickListener() {
-		public void onClick(DialogInterface dialog, int i) {
-		    dialog.dismiss();
-		}
-	    });
-	    return builder.create();
+        switch (id) {
+            case ABOUT_DIALOG_ID:
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle(R.string.about);
+                builder.setMessage(getText(R.string.InfoPopupText));
+                builder.setCancelable(true);
+                builder.setNeutralButton(R.string.InfoButtonOK,
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int i) {
+                                dialog.dismiss();
+                            }
+                        });
+                return builder.create();
 
-	case DUEDATE_LIST_ID:
+            case DUEDATE_LIST_ID:
             if (dueDateAdapter == null) {
                 dueDateAdapter = new DueDateSelectAdapter(this, prefs);
             }
@@ -843,52 +791,22 @@ public class ToDoListActivity extends ListActivity {
             dueDateListDialog = builder.create();
             return dueDateListDialog;
 
-	case DUEDATE_DIALOG_ID:
-	    dueDateDialog = new CalendarDatePickerDialog(this,
-		    getText(R.string.DatePickerTitleDueDate),
-		    new CalendarDatePickerDialog.OnDateSetListener() {
-		@Override
-		public void onDateSet(CalendarDatePicker dp,
-			int year, int month, int day) {
-		    Uri todoItemUri = itemAdapter.getSelectedItemUri();
-		    Log.d(TAG, "dueDateDialog.onDateSet(" + year + ","
-			    + month + "," + day + ")");
-		    Calendar c = new GregorianCalendar(year, month, day);
-		    c.set(Calendar.HOUR_OF_DAY, 23);
-		    c.set(Calendar.MINUTE, 59);
-		    c.set(Calendar.SECOND, 59);
-		    ContentValues values = new ContentValues();
-		    values.put(ToDoItemColumns.DUE_TIME, c.getTimeInMillis());
-		    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
-		    try {
-			getContentResolver().update(
-				todoItemUri, values, null, null);
-		    } catch (SQLException sx) {
-			new AlertDialog.Builder(ToDoListActivity.this)
-			.setMessage(sx.getMessage())
-			.setIcon(android.R.drawable.ic_dialog_alert)
-			.setNeutralButton(R.string.ConfirmationButtonCancel,
-				new DialogInterface.OnClickListener() {
-			    @Override
-			    public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-			    }
-			}).create().show();
-		    }
-		}
-	    });
-	    return dueDateDialog;
+            case DUEDATE_DIALOG_ID:
+                dueDateDialog = new CalendarDatePickerDialog(this,
+                        getText(R.string.DatePickerTitleDueDate),
+                        new CalendarPickerDateSetListener());
+                return dueDateDialog;
 
-        case UNLOCK_DIALOG_ID:
-            builder = new AlertDialog.Builder(this);
-	    builder.setIcon(R.drawable.ic_menu_login);
-	    builder.setTitle(R.string.MenuUnlock);
-            View unlockLayout =
-                ((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
-                .inflate(R.layout.unlock,
-                        (ScrollView) findViewById(R.id.UnlockLayoutRoot));
-            builder.setView(unlockLayout);
-            final DialogInterface.OnClickListener listener1 =
+            case UNLOCK_DIALOG_ID:
+                builder = new AlertDialog.Builder(this);
+                builder.setIcon(R.drawable.ic_menu_login);
+                builder.setTitle(R.string.MenuUnlock);
+                View unlockLayout =
+                        ((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
+                                .inflate(R.layout.unlock, (ScrollView)
+                                        findViewById(R.id.UnlockLayoutRoot));
+                builder.setView(unlockLayout);
+                final DialogInterface.OnClickListener listener1 =
                     new UnlockOnClickListener();
             builder.setPositiveButton(R.string.ConfirmationButtonOK, listener1);
             builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener1);
@@ -900,45 +818,45 @@ public class ToDoListActivity extends ListActivity {
             showPasswordCheckBox1.setOnCheckedChangeListener(unlockShowPasswordListener);
             return unlockDialog;
 
-	case PASSWORD_DIALOG_ID:
-	    builder = new AlertDialog.Builder(this);
-	    builder.setIcon(R.drawable.ic_menu_login);
-	    builder.setTitle(hasPassword ? R.string.MenuPasswordChange
-                    : R.string.MenuPasswordSet);
-	    View passwordLayout =
-		((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
-		.inflate(R.layout.password,
-			(ScrollView) findViewById(R.id.PasswordLayoutRoot));
-	    builder.setView(passwordLayout);
-	    DialogInterface.OnClickListener listener2 =
-		new PasswordChangeOnClickListener();
-	    builder.setPositiveButton(R.string.ConfirmationButtonOK, listener2);
-	    builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener2);
-	    passwordChangeDialog = builder.create();
-            CheckBox showPasswordCheckBox2 =
-                (CheckBox) passwordLayout.findViewById(R.id.CheckBoxShowPassword);
-            passwordChangeEditText[0] =
-                (EditText) passwordLayout.findViewById(R.id.EditTextOldPassword);
-            passwordChangeEditText[1] =
-                (EditText) passwordLayout.findViewById(R.id.EditTextNewPassword);
-            passwordChangeEditText[2] =
-                (EditText) passwordLayout.findViewById(R.id.EditTextConfirmPassword);
-            showPasswordCheckBox2.setOnCheckedChangeListener(changeShowPasswordListener);
-            return passwordChangeDialog;
+            case PASSWORD_DIALOG_ID:
+                builder = new AlertDialog.Builder(this);
+                builder.setIcon(R.drawable.ic_menu_login);
+                builder.setTitle(hasPassword ? R.string.MenuPasswordChange
+                        : R.string.MenuPasswordSet);
+                View passwordLayout =
+                        ((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
+                                .inflate(R.layout.password, (ScrollView)
+                                        findViewById(R.id.PasswordLayoutRoot));
+                builder.setView(passwordLayout);
+                DialogInterface.OnClickListener listener2 =
+                        new PasswordChangeOnClickListener();
+                builder.setPositiveButton(R.string.ConfirmationButtonOK, listener2);
+                builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener2);
+                passwordChangeDialog = builder.create();
+                CheckBox showPasswordCheckBox2 = (CheckBox)
+                        passwordLayout.findViewById(R.id.CheckBoxShowPassword);
+                passwordChangeEditText[0] = (EditText)
+                        passwordLayout.findViewById(R.id.EditTextOldPassword);
+                passwordChangeEditText[1] = (EditText)
+                        passwordLayout.findViewById(R.id.EditTextNewPassword);
+                passwordChangeEditText[2] = (EditText)
+                        passwordLayout.findViewById(R.id.EditTextConfirmPassword);
+                showPasswordCheckBox2.setOnCheckedChangeListener(changeShowPasswordListener);
+                return passwordChangeDialog;
 
-	case PROGRESS_DIALOG_ID:
-	    progressDialog = new ProgressDialog(this);
-	    progressDialog.setCancelable(false);
-	    progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-	    progressDialog.setMessage("...");
-	    progressDialog.setMax(100);
-	    progressDialog.setProgress(0);
-	    return progressDialog;
+            case PROGRESS_DIALOG_ID:
+                progressDialog = new ProgressDialog(this);
+                progressDialog.setCancelable(false);
+                progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                progressDialog.setMessage("...");
+                progressDialog.setMax(100);
+                progressDialog.setProgress(0);
+                return progressDialog;
 
-	default:
-	    Log.d(TAG, ".onCreateDialog(" + id + "): undefined dialog ID");
-	    return null;
-	}
+            default:
+                Log.d(TAG, ".onCreateDialog(" + id + "): undefined dialog ID");
+                return null;
+        }
     }
 
     /** Called each time a dialog is shown */
@@ -949,26 +867,29 @@ public class ToDoListActivity extends ListActivity {
                 dueDateAdapter.refreshDates();
                 return;
 
-	case DUEDATE_DIALOG_ID:
-	    final Uri itemUri = itemAdapter.getSelectedItemUri();
-	    if (itemUri == null) {
-		Log.w(TAG, "Due date dialog being prepared with no item selected");
-		return;
-	    }
-	    Uri todoItemUri = itemAdapter.getSelectedItemUri();
-	    Cursor itemCursor = getContentResolver().query(todoItemUri,
-		    ITEM_PROJECTION, null, null, null);
-	    if (!itemCursor.moveToFirst())
-		throw new SQLiteDoneException();
-	    int i = itemCursor.getColumnIndex(ToDoItemColumns.DUE_TIME);
-	    Calendar c = Calendar.getInstance();
-	    if (!itemCursor.isNull(i)) {
-		c.setTime(new Date(itemCursor.getLong(i)));
-	    }
-	    itemCursor.close();
-	    dueDateDialog.setDate(c.get(Calendar.YEAR),
-		    c.get(Calendar.MONTH), c.get(Calendar.DATE));
-	    return;
+            case DUEDATE_DIALOG_ID:
+                dueDateDialog.setTimeZone(prefs.getTimeZone());
+                final long itemId = itemAdapter.getSelectedItemId();
+                executor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        ToDoItem item = repository.getItemById(itemId);
+                        if (item == null) {
+                            Log.w(TAG, String.format(Locale.US,
+                                    "Due date dialog prepared by item %d not found",
+                                    itemId));
+                            return;
+                        }
+                        final LocalDate due = item.getDue();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                dueDateDialog.setDate(due);
+                            }
+                        });
+                    }
+                });
+                return;
 
         case UNLOCK_DIALOG_ID:
             CheckBox showPasswordCheckBox1 =
@@ -984,22 +905,22 @@ public class ToDoListActivity extends ListActivity {
                 unlockPasswordEditText.setText("");
             return;
 
-	case PASSWORD_DIALOG_ID:
-            passwordChangeDialog.setTitle(hasPassword
-                    ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
-	    TableRow tr = (TableRow) passwordChangeDialog.findViewById(
-		    R.id.TableRowOldPassword);
-            tr.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
-	    CheckBox showPasswordCheckBox2 =
-		(CheckBox) passwordChangeDialog.findViewById(
-			R.id.CheckBoxShowPassword);
-	    showPasswordCheckBox2.setChecked(false);
-            changeShowPasswordListener.onCheckedChanged(showPasswordCheckBox2,
-                    false);
-	    passwordChangeEditText[0].setText("");
-	    passwordChangeEditText[1].setText("");
-	    passwordChangeEditText[2].setText("");
-	    return;
+            case PASSWORD_DIALOG_ID:
+                passwordChangeDialog.setTitle(hasPassword
+                        ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
+                TableRow tr = (TableRow) passwordChangeDialog.findViewById(
+                        R.id.TableRowOldPassword);
+                tr.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
+                CheckBox showPasswordCheckBox2 =
+                        (CheckBox) passwordChangeDialog.findViewById(
+                                R.id.CheckBoxShowPassword);
+                showPasswordCheckBox2.setChecked(false);
+                changeShowPasswordListener.onCheckedChanged(showPasswordCheckBox2,
+                        false);
+                passwordChangeEditText[0].setText("");
+                passwordChangeEditText[1].setText("");
+                passwordChangeEditText[2].setText("");
+                return;
 
             case PROGRESS_DIALOG_ID:
                 if (progressObserver != null) {
@@ -1056,48 +977,98 @@ public class ToDoListActivity extends ListActivity {
         }
     };
 
+    /**
+     * A runner which displays an alert on the UI thread when a repository
+     * operation on a non-UI thread throws an exception.
+     */
+    private class RepositoryExceptionAlertRunner implements Runnable {
+
+        private final Exception exception;
+
+        RepositoryExceptionAlertRunner(Exception e) {
+            exception = e;
+        }
+
+        @Override
+        public void run() {
+            new AlertDialog.Builder(ToDoListActivity.this)
+                    .setMessage(exception.getMessage())
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setNeutralButton(R.string.ConfirmationButtonCancel,
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            })
+                    .create()
+                    .show();
+        }
+
+    }
+
     class DueDateListSelectionListener
-		implements DialogInterface.OnClickListener {
-	@Override
-	public void onClick(DialogInterface dialog, int which) {
-	    Log.d(TAG, "DueDateListSelectionListener.onClick(" + which + ")");
-	    Uri todoItemUri = itemAdapter.getSelectedItemUri();
-	    ContentValues values = new ContentValues();
-	    switch (which) {
-	    default:
-		Calendar c = Calendar.getInstance();
-		c.add(Calendar.DATE, which);
-		c.set(Calendar.HOUR_OF_DAY, 23);
-		c.set(Calendar.MINUTE, 59);
-		c.set(Calendar.SECOND, 59);
-		values.put(ToDoItemColumns.DUE_TIME, c.getTimeInMillis());
-		break;
+            implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            long todoItemId = itemAdapter.getSelectedItemId();
+            Log.d(TAG, String.format(Locale.US,
+                    "DueDateListSelectionListener.onClick(%d), for item %d",
+                    which, todoItemId));
+            final LocalDate selectedDate;
+            switch (which) {
+                default:
+                    selectedDate = LocalDate.now(prefs.getTimeZone())
+                            .plusDays(which);
+                    break;
 
-	    case 8:	// No date
-		values.putNull(ToDoItemColumns.DUE_TIME);
-		break;
+                case 8:	// No date
+                    selectedDate = null;
+                    break;
 
-	    case 9:	// Other
-		showDialog(DUEDATE_DIALOG_ID);
-		return;
-	    }
-	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
+                case 9:	// Other
+                    showDialog(DUEDATE_DIALOG_ID);
+                    return;
+            }
 
-	    try {
-		getContentResolver().update(todoItemUri, values, null, null);
-	    } catch (SQLException sx) {
-		new AlertDialog.Builder(ToDoListActivity.this)
-		.setMessage(sx.getMessage())
-		.setIcon(android.R.drawable.ic_dialog_alert)
-		.setNeutralButton(R.string.ConfirmationButtonCancel,
-			new DialogInterface.OnClickListener() {
-		    @Override
-		    public void onClick(DialogInterface dialog, int which) {
-			dialog.dismiss();
-		    }
-		}).create().show();
-	    }
-	}
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ToDoItem todo = repository.getItemById(todoItemId);
+                        todo.setDue(selectedDate);
+                        todo.setModTimeNow();
+                        repository.updateItem(todo);
+                    } catch (SQLException sx) {
+                        runOnUiThread(new RepositoryExceptionAlertRunner(sx));
+                    }
+                }
+            });
+        }
+    }
+
+    class CalendarPickerDateSetListener
+            implements CalendarDatePickerDialog.OnDateSetListener {
+        @Override
+        public void onDateSet(CalendarDatePicker dp, final LocalDate date) {
+            final long todoItemId = itemAdapter.getSelectedItemId();
+            Log.d(TAG, String.format(Locale.US,
+                    "dueDateDialog.onDateSet(%s); item=%d",
+                    date.toString(), todoItemId));
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ToDoItem todo = repository.getItemById(todoItemId);
+                        todo.setDue(date);
+                        todo.setModTimeNow();
+                        repository.updateItem(todo);
+                    } catch (SQLException sx) {
+                        runOnUiThread(new RepositoryExceptionAlertRunner(sx));
+                    }
+                }
+            });
+        }
     }
 
     class UnlockOnClickListener implements DialogInterface.OnClickListener {
@@ -1136,7 +1107,7 @@ public class ToDoListActivity extends ListActivity {
         @Override
         public void run() {
             try {
-                if (encryptor.checkPassword(getContentResolver())) {
+                if (encryptor.checkPassword(repository)) {
                     prefs.setShowEncrypted(true);
                     menu.findItem(R.id.menuUnlock)
                             .setTitle(R.string.MenuLock);
@@ -1164,6 +1135,7 @@ public class ToDoListActivity extends ListActivity {
             }
         }
     };
+
     class PasswordChangeOnClickListener
             implements DialogInterface.OnClickListener {
         @Override

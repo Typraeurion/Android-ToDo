@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2026 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,9 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Locale;
 
 import android.app.AlertDialog;
 import android.content.*;
@@ -33,83 +35,88 @@ import com.xmission.trevin.android.todo.R;
  * @author Trevin Beattie
  */
 public class CalendarDatePickerDialog extends AlertDialog
-	implements OnClickListener, CalendarDatePicker.OnDateSetListener {
+        implements OnClickListener, CalendarDatePicker.OnDateSetListener {
     private static final String LOG_TAG = "CalDatePickerDialog";
 
+    private ZoneId zone;
     private final CalendarDatePicker datePicker;
     private final OnDateSetListener callback;
 
     /** The callback used to indicate the user has selected a date. */
     public interface OnDateSetListener {
-	/**
-	 * @param view The view associated with this listener.
-	 * @param year The year that was set.
-	 * @param monthOfYear The month that was set
-	 *  (Calendar.JANUARY - Calendar.DECEMBER).
-	 * @param dayOfMonth The day of the month that was set.
-	 */
-	void onDateSet(CalendarDatePicker view,
-		int year, int monthOfYear, int dayOfMonth);
+        /**
+         * @param view The view associated with this listener.
+         * @param date The date that was set.
+         */
+        void onDateSet(CalendarDatePicker view, LocalDate date);
     }
 
-    /** Create a new calendar date picker dialog for the given date */
-    public CalendarDatePickerDialog(Context context, CharSequence title,
-	    OnDateSetListener callback) {
-	super(context);
-	this.callback = callback;
-	setTitle(title);
+    /**
+     * Create a new calendar date picker dialog for the current date.
+     *
+     * @param context the context in which this dialog is being shown
+     * @param title the title of the dialog indicating which date is being set
+     * @param callback the callback used when the user has selected a date
+     */
+    public CalendarDatePickerDialog(
+            Context context, CharSequence title,
+            OnDateSetListener callback) {
+        super(context);
+        this.callback = callback;
+        setTitle(title);
 
-	setButton(context.getText(R.string.DatePickerCancel), this);
-	setButton2(context.getText(R.string.DatePickerToday), this);
-	setIcon(R.drawable.ic_dialog_time);
+        setButton(context.getText(R.string.DatePickerCancel), this);
+        setButton2(context.getText(R.string.DatePickerToday), this);
+        setIcon(R.drawable.ic_dialog_time);
 
-	LayoutInflater inflater = (LayoutInflater)
-		context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-	View view = inflater.inflate(R.layout.date_picker_dialog, null);
-	setView(view);
-	datePicker = (CalendarDatePicker)
-		view.findViewById(R.id.CalendarDatePicker);
-	datePicker.setOnDateSetListener(this);
+        LayoutInflater inflater = (LayoutInflater)
+                context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = inflater.inflate(R.layout.date_picker_dialog, null);
+        setView(view);
+        datePicker = (CalendarDatePicker)
+                view.findViewById(R.id.CalendarDatePicker);
+        datePicker.setOnDateSetListener(this);
     }
 
-    /** Create a new calendar date picker dialog for the given date */
-    public CalendarDatePickerDialog(Context context, CharSequence title,
-	    OnDateSetListener callback,
-	    int year, int monthOfYear, int dayOfMonth) {
-	this(context, title, callback);
-	setDate(year, monthOfYear, dayOfMonth);
+    /**
+     * Set the date displayed in the date picker dialog.
+     *
+     * @param date the date to highlight
+     */
+    public void setDate(LocalDate date) {
+        datePicker.setDate(date);
     }
 
-    /** Set the date displayed in the date picker dialog */
-    public void setDate(int year, int monthOfYear, int dayOfMonth) {
-	Calendar c = Calendar.getInstance();
-	c.set(year, monthOfYear, dayOfMonth);
-	datePicker.setDate(c.getTime());
+    /**
+     * Set the time zone used for determining the current date
+     *
+     * @param zoneId the time zone to use
+     */
+    public void setTimeZone(ZoneId zoneId) {
+        zone = zoneId;
     }
 
     /** Called when the user clicks either the Cancel or the Today button */
     @Override
     public void onClick(DialogInterface dialog, int which) {
-	Log.d(LOG_TAG, ".onClick(dialog,"
-		+ ((which == DialogInterface.BUTTON1) ? "Cancel"
-			: ((which == DialogInterface.BUTTON2) ? "Today"
-				: Integer.toString(which))) + ")");
-	if ((which == DialogInterface.BUTTON2) && (callback != null)) {
-	    Calendar c = Calendar.getInstance();
-	    callback.onDateSet(datePicker, c.get(Calendar.YEAR),
-		    c.get(Calendar.MONTH), c.get(Calendar.DATE));
-	}
-	dismiss();
+        Log.d(LOG_TAG, String.format(Locale.US,
+                ".onClick(dialog,%s)",
+                ((which == DialogInterface.BUTTON1) ? "Cancel"
+                        : ((which == DialogInterface.BUTTON2) ? "Today"
+                        : Integer.toString(which)))));
+        if ((which == DialogInterface.BUTTON2) && (callback != null)) {
+            callback.onDateSet(datePicker, LocalDate.now(zone));
+        }
+        dismiss();
     }
 
     /** Called when the user clicks a date in the date picker */
     @Override
-    public void onDateSet(CalendarDatePicker view,
-		int year, int monthOfYear, int dayOfMonth) {
-	Log.d(LOG_TAG, ".onDateSet(view," + year + "," + monthOfYear
-		+ "," + dayOfMonth + ")");
-	if (callback != null)
-	    callback.onDateSet(view, year, monthOfYear, dayOfMonth);
-	dismiss();
+    public void onDateSet(CalendarDatePicker view, LocalDate date) {
+        Log.d(LOG_TAG, String.format(Locale.US, ".onDateSet(view,%s)", date));
+        if (callback != null)
+            callback.onDateSet(view, date);
+        dismiss();
     }
+
 }

@@ -287,6 +287,25 @@ public class CategoryFilterAdapter extends BaseAdapter {
     }
 
     /**
+     * Get the position of a category filter from the category ID.
+     * If there is no such category, returns the position of the
+     * &ldquo;ALL&rdquo; psuedo-category.
+     *
+     * @param categoryId the ID of the category to find
+     *
+     * @return the category position
+     */
+    public int getCategoryPosition(long categoryId) {
+        if (categoryId == ToDoPreferences.ALL_CATEGORIES)
+            return 0;
+        for (int i = 0; i < categories.size(); i++) {
+            if (categories.get(i).getId() == categoryId)
+                return i + 1;
+        }
+        return 0;
+    }
+
+    /**
      * @return the type of {@link View} that will be created by
      * {@link #getView(int, View, ViewGroup)} for the specified item.
      * We have three types: one for "All", which is not bound to

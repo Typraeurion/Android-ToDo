@@ -19,167 +19,313 @@ package com.xmission.trevin.android.todo.ui;
 import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoCategoryColumns.*;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.ToDoCategory;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
-import com.xmission.trevin.android.todo.provider.ToDoProvider;
 
 import android.app.*;
 import android.content.*;
-import android.database.*;
-import android.database.sqlite.SQLiteException;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Displays a list of To Do categories.  Will display categories from the
- * {@link Uri} provided in the intent if there is one, otherwise defaults
- * to displaying the contents of the {@link ToDoProvider}
+ * Displays a list of To Do categories, allows the user to add to or edit
+ * them, and saves the list back to the repository.
  *
  * @author Trevin Beattie
  */
-public class CategoryListActivity extends ListActivity {
+public class CategoryListActivity extends AppCompatActivity {
 
     private static final String TAG = "CategoryListActivity";
 
-    /**
-     * The columns we are interested in from the category table
-     */
-    private static final String[] CATEGORY_PROJECTION = new String[] {
-	    _ID, // 0
-	    NAME, // 1
-    };
-
+    /** @deprecated */
     public static final String ORIG_NAME = "original " + NAME;
+
+    private ToDoRepository repository = null;
+
+    private boolean isOpen = false;
+
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
+
+    /**
+     * A copy of the actual categories from the repository.
+     * These are the categories which are displayed and may be
+     * edited.
+     */
+    private List<ToDoCategory> categoryList = null;
+
+    /**
+     * A copy of the original categories that were read in.
+     * We use this to check which ones were modified and thus
+     * need to be updated or deleted.  Keyed by database ID.
+     */
+    private final Map<Long,String> originalNames = new HashMap<>();
+
+    /**
+     * The list adapter which provides the categories to display in this
+     * activity.  This will be set once we've read the categories,
+     * which will be done on a separate (non-UI) thread.
+     */
+    private CategoryEditorAdapter categoryAdapter = null;
+
+    private ListView listView;
+
+    /**
+     * A runner for opening the repository on a non-UI thread,
+     * reading the current list of categories, and initializing
+     * the list adapter.  (This is run on a separate non-UI thread
+     * if on Honeycomb or later.)
+     */
+    private class OpenRepositoryRunner implements Runnable {
+        @Override
+        public void run() {
+            synchronized (CategoryListActivity.this) {
+                repository.open(CategoryListActivity.this);
+                isOpen = true;
+
+                // Populate the category list
+                categoryList = repository.getCategories();
+                Iterator<ToDoCategory> caiter = categoryList.iterator();
+                while (caiter.hasNext()) {
+                    ToDoCategory category = caiter.next();
+                    if (category.getId() == UNFILED) {
+                        // Exclude the "Unfiled" category from edits
+                        caiter.remove();
+                        continue;
+                    }
+                    originalNames.put(category.getId(), category.getName());
+                }
+
+                categoryAdapter = new CategoryEditorAdapter(
+                        CategoryListActivity.this, categoryList);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        listView.setAdapter(categoryAdapter);
+                    }
+                });
+
+                CategoryListActivity.this.notify();
+            }
+        }
+    }
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-	super.onCreate(savedInstanceState);
-	Log.d(TAG, ".onCreate");
+        super.onCreate(savedInstanceState);
+        Log.d(TAG, ".onCreate");
 
-	setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
+        setContentView(R.layout.category_list);
+        setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-	// If no data was given in the intent (because we were started
-	// as a MAIN activity), then use our default content provider.
-	Intent intent = getIntent();
-	if (intent.getData() == null) {
-	    intent.setData(CONTENT_URI);
-	}
+        listView = findViewById(R.id.CategoryList);
 
-	/*
-	 * Perform a managed query. The Activity will handle closing and
-	 * requerying the cursor when needed, but for now we need to
-	 * read in the current category list.  Changes will not be
-	 * written until the activity is finished.
-	 */
-	Cursor categoryCursor = managedQuery(
-		getIntent().getData(), CATEGORY_PROJECTION,
-		_ID + " != " + UNFILED, null, DEFAULT_SORT_ORDER);
-	final List<Map<String,Object>> categoryList =
-	    new ArrayList<>(categoryCursor.getCount());
-	while (categoryCursor.moveToNext()) {
-	    Map<String,Object> valueMap = new HashMap<>();
-	    valueMap.put(NAME, categoryCursor.getString(
-		    categoryCursor.getColumnIndex(NAME)));
-	    valueMap.put(_ID, categoryCursor.getLong(
-		    categoryCursor.getColumnIndex(_ID)));
-	    valueMap.put(ORIG_NAME, valueMap.get(NAME));
-	    categoryList.add(valueMap);
-	}
-	categoryCursor.deactivate();
+        if (repository == null)
+            repository = ToDoRepositoryImpl.getInstance();
 
-	final CategoryEditorAdapter categoryAdapter =
-	    new CategoryEditorAdapter(this, categoryList);
-	setListAdapter(categoryAdapter);
+        /*
+         * The repository should be opened, but not on the UI thread.
+         * After opening the repository, we'll read in the current list
+         * of categories.  Changes will not be written back out until
+         * the activity is finished (clicking "OK").
+         */
+        Runnable openRepo = new OpenRepositoryRunner();
+        if (Looper.getMainLooper().getThread() != Thread.currentThread()) {
+            // This could happen if we're running in a test context.
+            // We can open the repository directly.
+            openRepo.run();
+        } else {
+            executor.submit(openRepo);
+        }
 
-	setContentView(R.layout.category_list);
+        // Add callbacks
+        Button newButton = (Button) findViewById(R.id.CategoryListButtonNew);
+        newButton.setOnClickListener(new NewCategoryListener());
 
-	// Add callbacks
-	Button newButton = (Button) findViewById(R.id.CategoryListButtonNew);
-	newButton.setOnClickListener(new View.OnClickListener() {
-	    @Override
-	    public void onClick(View v) {
-		Log.d(TAG, "newButton.onClick: adding a new category to the list");
-		// Add a new item to the list
-		Map<String,Object> newEntry = new HashMap<>();
-		newEntry.put(ToDoCategoryColumns.NAME, "");
-		categoryList.add(newEntry);
-		// Tell the adapter to refresh the display
-		categoryAdapter.notifyDataSetChanged();
-	    }
-	});
+        Button okButton = (Button) findViewById(R.id.CategoryListButtonOK);
+        okButton.setOnClickListener(new SaveChangesListener());
 
-	Button okButton = (Button) findViewById(R.id.CategoryListButtonOK);
-	okButton.setOnClickListener(new View.OnClickListener() {
-	    @Override
-	    public void onClick(View v) {
-		Log.d(TAG, "okButton.onClick");
-		// Collect and commit changes
-		ContentResolver cr = getContentResolver();
-		Uri categoryUri = getIntent().getData();
-		// To do: start a transaction
-		try {
-		    for (Map<String,Object> entry : categoryList) {
-			String newName = (String) entry.get(ToDoCategoryColumns.NAME);
-			if (entry.containsKey(ToDoCategoryColumns._ID)) {
-			    // Has this entry been modified?
-			    if (!newName.equals(entry.get(ORIG_NAME))) {
-				Uri itemUri = ContentUris.withAppendedId(
-					categoryUri,
-					(Long) entry.get(ToDoCategoryColumns._ID));
-				if (newName.length() == 0) {
-				    cr.delete(itemUri, null, null);
-				} else {
-				    ContentValues values = new ContentValues();
-				    values.put(ToDoCategoryColumns.NAME, newName);
-				    cr.update(itemUri, values, null, null);
-				}
-			    }
-			} else {
-			    if (newName.length() > 0) {
-				ContentValues values = new ContentValues();
-				values.put(ToDoCategoryColumns.NAME, newName);
-				cr.insert(categoryUri, values);
-			    }
-			}
-		    }
-		    // To do: commit the transaction
-		} catch (SQLiteException sqx) {
-		    // Throw up an alert box
-		    AlertDialog.Builder builder =
-			new AlertDialog.Builder(CategoryListActivity.this);
-		    builder.setIcon(android.R.drawable.ic_dialog_alert);
-		    builder.setTitle(sqx.getClass().getSimpleName());
-		    builder.setMessage(sqx.getMessage());
-		    builder.setNeutralButton(
-			    CategoryListActivity.this.getResources().getString(
-				    R.string.CategoryListButtonOKText),
-				    new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int id) {
-				    dialog.cancel();
-				}
-			    });
-		    builder.show();
-		    // To do: roll back the transaction
-		    return;
-		}
-		CategoryListActivity.this.finish();
-	    }
-	});
-
-	Button cancelButton = (Button)
-		findViewById(R.id.CategoryListButtonCancel);
-	cancelButton.setOnClickListener(new View.OnClickListener() {
-	    @Override
-	    public void onClick(View v) {
-		Log.d(TAG, "cancelButton.onClick");
-		CategoryListActivity.this.finish();
-	    }
-	});
+        Button cancelButton = (Button)
+                findViewById(R.id.CategoryListButtonCancel);
+        cancelButton.setOnClickListener(new CancelListener());
     }
+
+    private static final DialogInterface.OnClickListener DISMISS_DIALOG_LISTENER =
+            new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int id) {
+                    dialog.cancel();
+                }
+            };
+
+    /**
+     * Display an error message
+     *
+     * @param message the message to show
+     */
+    private void showAlert(String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setIcon(android.R.drawable.ic_dialog_alert);
+        builder.setTitle(R.string.ErrorTitle);
+        builder.setMessage(message);
+        builder.setNeutralButton(R.string.CategoryListButtonOKText,
+                DISMISS_DIALOG_LISTENER);
+        builder.show();
+    }
+
+    /**
+     * Check that the repository has been opened and the list adapter
+     * set up.  If not, wait for up to 1 second for it to open.
+     * This should be called before any callback tries to use the
+     * category list.
+     *
+     * @return true if the list has been initialized, false if it
+     * was not initialized before the timeout.
+     */
+    private synchronized boolean checkListReady() {
+        if (isOpen)
+            return true;
+        try {
+            wait(5000);
+            return isOpen;
+        } catch (InterruptedException e) {
+            Log.e(TAG, "repository failed to open within 1 second", e);
+            showAlert(getString(R.string.ErrorDatabaseNotOpen));
+            return false;
+        }
+    }
+
+    /**
+     * Callback for adding a new category to the list
+     */
+    private class NewCategoryListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            if (!checkListReady())
+                return;
+            Log.d(TAG, "NewCategoryListener: adding a new category to the list");
+            // Add a new item to the list
+            ToDoCategory newCategory = new ToDoCategory();
+            newCategory.setName("");
+            categoryList.add(newCategory);
+            // Tell the adapter to refresh the display
+            categoryAdapter.notifyDataSetChanged();
+        }
+    }
+
+    /**
+     * Callback for saving all changes to the category list.
+     */
+    private class SaveChangesListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "SaveChangesListener");
+            if (!checkListReady()) {
+                // Since we haven't had a chance to read the categories
+                // in yet, there are no changes to save.  Just exit.
+                finish();
+                return;
+            }
+            // Ensure focus has been removed from any text field
+            // so that any recent edits have been saved.
+            // (Potentially addresses issue #2.)
+            View focus = CategoryListActivity.this.getCurrentFocus();
+            if (focus instanceof EditText)
+                focus.clearFocus();
+
+            executor.submit(new SaveChangesRunner());
+        }
+    }
+
+    /**
+     * Callback for canceling all changes.  We simply finish the activity,
+     * dropping all work in progress.
+     */
+    private class CancelListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "CancelListener");
+            finish();
+        }
+    }
+
+    /**
+     * A runner for saving all changes to the category list.
+     * We do this in a separate thread because database operations
+     * cannot be run on the main UI thread.
+     */
+    private class SaveChangesRunner implements Runnable {
+        @Override
+        public void run() {
+            try {
+                repository.runInTransaction(
+                        new SaveChangesTransactionRunner());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        finish();
+                    }
+                });
+            } catch (final Exception e) {
+                Log.e(TAG, "SaveChangesRunner", e);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showAlert(String.format("%s: %s",
+                                e.getClass().getSimpleName(), e.getMessage()));
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * A runner for the repository calls that
+     * need to be done within a transaction.
+     * This must be called by the repository.
+     */
+    private class SaveChangesTransactionRunner implements Runnable {
+        @Override
+        public void run() {
+            for (ToDoCategory category : categoryList) {
+                if (category.getId() != null) {
+                    // Has this entry been modified?
+                    if (TextUtils.equals(category.getName(),
+                            originalNames.get(category.getId())))
+                        continue;
+                    if (category.getName().length() == 0)
+                        repository.deleteCategory(category.getId());
+                    else
+                        repository.updateCategory(category.getId(),
+                                category.getName());
+                } else {
+                    if (category.getName().length() > 0)
+                        repository.insertCategory(category.getName());
+                }
+            }
+        }
+    }
+
+    /*
+     * Called when the activity is being destroyed
+     */
+    @Override
+    public void onDestroy() {
+        if (isOpen)
+            repository.release(this);
+        super.onDestroy();
+    }
+
 }

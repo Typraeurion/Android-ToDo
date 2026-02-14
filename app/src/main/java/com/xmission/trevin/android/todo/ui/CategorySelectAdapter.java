@@ -32,6 +32,7 @@ import com.xmission.trevin.android.todo.provider.ToDoRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -228,6 +229,32 @@ public class CategorySelectAdapter extends BaseAdapter {
                 (position >= categories.size()))
             return ToDoCategory.UNFILED;
         return categories.get(position).getId();
+    }
+
+    /**
+     * Get the position of a category from the category ID.
+     * If there is no such category, returns the position of the
+     * &ldquo;Unfiled&rdquo; category.
+     *
+     * @param categoryId the ID of the category to find
+     *
+     * @return the category position
+     */
+    public int getCategoryPosition(long categoryId) {
+        for (int i = 0; i < categories.size(); i++) {
+            if (categories.get(i).getId() == categoryId)
+                return i;
+        }
+        for (int i = 0; i < categories.size(); i++) {
+            if (categories.get(i).getId() == ToDoCategory.UNFILED)
+                return i;
+        }
+        Log.w(LOG_TAG, String.format(Locale.US,
+        "No category exists with ID %d or %d; returning %d \"%s\"",
+                categoryId, ToDoCategory.UNFILED,
+                (categories.isEmpty() ? -1 : categories.get(0).getId()),
+                (categories.isEmpty() ? "" : categories.get(0).getName())));
+        return 0;
     }
 
     /**

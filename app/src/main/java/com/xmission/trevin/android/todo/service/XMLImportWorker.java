@@ -216,6 +216,18 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
                 throw e;
             }
         }
+
+        // Initialize string resources on the importer for the progress bar
+        XMLImporter.setModeText(XMLImporter.OpMode.START,
+                context.getString(R.string.ProgressMessageStart));
+        XMLImporter.setModeText(XMLImporter.OpMode.SETTINGS,
+                context.getString(R.string.ProgressMessageImportSettings));
+        XMLImporter.setModeText(XMLImporter.OpMode.CATEGORIES,
+                context.getString(R.string.ProgressMessageImportCategories));
+        XMLImporter.setModeText(XMLImporter.OpMode.ITEMS,
+                context.getString(R.string.ProgressMessageImportItems));
+        XMLImporter.setModeText(XMLImporter.OpMode.FINISH,
+                context.getString(R.string.ProgressMessageFinish));
     }
 
     /**

@@ -18,6 +18,8 @@ package com.xmission.trevin.android.todo.service;
 
 import static android.content.Context.ALARM_SERVICE;
 import static android.content.Context.NOTIFICATION_SERVICE;
+import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_CATEGORY_ID;
+import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_ITEM_ID;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.xmission.trevin.android.todo.R;
@@ -84,12 +86,6 @@ public class AlarmWorker extends Worker {
     /** The name of the Intent extra data that holds the notification date */
     public static final String EXTRA_NOTIFICATION_DATE =
             "com.xmission.trevin.android.todo.AlarmTime";
-    /** The name of the Intent extra data that holds the item category ID */
-    public static final String EXTRA_ITEM_CATEGORY_ID =
-            "com.xmission.trevin.android.todo.CategoryId";
-    /** The name of the Intent extra data that holds the item ID */
-    public static final String EXTRA_ITEM_ID =
-            "com.xmission.trevin.android.todo.ItemId";
 
     public static final String ALMOST_DUE_CHANNEL_ID =
             "due_notification_channel";
@@ -361,7 +357,7 @@ public class AlarmWorker extends Worker {
         mainIntent.setData(ToDoItemColumns.CONTENT_URI);
         mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
        	mainIntent.putExtra(EXTRA_NOTIFICATION_DATE, now.toEpochMilli());
-        mainIntent.putExtra(EXTRA_ITEM_CATEGORY_ID, alarm.getCategoryId());
+        mainIntent.putExtra(EXTRA_CATEGORY_ID, alarm.getCategoryId());
         mainIntent.putExtra(EXTRA_ITEM_ID, alarm.getId());
 
         int defaultFlags = Notification.DEFAULT_LIGHTS;

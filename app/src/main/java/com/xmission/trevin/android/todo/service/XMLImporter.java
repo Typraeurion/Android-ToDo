@@ -21,7 +21,6 @@ import static com.xmission.trevin.android.todo.data.ToDoPreferences.*;
 import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.REPEAT_NONE;
 import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.REPEAT_YEAR_AFTER;
 import static com.xmission.trevin.android.todo.service.XMLExporter.*;
-import static com.xmission.trevin.android.todo.ui.ToDoListActivity.TPREF_NOTIFICATION_SOUND;
 
 import android.util.Log;
 
@@ -165,7 +164,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
          * which may be any type represented as a string.
          */
         PREFERENCE("", PREFERENCES, true),
-        /** Medata section */
+        /** Metadata section */
         METADATA(METADATA_TAG, DOCUMENT, false),
         /** Metadata item */
         METADATUM(METADATA_ITEM, METADATA, true),
@@ -216,7 +215,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             this.hasText = hasText;
         }
 
-        /** @return whether this state expects text contet */
+        /** @return whether this state expects text content */
         public boolean hasText() {
             return hasText;
         }

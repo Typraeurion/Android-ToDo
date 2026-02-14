@@ -43,7 +43,7 @@ public class CategoryEditorAdapter extends BaseAdapter {
     /** Key we use to store the position of the view in the list */
     private static final int POSITION_KEY = 1041952916;
 
-    private LayoutInflater inflater;
+    private final LayoutInflater inflater;
 
     /** The list of categories being edited. */
     private final List<ToDoCategory> categories;
@@ -153,7 +153,7 @@ public class CategoryEditorAdapter extends BaseAdapter {
             new EditCategoryFocusChangeListener();
 
     /**
-     * Get a {@link View) that displays the category for
+     * Get a {@link View} that displays the category for
      * the specified position in the category list.
      *
      * @param position the position of the category in the list

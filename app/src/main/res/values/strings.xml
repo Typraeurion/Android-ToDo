@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.4.3 (2025.12.29)\n
+version 1.5.0 (2026.02.13)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -44,6 +44,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
 </string>
 
     <string name="about">About&#8230;</string>
+    <string name="AlertUnsavedChangesTitle">Unsaved Changes</string>
     <string name="app_name">To Do</string>
     <string name="service_name_alarm">Alarm Service</string>
     <string name="service_name_export">Export Service</string>
@@ -62,8 +63,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="Category_Edit">Edit categories&#8230;</string>
     <string name="Category_Unfiled">Unfiled</string>
     <string-array name="CategoryFilterList">
-	<item>@string/Category_All</item>
-	<item>@string/Category_Unfiled</item>
+        <item>@string/Category_All</item>
+        <item>@string/Category_Unfiled</item>
     </string-array>
     <string name="CategoryListButtonCancelText">Cancel</string>
     <string name="CategoryListButtonNewText">New</string>
@@ -71,7 +72,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ConfirmationTextDeleteNote">Are you sure you wish to delete this note?</string>
     <string name="ConfirmationTextDeleteToDo">Delete this To Do item?</string>
     <string name="ConfirmationButtonCancel">Cancel</string>
+    <string name="ConfirmationButtonDiscard">Discard</string>
     <string name="ConfirmationButtonOK">OK</string>
+    <string name="ConfirmUnsavedChanges">Your note has been changed; going back will lose all changes.  Do you want to discard these changes or cancel going back and continue editing?</string>
     <string name="DatePickerCancel">Cancel</string>
     <string name="DatePickerFri">F</string>
     <string name="DatePickerMon">M</string>
@@ -92,8 +95,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="DetailTextCategory">Category:</string>
     <string name="DetailTextCompleted">Completed:</string>
     <plurals name="DetailTextDaysEarlier">
-	<item quantity="one">%d day earlier</item>
-	<item quantity="other">%d days earlier</item>
+        <item quantity="one">%d day earlier</item>
+        <item quantity="other">%d days earlier</item>
     </plurals>
     <string name="DetailTextDueDate">Due date:</string>
     <string name="DetailTextHideUntil">Hide until:</string>
@@ -107,14 +110,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="DialogOldPassword">Old password:</string>
     <string name="DialogShowPassword">Show password</string>
     <string-array name="DueDateFormatList">
-	<item>@string/DueDateFormatToday</item>
-	<item>@string/DueDateFormatTomorrow</item>
-	<item>@string/DueDateFormatDayOfWeek</item>
-	<item>@string/DueDateFormatDayOfWeek</item>
-	<item>@string/DueDateFormatDayOfWeek</item>
-	<item>@string/DueDateFormatDayOfWeek</item>
-	<item>@string/DueDateFormatDayOfWeek</item>
-	<item>@string/DueDateFormatNextWeek</item>
+        <item>@string/DueDateFormatToday</item>
+        <item>@string/DueDateFormatTomorrow</item>
+        <item>@string/DueDateFormatDayOfWeek</item>
+        <item>@string/DueDateFormatDayOfWeek</item>
+        <item>@string/DueDateFormatDayOfWeek</item>
+        <item>@string/DueDateFormatDayOfWeek</item>
+        <item>@string/DueDateFormatDayOfWeek</item>
+        <item>@string/DueDateFormatNextWeek</item>
     </string-array>
     <string name="DueDateFormatDayOfWeek">M/d &#8211; EEEE</string>
     <string name="DueDateFormatNextWeek">M/d &#8211; \'In 1 week\'</string>
@@ -125,6 +128,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ErrorDescriptionBlank">The item description is empty.</string>
     <string name="ErrorCannotFind">Cannot find %s</string>
     <string name="ErrorCategoryID">The category is invalid.</string>
+    <string name="ErrorDatabaseNotOpen">Could not open the database</string>
     <string name="ErrorExportCantMkdirs">Cannot create directory %s</string>
     <string name="ErrorExportFailed">Export failed</string>
     <string name="ErrorExportPermissionDenied">Permission to write to %s has not been granted.  Please allow access or change the folder then try again.</string>
@@ -139,6 +143,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ErrorPasswordMismatch">New passwords do not match.</string>
     <string name="ErrorPriority">The priority is invalid.</string>
     <string name="ErrorSDNotFound">Storage media not found</string>
+    <string name="ErrorTitle">Error</string>
     <string name="ExportButtonCancel">Cancel</string>
     <string name="ExportButtonOK">Export</string>
     <string name="ExportEditDirectoryHint">Folder in which to save the export file</string>
@@ -172,12 +177,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ImportTextPasswordNotSetWarning">No password has been entered in Settings.  Private records will not be encrypted!</string>
     <string name="ImportTextShowPassword">Show Password:</string>
     <string-array name="ImportTypeList">
-	<item>Clean</item>
-	<item>Overwrite</item>
-	<item>Update</item>
-	<item>Merge</item>
-	<item>Add</item>
-	<item>Test</item>
+        <item>Clean</item>
+        <item>Overwrite</item>
+        <item>Update</item>
+        <item>Merge</item>
+        <item>Add</item>
+        <item>Test</item>
     </string-array>
     <string name="InfoButtonOK">OK</string>
     <string name="ListButtonNew">New</string>
@@ -192,32 +197,32 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="MenuUnlock">Unlock Encrypted Records</string>
     <string name="MenuShowCompleted">Toggle Show Completed</string>
     <string-array name="MonList">
-	<item>@string/MonthJan</item>
-	<item>@string/MonthFeb</item>
-	<item>@string/MonthMar</item>
-	<item>@string/MonthApr</item>
-	<item>@string/MonthMay</item>
-	<item>@string/MonthJun</item>
-	<item>@string/MonthJul</item>
-	<item>@string/MonthAug</item>
-	<item>@string/MonthSep</item>
-	<item>@string/MonthOct</item>
-	<item>@string/MonthNov</item>
-	<item>@string/MonthDec</item>
+        <item>@string/MonthJan</item>
+        <item>@string/MonthFeb</item>
+        <item>@string/MonthMar</item>
+        <item>@string/MonthApr</item>
+        <item>@string/MonthMay</item>
+        <item>@string/MonthJun</item>
+        <item>@string/MonthJul</item>
+        <item>@string/MonthAug</item>
+        <item>@string/MonthSep</item>
+        <item>@string/MonthOct</item>
+        <item>@string/MonthNov</item>
+        <item>@string/MonthDec</item>
     </string-array>
     <string-array name="MonthList">
-	<item>@string/MonthJanuary</item>
-	<item>@string/MonthFebruary</item>
-	<item>@string/MonthMarch</item>
-	<item>@string/MonthApril</item>
-	<item>@string/MonthMay</item>
-	<item>@string/MonthJune</item>
-	<item>@string/MonthJuly</item>
-	<item>@string/MonthAugust</item>
-	<item>@string/MonthSeptember</item>
-	<item>@string/MonthOctober</item>
-	<item>@string/MonthNovember</item>
-	<item>@string/MonthDecember</item>
+        <item>@string/MonthJanuary</item>
+        <item>@string/MonthFebruary</item>
+        <item>@string/MonthMarch</item>
+        <item>@string/MonthApril</item>
+        <item>@string/MonthMay</item>
+        <item>@string/MonthJune</item>
+        <item>@string/MonthJuly</item>
+        <item>@string/MonthAugust</item>
+        <item>@string/MonthSeptember</item>
+        <item>@string/MonthOctober</item>
+        <item>@string/MonthNovember</item>
+        <item>@string/MonthDecember</item>
     </string-array>
     <string name="MonthApr">Apr</string>
     <string name="MonthApril">April</string>
@@ -253,19 +258,19 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="NotificationFormatPrivate">[Private]</string>
     <string name="NotificationFormatEncrypted">[Locked]</string>
     <string-array name="OrdinalList">
-	<item>@string/Ordinal1</item>
-	<item>@string/Ordinal2</item>
-	<item>@string/Ordinal3</item>
-	<item>@string/Ordinal4</item>
-	<item>@string/Ordinal5</item>
-	<item>@string/Ordinal6</item>
-	<item>@string/Ordinal7</item>
-	<item>@string/Ordinal8</item>
-	<item>@string/Ordinal9</item>
-	<item>@string/Ordinal10</item>
-	<item>@string/Ordinal11</item>
-	<item>@string/Ordinal12</item>
-	<item>@string/Ordinal13</item>
+        <item>@string/Ordinal1</item>
+        <item>@string/Ordinal2</item>
+        <item>@string/Ordinal3</item>
+        <item>@string/Ordinal4</item>
+        <item>@string/Ordinal5</item>
+        <item>@string/Ordinal6</item>
+        <item>@string/Ordinal7</item>
+        <item>@string/Ordinal8</item>
+        <item>@string/Ordinal9</item>
+        <item>@string/Ordinal10</item>
+        <item>@string/Ordinal11</item>
+        <item>@string/Ordinal12</item>
+        <item>@string/Ordinal13</item>
     </string-array>
     <string name="Ordinal1">%dst</string>
     <string name="Ordinal2">%dnd</string>
@@ -284,20 +289,20 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="OrdinalOnly"></string>
     <string name="OrdinalOther">other</string>
     <string-array name="OtherOrdinalList">
-	<item>@string/OrdinalOnly</item>
-	<item>@string/OrdinalOther</item>
+        <item>@string/OrdinalOnly</item>
+        <item>@string/OrdinalOther</item>
     </string-array>
     <string name="PasswordProtected">[Locked]</string>
     <string name="PermissionRequiredTitle">Permission Required</string>
     <string name="PermissionToPostNotificationRationale">The app needs your permission to post a notification when it’s time to show the alarm.  Please enable notifications for this app in the Android settings.</string>
     <string name="PrefTextSortBy">Sort by:</string>
     <string-array name="PrefSortByList">
-	<item>@string/PrefSortByPriorityDueDate</item>
-	<item>@string/PrefSortByDueDatePriority</item>
-	<item>@string/PrefSortByCategoryPriority</item>
-	<item>@string/PrefSortByCategoryDueDate</item>
-	<item>@string/PrefSortByAlpha</item>
-	<item>@string/PrefSortByDueDateAlpha</item>
+        <item>@string/PrefSortByPriorityDueDate</item>
+        <item>@string/PrefSortByDueDatePriority</item>
+        <item>@string/PrefSortByCategoryPriority</item>
+        <item>@string/PrefSortByCategoryDueDate</item>
+        <item>@string/PrefSortByAlpha</item>
+        <item>@string/PrefSortByDueDateAlpha</item>
     </string-array>
     <string name="PrefSortByPriorityDueDate">Priority, Due Date</string>
     <string name="PrefSortByDueDatePriority">Due Date, Priority</string>
@@ -317,6 +322,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="PrefTextShowPrivate">Show private records</string>
     <string name="PrefTextShowCategory">Show categories</string>
     <string name="PrefTextSound">Sound:</string>
+    <string name="PrefTextTimeZone">Time zone:</string>
+    <string name="PrefTextUseLocalTimeZone">Use system time zone</string>
     <string name="ProgressMessageDecrypting">Decrypting private records with the old password&#8230;</string>
     <string name="ProgressMessageEncrypting">Encrypting private records with the new password&#8230;</string>
     <string name="ProgressMessageExportCategories">Exporting categories&#8230;</string>
@@ -339,13 +346,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="PromptSaveEitherFileTo">Please save your todo.dat or todo.xml file in:&#10;%s</string>
     <string name="PromptMountStorage">Please unplug your USB cable or disable USB storage.</string>
     <string-array name="RepeatList">
-	<item>@string/RepeatNone</item>
-	<item>@string/RepeatDailyUntilDots</item>
-	<item>@string/RepeatEveryWeek</item>
-	<item>@string/RepeatSemiMonthly</item>
-	<item>@string/RepeatEveryMonth</item>
-	<item>@string/RepeatEveryYear</item>
-	<item>@string/RepeatOther</item>
+        <item>@string/RepeatNone</item>
+        <item>@string/RepeatDailyUntilDots</item>
+        <item>@string/RepeatEveryWeek</item>
+        <item>@string/RepeatSemiMonthly</item>
+        <item>@string/RepeatEveryMonth</item>
+        <item>@string/RepeatEveryYear</item>
+        <item>@string/RepeatOther</item>
     </string-array>
     <string name="RepeatButtonCancel">Cancel</string>
     <string name="RepeatButtonNoEndDate">No End Date</string>
@@ -355,56 +362,56 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="RepeatDailyUntilDots">Daily until&#8230;</string>
     <string name="RepeatDailyUntilWhen">Daily until %s</string>
     <plurals name="RepeatDescriptionDaily">
-	<item quantity="one">Every day</item>
-	<item quantity="other">Every %s day</item>
+        <item quantity="one">Every day</item>
+        <item quantity="other">Every %s day</item>
     </plurals>
     <plurals name="RepeatDescriptionDayAfter">
-	<item quantity="one">%d day after prior task is complete</item>
-	<item quantity="other">%d days after prior task is complete</item>
+        <item quantity="one">%d day after prior task is complete</item>
+        <item quantity="other">%d days after prior task is complete</item>
     </plurals>
     <plurals name="RepeatDescriptionMonthAfter">
-	<item quantity="one">%d month after prior task is complete</item>
-	<item quantity="other">%d months after prior task is complete</item>
+        <item quantity="one">%d month after prior task is complete</item>
+        <item quantity="other">%d months after prior task is complete</item>
     </plurals>
     <plurals name="RepeatDescriptionMonthlyOnDate">
-	<item quantity="one">The %1$s of every month</item>
-	<item quantity="other">The %1$s of every %2$s month</item>
+        <item quantity="one">The %1$s of every month</item>
+        <item quantity="other">The %1$s of every %2$s month</item>
     </plurals>
     <plurals name="RepeatDescriptionMonthlyOnDay">
-	<item quantity="one">The %1$s %2$s of every month</item>
-	<item quantity="other">The %1$s %2$s of every %3$s month</item>
+        <item quantity="one">The %1$s %2$s of every month</item>
+        <item quantity="other">The %1$s %2$s of every %3$s month</item>
     </plurals>
     <string name="RepeatDescriptionNone">No Repeat</string>
     <string name="RepeatDescriptionOnDay">\u0020on %s</string>
     <string name="RepeatDescriptionOn2Days">\u0020on %1$s and %2$s</string>
     <string name="RepeatDescriptionOn2DaysAllowed">\u0020on %1$s or %2$s</string>
     <plurals name="RepeatDescriptionSemiMonthlyOnDates">
-	<item quantity="one">The %1$s and %2$s of every month</item>
-	<item quantity="other">The %1$s and %2$s of every %3$s month</item>
+        <item quantity="one">The %1$s and %2$s of every month</item>
+        <item quantity="other">The %1$s and %2$s of every %3$s month</item>
     </plurals>
     <plurals name="RepeatDescriptionSemiMonthlyOnDays">
-	<item quantity="one">The %1$s %2$s and %3$s %4$s of every month</item>
-	<item quantity="other">The %1$s %2$s and %3$s %4$s of every %5$s month</item>
+        <item quantity="one">The %1$s %2$s and %3$s %4$s of every month</item>
+        <item quantity="other">The %1$s %2$s and %3$s %4$s of every %5$s month</item>
     </plurals>
     <plurals name="RepeatDescriptionWeekAfter">
-	<item quantity="one">%d week after prior task is complete</item>
-	<item quantity="other">%d weeks after prior task is complete</item>
+        <item quantity="one">%d week after prior task is complete</item>
+        <item quantity="other">%d weeks after prior task is complete</item>
     </plurals>
     <plurals name="RepeatDescriptionWeekly">
-	<item quantity="one">Every week</item>
-	<item quantity="other">Every %s week</item>
+        <item quantity="one">Every week</item>
+        <item quantity="other">Every %s week</item>
     </plurals>
     <plurals name="RepeatDescriptionYearAfter">
-	<item quantity="one">%d year after prior task is complete</item>
-	<item quantity="other">%d years after prior task is complete</item>
+        <item quantity="one">%d year after prior task is complete</item>
+        <item quantity="other">%d years after prior task is complete</item>
     </plurals>
     <plurals name="RepeatDescriptionYearlyOnDate">
-	<item quantity="one">%1$s %2$s every year</item>
-	<item quantity="other">%1$s %2$s every %3$s year</item>
+        <item quantity="one">%1$s %2$s every year</item>
+        <item quantity="other">%1$s %2$s every %3$s year</item>
     </plurals>
     <plurals name="RepeatDescriptionYearlyOnDay">
-	<item quantity="one">The %1$s %2$s of %3$s every year</item>
-	<item quantity="other">The %1$s %2$s of %3$s every %4$s year</item>
+        <item quantity="one">The %1$s %2$s of %3$s every year</item>
+        <item quantity="other">The %1$s %2$s of %3$s every %4$s year</item>
     </plurals>
     <string name="RepeatEveryMonth">Every month</string>
     <string name="RepeatEveryOtherMonth">Every other month</string>
@@ -449,14 +456,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="TooltipAlarm">Alarm</string>
     <string name="TooltipNote">Note</string>
     <string name="TooltipRepeat">Repeating</string>
+    <string name="UntitledItem">(Untitled)</string>
     <string-array name="WeekdayList">
-	<item>@string/WeekdaySunday</item>
-	<item>@string/WeekdayMonday</item>
-	<item>@string/WeekdayTuesday</item>
-	<item>@string/WeekdayWednesday</item>
-	<item>@string/WeekdayThursday</item>
-	<item>@string/WeekdayFriday</item>
-	<item>@string/WeekdaySaturday</item>
+        <item>@string/WeekdaySunday</item>
+        <item>@string/WeekdayMonday</item>
+        <item>@string/WeekdayTuesday</item>
+        <item>@string/WeekdayWednesday</item>
+        <item>@string/WeekdayThursday</item>
+        <item>@string/WeekdayFriday</item>
+        <item>@string/WeekdaySaturday</item>
     </string-array>
     <string name="WeekdayFriday">Friday</string>
     <string name="WeekdayMonday">Monday</string>
@@ -465,5 +473,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="WeekdayThursday">Thursday</string>
     <string name="WeekdayTuesday">Tuesday</string>
     <string name="WeekdayWednesday">Wednesday</string>
+    <string name="ZonePrefixAfrica">Africa</string>
+    <string name="ZonePrefixAmerica">America</string>
+    <string name="ZonePrefixAntarctica">Antarctica</string>
+    <string name="ZonePrefixAsia">Asia</string>
+    <string name="ZonePrefixAtlantic">Atlantic</string>
+    <string name="ZonePrefixAustralia">Australia</string>
+    <string name="ZonePrefixEtc">Fixed Offset</string>
+    <string name="ZonePrefixEurope">Europe</string>
+    <string name="ZonePrefixIndian">Indian</string>
+    <string name="ZonePrefixPacific">Pacific</string>
 
 </resources>

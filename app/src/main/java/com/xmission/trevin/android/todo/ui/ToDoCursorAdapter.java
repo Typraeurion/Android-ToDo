@@ -16,25 +16,34 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import java.text.SimpleDateFormat;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.data.RepeatSettings;
+import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.data.repeat.RepeatNone;
+import com.xmission.trevin.android.todo.provider.ToDoCursor;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import android.app.Activity;
+import android.app.LoaderManager;
 import android.app.NotificationManager;
 import android.content.*;
-import android.database.Cursor;
-//import android.database.CursorIndexOutOfBoundsException;
 import android.net.Uri;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * An adapter to map columns from a To Do item cursor to respective
@@ -44,14 +53,20 @@ import android.widget.*;
  *
  * @author Trevin Beattie
  */
-public class ToDoCursorAdapter extends ResourceCursorAdapter {
+public class ToDoCursorAdapter extends BaseAdapter {
 
     public final static String TAG = "ToDoCursorAdapter";
 
-    private final Activity callingActivity;
+    private final Activity activity;
+
+    /** The cursor providing our To Do data */
+    private ToDoCursor cursor;
+
+    private final LayoutInflater inflater;
+
     private final ToDoPreferences prefs;
-    private final ContentResolver contentResolver;
-    private final Uri listUri;
+
+    private final ToDoRepository repo;
 
     /** Encryption in case we're showing private records */
     private final StringEncryption encryptor;
@@ -59,145 +74,290 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
     /** The notification manager for clearing notifications of completed items */
     private final NotificationManager notificationManager;
 
+    /** An executor for running repository operations on a non-UI thread */
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
+
     /**
      * Keep track of which rows are assigned to which views.
      * Binding occurs over and over again for the same rows,
      * so we want to avoid any unnecessary work.
      */
-    private final Map<View,Long> bindingMap = new HashMap<>();
+    //private final Map<View,Long> bindingMap = new HashMap<>();
 
     /** The item whose due date is currently selected */
-    Uri selectedItemUri = null;
+    long selectedItemId = -1;
 
     /**
      * Constructor
+     *
+     * @param activity the Android Activity in which this adapter is running
+     * @param cursor the cursor that provides the To Do items for this
+     * adapter.  May be {@code null} if the data will be loaded by a
+     * {@link LoaderManager}, in which caseit must be set by calling
+     * {@link #swapCursor}.
+     * @param repository the To Do repository, needed for updating an
+     * item&rsquo;s checked state and potentially changing the due date
+     * when the user taps the check box.
+     * @param encryption a {@link StringEncryption} object used to decrypt
+     * encrypted notes.  This may be uninitialized (i.e. no password set)
+     * in which case views for encrypted items will just display
+     * &ldquo;[Locked]&rdquo;.
+     * @param notificationManager the notification manager for clearing
+     * notifications of completed items
      */
-    public ToDoCursorAdapter(Context context, int layout, Cursor cursor,
-            ContentResolver cr, Uri uri, Activity activity,
-            StringEncryption encryption,
-            NotificationManager notificationManager) {
-        super(context, layout, cursor);
-        callingActivity = activity;
-        prefs = ToDoPreferences.getInstance(context);
-        contentResolver = cr;
-        listUri = uri;
+    public ToDoCursorAdapter(Activity activity,
+                             @Nullable ToDoCursor cursor,
+                             @NonNull ToDoRepository repository,
+                             StringEncryption encryption,
+                             NotificationManager notificationManager) {
+        this.activity = activity;
+        this.cursor = cursor;
+        this.repo = repository;
+        prefs = ToDoPreferences.getInstance(activity);
+        inflater = (LayoutInflater) activity.getSystemService(
+                Context.LAYOUT_INFLATER_SERVICE);
         encryptor = encryption;
         this.notificationManager = notificationManager;
     }
 
     /**
-     * @return the URI of the item whose due date was last selected
+     * Close any existing ToDoCursor used by this adapter and replace ti
+     * with the given ToDoCursor.
+     *
+     * @param newCursor the new ToDoCursor to use.  (May be {@code null}.)
      */
-    public Uri getSelectedItemUri() { return selectedItemUri; }
-
-    /** Clear the URI of the item whose due date was selected after use */
-    public void clearSelectedItemUri() { selectedItemUri = null; }
+    public void swapCursor(@Nullable ToDoCursor newCursor) {
+        Log.d(TAG, String.format(Locale.US, ".swapCursor(%s)", newCursor));
+        if (cursor != null)
+            cursor.close();
+        cursor = newCursor;
+        notifyDataSetChanged();
+    }
 
     /**
-     * Called when data from a cursor row needs to be displayed in the
-     * given view.  This may include temporary display for the purpose of
-     * measurement, in which case the same view may be reused multiple
-     * times, so we cannot depend on a permanent connection to the data!
+     * Get the number of items in the data set managed by this adapter
+     *
+     * @return the number of items in the data set
      */
     @Override
-    public void bindView(View view, Context context, Cursor cursor) {
-	int itemID = cursor.getInt(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns._ID));
+    public int getCount() {
+        if (cursor == null) {
+            Log.w(TAG, ".getCount: The cursor has not been set!");
+            return 0;
+        }
+        Log.d(TAG, ".getCount()");
+        return cursor.getCount();
+    }
 
-	// If this view is already bound to the given row, skip (re-)binding.
-	if (bindingMap.containsKey(view) &&
-		bindingMap.get(view) == itemID)
-	    return;
+    /**
+     * @return the ID of the item whose due date was last selected
+     */
+    public long getSelectedItemId() { return selectedItemId; }
 
-	Log.d(TAG, ".bindView(" + view + ",context,cursor [item #"
-		+ itemID + "])");
+    /**
+     * Get the To Do item associated with the specified position
+     * in the data set.
+     *
+     * @param position Position of the item whose data we want
+     *                 within the adapter&rsquo;s data set
+     *
+     * @return The item at the specified position
+     */
+    @Override
+    public ToDoItem getItem(int position) {
+        if (cursor == null) {
+            Log.w(TAG, ".getItem: The cursor has not been set!");
+            return null;
+        }
+        Log.d(TAG, String.format(Locale.US, ".getItem(%d)", position));
+        cursor.moveToPosition(position);
+        return cursor.getItem();
+    }
 
-	// Remove any existing callbacks to avoid spurious database changes
-	removeListeners(view);
+    /**
+     * Get the row ID associated with the specified position in the list.
+     *
+     * @param position The position of the item within the adapter&rsquo;s
+     *                 data set whose row ID we want.
+     *
+     * @return the ID of the item at the specified position
+     */
+    @Override
+    public long getItemId(int position) {
+        if (cursor == null) {
+            Log.w(TAG, ".getItemId: The cursor has not been set!");
+            return -1;
+        }
+        Log.d(TAG, String.format(Locale.US, ".getItemId(%d)", position));
+        cursor.moveToPosition(position);
+        return cursor.getItem().getId();
+    }
 
-	// These are the widgets that need customizing per item
-	CheckBox checkBox = (CheckBox) view.findViewById(R.id.ToDoItemChecked);
-	TextView priorityText = (TextView) view.findViewById(R.id.ToDoTextPriority);
-	// To do: change this back to EditText when you can get it working
-	TextView editDescription = (TextView)
-		view.findViewById(R.id.ToDoEditDescription);
-	ImageView noteImage = (ImageView)
-		view.findViewById(R.id.ToDoNoteImage);
-	ImageView alarmImage = (ImageView)
-		view.findViewById(R.id.ToDoAlarmImage);
-	ImageView repeatImage = (ImageView)
-		view.findViewById(R.id.ToDoRepeatImage);
-	TextView dueDateText = (TextView)
-		view.findViewById(R.id.ToDoTextDueDate);
-	TextView overdueText = (TextView)
-		view.findViewById(R.id.ToDoTextOverdue);
-	TextView categText = (TextView) view.findViewById(R.id.ToDoTextCateg);
+    /**
+     * Get the position of a To Do item from its ID.
+     * If there is no such item, returns the first position.
+     *
+     * @param itemId the ID of the item to find
+     *
+     * @return the position of the item
+     */
+    public int getItemPosition(long itemId) {
+        for (int i = 0; i < cursor.getCount(); i++) {
+            if (cursor.moveToPosition(i)) {
+                if (cursor.getItem().getId() == itemId)
+                    return i;
+            }
+        }
+        return 0;
+    }
 
-	/*
-	 * Get the item data and set the widgets accordingly.
-	 * Note that bindView may be called repeatedly on the same item
-	 * which has already been initialized.  In order to avoid
-	 * unnecessary callbacks, only set widgets when the value
-	 * in the database differs from what is already shown.
-	 */
-	checkBox.setChecked(cursor.getInt(
-		cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.CHECKED)) != 0);
-	priorityText.setText(Integer.toString(cursor.getInt(
-		cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.PRIORITY))));
-	priorityText.setVisibility(prefs.showPriority()
-		? View.VISIBLE : View.GONE);
-	String description = context.getString(R.string.PasswordProtected);
-	int privacy = cursor.getInt(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.PRIVATE));
-        if (privacy > 1) {
-            if (encryptor.hasKey()) {
-                try {
-                    description = encryptor.decrypt(cursor.getBlob(
-                            cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION)));
-                } catch (EncryptionException e) {
-                    Log.e(TAG, "Unable to decrypt the description for item "
-                            + itemID, e);
-                }
+    /**
+     * Get a view that displays the To Do data at the specified position
+     * in the data set.  The parent view will apply the default layout
+     * parameters.
+     *
+     * @param position The position of the item within the adapter&rsquo;s
+     *                 data set.
+     * @param convertView The old view to use, if possible.  If it is not
+     *                    possible to convert this view to display the
+     *                    correct data, this method creates a new view.
+     * @param parent The parent that this view will eventually be attached to.
+     *
+     * @return a {@link View} corresponding to the item
+     * at the specified position.
+     */
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        Log.d(TAG, String.format(Locale.US, ".getView(%d, %s, %s)",
+                position, (convertView == null) ? null
+                        : convertView.getClass().getSimpleName(),
+                parent.getClass().getSimpleName()));
+
+        if (cursor == null) {
+            Log.e(TAG, ".getView: The cursor has not been set!");
+            return null;
+        }
+
+        ToDoItem todo = getItem(position);
+        View itemView = convertView;
+        if (itemView == null) {
+            Log.d(TAG, "Creating a new list item view");
+            itemView = inflater.inflate(R.layout.list_item, parent, false);
+        }
+
+        // Remove any existing callbacks to avoid spurious database changes
+        removeListeners(itemView);
+
+        // These are the widgets that need customizing per item:
+        CheckBox checkBox = (CheckBox)
+                itemView.findViewById(R.id.ToDoItemChecked);
+        TextView priorityText = (TextView)
+                itemView.findViewById(R.id.ToDoTextPriority);
+        TextView editDescription = (TextView)
+                itemView.findViewById(R.id.ToDoEditDescription);
+        ImageView noteImage = (ImageView)
+                itemView.findViewById(R.id.ToDoNoteImage);
+        ImageView alarmImage = (ImageView)
+                itemView.findViewById(R.id.ToDoAlarmImage);
+        ImageView repeatImage = (ImageView)
+                itemView.findViewById(R.id.ToDoRepeatImage);
+        TextView dueDateText = (TextView)
+                itemView.findViewById(R.id.ToDoTextDueDate);
+        TextView overdueText = (TextView)
+                itemView.findViewById(R.id.ToDoTextOverdue);
+        TextView categText = (TextView) itemView.findViewById(R.id.ToDoTextCateg);
+
+        /*
+         * Get the item data and set the widgets accordingly.
+         * Note that bindView may be called repeatedly on the same item
+         * which has already been initialized.
+         */
+        checkBox.setChecked(todo.isChecked());
+        NumberFormat numFormat = NumberFormat
+                .getIntegerInstance(Locale.getDefault());
+        priorityText.setText(numFormat.format(todo.getPriority()));
+        priorityText.setVisibility(prefs.showPriority()
+                ? View.VISIBLE : View.GONE);
+        String description = activity.getString(R.string.PasswordProtected);
+        if (todo.isEncrypted()) {
+            if (encryptor.hasKey()) try {
+                description = encryptor.decrypt(todo.getEncryptedDescription());
+            } catch (EncryptionException e) {
+                Log.e(TAG, String.format(Locale.US,
+                        "Unable to decrypt the description for item %d",
+                        todo.getId()), e);
             }
         } else {
-            description = cursor.getString(
-                    cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DESCRIPTION));
+            description = todo.getDescription();
         }
-	editDescription.setText(description);
-	/* // If the description is empty, this is a new item.
-	// Give it focus so the user can enter some text.
-	// Empty items are removed when the focus is lost.
-	if (description.length() == 0)
-	    editDescription.requestFocus(); */
-	noteImage.setVisibility(cursor.isNull(cursor.getColumnIndex(
-		ToDoSchema.ToDoItemColumns.NOTE)) ? View.GONE : View.VISIBLE);
-        boolean hasAlarm = !cursor.isNull(cursor.getColumnIndex(
-                ToDoSchema.ToDoItemColumns.ALARM_DAYS_EARLIER));
-	alarmImage.setVisibility(hasAlarm ? View.VISIBLE : View.GONE);
-	repeatImage.setVisibility(cursor.getInt(cursor.getColumnIndex(
-		ToDoSchema.ToDoItemColumns.REPEAT_INTERVAL)) == ToDoSchema.ToDoItemColumns.REPEAT_NONE
-		? View.GONE : View.VISIBLE);
-	if (cursor.isNull(cursor.getColumnIndex(ToDoSchema.ToDoItemColumns.DUE_TIME))) {
-	    dueDateText.setText("\u2015");
-	    overdueText.setText("");
-	} else {
-	    Date due = new Date(cursor.getLong(cursor.getColumnIndex(
-		    ToDoSchema.ToDoItemColumns.DUE_TIME)));
-	    SimpleDateFormat df = new SimpleDateFormat(
-		    view.getResources().getString(R.string.ListDueDateFormat));
-	    dueDateText.setText(df.format(due));
-	    overdueText.setText(due.before(new Date()) ? "!" : "");
-	}
-	dueDateText.setVisibility(prefs.showDueDate()
-		? View.VISIBLE : View.GONE);
-	categText.setText(cursor.getString(cursor.getColumnIndex(
-		ToDoSchema.ToDoItemColumns.CATEGORY_NAME)));
-	categText.setVisibility(prefs.showCategory()
-		? View.VISIBLE : View.GONE);
+        editDescription.setText(description);
+        noteImage.setVisibility(((todo.isEncrypted() ? todo.getEncryptedNote()
+                : todo.getNote()) == null) ? View.GONE : View.VISIBLE);
+        alarmImage.setVisibility((todo.getAlarm() == null)
+                ? View.GONE : View.VISIBLE);
+        repeatImage.setVisibility(((todo.getRepeatInterval() == null) ||
+                (todo.getRepeatInterval() instanceof RepeatNone))
+                ? View.GONE : View.VISIBLE);
+        if (todo.getDue() == null) {
+            dueDateText.setText("\u2015");      // em dash
+            overdueText.setText("");
+        } else {
+            DateTimeFormatter df = DateTimeFormatter.ofPattern(
+                    activity.getString(R.string.ListDueDateFormat));
+            dueDateText.setText(df.format(todo.getDue()));
+            overdueText.setText(todo.getDue().isBefore(
+                    LocalDate.now(prefs.getTimeZone())) ? "!" : "");
+        }
+        dueDateText.setVisibility(prefs.showDueDate()
+                ? View.VISIBLE : View.GONE);
+        categText.setText(todo.getCategoryName());
+        categText.setVisibility(prefs.showCategory()
+                ? View.VISIBLE : View.GONE);
 
-	RepeatSettings repeat = new RepeatSettings(cursor);
+        // Set callbacks for the widgets
+        installListeners(itemView, todo.getId());
 
-	// Set callbacks for the widgets
-	Uri itemUri = ContentUris.withAppendedId(listUri, itemID);
-	installListeners(view, itemID, itemUri, hasAlarm, repeat);
+        return itemView;
+    }
+
+    /**
+     * Install listeners onto a view.
+     * This must be done after binding.
+     */
+    void installListeners(View view, long itemId) {
+        CheckBox checkBox = (CheckBox)
+                view.findViewById(R.id.ToDoItemChecked);
+        checkBox.setOnCheckedChangeListener(
+                new OnCheckedChangeListener(itemId));
+
+        // Set a long-click listener to bring up the details dialog
+        OnDetailsClickListener detailsClickListener =
+                new OnDetailsClickListener(itemId);
+        view.setOnLongClickListener(detailsClickListener);
+        TextView editDescription = (TextView)
+                view.findViewById(R.id.ToDoEditDescription);
+        editDescription.setOnLongClickListener(detailsClickListener);
+
+        // Set a regular click listener to bring up the note dialog
+        ImageView noteImage = (ImageView)
+                view.findViewById(R.id.ToDoNoteImage);
+        noteImage.setOnClickListener(new OnNoteClickListener(itemId));
+
+        // Set click listeners for the alarm and repeat fields
+        ImageView alarmImage = (ImageView)
+                view.findViewById(R.id.ToDoAlarmImage);
+        alarmImage.setOnClickListener(detailsClickListener);
+        ImageView repeatImage = (ImageView)
+                view.findViewById(R.id.ToDoRepeatImage);
+        repeatImage.setOnClickListener(detailsClickListener);
+
+        // Set a click listener for changing the due date
+        TextView dueDateText = (TextView)
+                view.findViewById(R.id.ToDoTextDueDate);
+        dueDateText.setOnClickListener(new OnDueDateClickListener(itemId));
+
+        // To do: set a click listener for the category field
     }
 
     /**
@@ -206,227 +366,149 @@ public class ToDoCursorAdapter extends ResourceCursorAdapter {
      * while we're binding the view.
      */
     void removeListeners(View view) {
-	CheckBox checkBox = (CheckBox) view.findViewById(R.id.ToDoItemChecked);
-	checkBox.setOnCheckedChangeListener(null);
-	TextView editDescription = (TextView)
-		view.findViewById(R.id.ToDoEditDescription);
-	editDescription.setOnFocusChangeListener(null);
-	ImageView noteImage = (ImageView)
-		view.findViewById(R.id.ToDoNoteImage);
-	noteImage.setOnClickListener(null);
-	ImageView alarmImage = (ImageView)
-		view.findViewById(R.id.ToDoAlarmImage);
-	alarmImage.setOnClickListener(null);
-	ImageView repeatImage = (ImageView)
-		view.findViewById(R.id.ToDoRepeatImage);
-	repeatImage.setOnClickListener(null);
-	TextView dueDateText = (TextView)
-		view.findViewById(R.id.ToDoTextDueDate);
-	dueDateText.setOnClickListener(null);
-    }
-
-    /**
-     * Install listeners onto a view.
-     * This must be done after binding.
-     */
-    void installListeners(View view, long itemId, Uri itemUri,
-                          boolean hasAlarm, RepeatSettings repeat) {
-	CheckBox checkBox = (CheckBox) view.findViewById(R.id.ToDoItemChecked);
-	checkBox.setOnCheckedChangeListener(
-		new OnCheckedChangeListener(itemId, itemUri, hasAlarm, repeat));
-
-	// Set a long-click listener to bring up the details dialog
-	OnDetailsClickListener detailsClickListener =
-	    new OnDetailsClickListener(itemUri);
-	view.setOnLongClickListener(detailsClickListener);
-	TextView editDescription = (TextView)
-		view.findViewById(R.id.ToDoEditDescription);
-	editDescription.setOnLongClickListener(detailsClickListener);
-
-	// Set a regular click listener to bring up the note dialog
-	ImageView noteImage = (ImageView)
-		view.findViewById(R.id.ToDoNoteImage);
-	noteImage.setOnClickListener(new OnNoteClickListener(itemUri));
-
-	// Set click listeners for the alarm and repeat fields
-	ImageView alarmImage = (ImageView)
-		view.findViewById(R.id.ToDoAlarmImage);
-	alarmImage.setOnClickListener(detailsClickListener);
-	ImageView repeatImage = (ImageView)
-		view.findViewById(R.id.ToDoRepeatImage);
-	repeatImage.setOnClickListener(detailsClickListener);
-
-	// Set a click listener for changing the due date
-	TextView dueDateText = (TextView)
-		view.findViewById(R.id.ToDoTextDueDate);
-	dueDateText.setOnClickListener(new OnDueDateClickListener(itemUri));
-
-	// To do: set a click listener for the category field
+        CheckBox checkBox = (CheckBox)
+                view.findViewById(R.id.ToDoItemChecked);
+        checkBox.setOnCheckedChangeListener(null);
+        TextView editDescription = (TextView)
+                view.findViewById(R.id.ToDoEditDescription);
+        editDescription.setOnFocusChangeListener(null);
+        ImageView noteImage = (ImageView)
+                view.findViewById(R.id.ToDoNoteImage);
+        noteImage.setOnClickListener(null);
+        ImageView alarmImage = (ImageView)
+                view.findViewById(R.id.ToDoAlarmImage);
+        alarmImage.setOnClickListener(null);
+        ImageView repeatImage = (ImageView)
+                view.findViewById(R.id.ToDoRepeatImage);
+        repeatImage.setOnClickListener(null);
+        TextView dueDateText = (TextView)
+                view.findViewById(R.id.ToDoTextDueDate);
+        dueDateText.setOnClickListener(null);
     }
 
     /** Listener for events on the "item completed" checkbox */
     class OnCheckedChangeListener
     implements CompoundButton.OnCheckedChangeListener {
         private final long itemId;
-	private final Uri itemUri;
-        private final boolean hasAlarm;
-	private final RepeatSettings repeat;
 
-	/** Create a new change listener for a specific To-Do item's checkbox */
-	public OnCheckedChangeListener(long itemId, Uri itemUri,
-                                       boolean hasAlarm, RepeatSettings repeat) {
-	    this.itemId = itemId;
-            this.itemUri = itemUri;
-            this.hasAlarm = hasAlarm;
-	    this.repeat = repeat;
-	}
+        /** Create a new change listener for a specific To-Do item's checkbox */
+        public OnCheckedChangeListener(long itemId) {
+            this.itemId = itemId;
+        }
 
-	/** Called when the user checks off (or back on) a to-do item */
-	@Override
-	public void onCheckedChanged(CompoundButton checkBox, boolean isChecked) {
-	    Log.d(TAG, ".onCheckedChanged(" + itemUri + "," + isChecked + ")");
-	    ContentValues values = new ContentValues();
-	    values.put(ToDoSchema.ToDoItemColumns.CHECKED, isChecked ? 1 : 0);
-	    values.put(ToDoSchema.ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
-	    if (isChecked) {
-		Date completed = new Date();
-		values.put(ToDoSchema.ToDoItemColumns.COMPLETED_TIME, completed.getTime());
-		/*
-		 * If the item has a repeat interval,
-		 * see if we need to change the due date
-		 * and reset the completed checkbox.
-		 */
-		if (repeat.getIntervalType() != RepeatSettings.IntervalType.NONE) {
-		    Date nextDueDate = repeat.computeNextDueDate(completed);
-		    if (nextDueDate != null) {
-			values.put(ToDoSchema.ToDoItemColumns.DUE_TIME, nextDueDate.getTime());
-			values.put(ToDoSchema.ToDoItemColumns.CHECKED, 0);
-		    }
-		}
-                if (hasAlarm) {
-                    // Clear any related notification
-                    Log.d(TAG, "Clearing any notification for item " + itemId);
-                    notificationManager.cancel((int) itemId);
+        /** Called when the user checks off (or back on) a to-do item */
+        @Override
+        public void onCheckedChanged(CompoundButton checkBox, boolean isChecked) {
+            Log.d(TAG, String.format(Locale.US,
+                    ".onCheckedChanged(ToDoItem(id=%d),isChecked=%s",
+                    itemId, isChecked));
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    ToDoItem todo = repo.getItemById(itemId);
+                    todo.setChecked(isChecked);
+                    if (isChecked) {
+                        todo.setCompletedNow();
+                        /*
+                         * If the item has a repeat interval,
+                         * see if we need to change the due date
+                         * and reset the completed checkbox.
+                         */
+                        if ((todo.getRepeatInterval() != null) &&
+                                !(todo.getRepeatInterval() instanceof RepeatNone)) {
+                            LocalDate oldDue = todo.getDue();
+                            LocalDate today = LocalDate.now(prefs.getTimeZone());
+                            // Sanity check in case the due date was cleared
+                            if (oldDue == null)
+                                oldDue = today;
+                            LocalDate nextDueDate = todo.getRepeatInterval()
+                                    .computeNextDueDate(oldDue, today);
+                            if (nextDueDate != null) {
+                                todo.setDue(nextDueDate);
+                                todo.setChecked(false);
+                            }
+                        }
+                        if (todo.getAlarm() != null) {
+                            // Clear any related notification
+                            Log.d(TAG, String.format(Locale.US,
+                                    "Clearing any notification for item %d",
+                                    todo.getId()));
+                            notificationManager.cancel(todo.getId().intValue());
+                        }
+                    }
+                    todo.setModTimeNow();
+                    repo.updateItem(todo);
                 }
-	    }
-	    contentResolver.update(itemUri, values, null, null);
-	}
+            });
+        }
     }
-
-    /* Listener for events on the description text field * /
-    class OnFocusChangeListener implements View.OnFocusChangeListener {
-	private final Uri itemUri;
-
-	/** Create a new text watcher for a specific To-Do item's description * /
-	public OnFocusChangeListener(Uri itemUri) {
-	    this.itemUri = itemUri;
-	}
-
-	/** Called after the user leaves the to-do item text * /
-	@Override
-	public void onFocusChange(View v, boolean hasFocus) {
-	    if (true)
-		// We don't care about gaining focus, just losing it.
-		// Unfortunately, we can't rely on focus events. :-(
-		return;
-
-	    EditText editText = (EditText) v;
-	    String newText = editText.getText().toString();
-	    Log.d(TAG, ".onFocusChange: new text = \"" + newText + "\"");
-
-	    // If the user has not entered any text or deleted all of the text,
-	    // drop the item from the database.
-	    if (newText.length() == 0) {
-		contentResolver.delete(itemUri, null, null);
-		return;
-	    }
-
-	    try {
-		// Check the current text and
-		// skip writing the database if it is the same
-		String[] projection = { ToDoItemColumns.DESCRIPTION };
-		Cursor c = contentResolver.query(itemUri, projection, null, null, null);
-		c.moveToFirst();
-		String oldText = c.getString(c.getColumnIndex(ToDoItemColumns.DESCRIPTION));
-		c.close();
-		if (newText.equals(oldText))
-		    return;
-	    } catch (CursorIndexOutOfBoundsException notFound) {
-		// This entry must have been deleted while we weren't looking
-		return;
-	    }
-
-	    // Update the text and modification time in the database
-	    ContentValues values = new ContentValues();
-	    values.put(ToDoItemColumns.DESCRIPTION, newText);
-	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
-	    contentResolver.update(itemUri, values, null, null);
-	}
-    } */
 
     /** Listener for click events on the note icon */
     static class OnNoteClickListener implements View.OnClickListener {
-	private final Uri itemUri;
+        private final Uri itemUri;
 
-	/** Create a new click listener for a specific To-Do item's note */
-	public OnNoteClickListener(Uri itemUri) {
-	    this.itemUri = itemUri;
-	}
+        /** Create a new click listener for a specific To-Do item's note */
+        public OnNoteClickListener(long itemId) {
+            itemUri = ContentUris.withAppendedId(
+                    ToDoSchema.ToDoItemColumns.CONTENT_URI, itemId);
+        }
 
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "ToDoNoteImage.onClick");
-	    Intent intent = new Intent(v.getContext(),
-		    ToDoNoteActivity.class);
-	    intent.setData(itemUri);
-	    v.getContext().startActivity(intent);
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "ToDoNoteImage.onClick");
+            Intent intent = new Intent(v.getContext(),
+                    ToDoNoteActivity.class);
+            intent.setData(itemUri);
+            v.getContext().startActivity(intent);
+        }
     }
 
     /** Listener for click events on the due date */
     class OnDueDateClickListener implements View.OnClickListener {
-	private final Uri itemUri;
+        private final long itemId;
 
-	/** Create a new click listener for a specific To-Do item's due date */
-	public OnDueDateClickListener(Uri itemUri) {
-	    this.itemUri = itemUri;
-	}
+        /** Create a new click listener for a specific To-Do item's due date */
+        public OnDueDateClickListener(long itemId) {
+            this.itemId = itemId;
+        }
 
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "ToDoTextDueDate.onClick(" + itemUri + ")");
-	    selectedItemUri = itemUri;
-	    callingActivity.showDialog(ToDoDetailsActivity.DUEDATE_LIST_ID);
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, String.format(Locale.US,
+                    "ToDoTextDueDate.onClick(%d)", itemId));
+            selectedItemId = itemId;
+            activity.showDialog(ToDoListActivity.DUEDATE_LIST_ID);
+        }
     }
 
     /** Listener for (long-)click events on the To Do item */
     static class OnDetailsClickListener
     implements View.OnLongClickListener, View.OnClickListener {
-	private final Uri itemUri;
+        private final Uri itemUri;
 
-	/** Create a new detail click listener for a specific To-Do item */
-	public OnDetailsClickListener(Uri itemUri) {
-	    this.itemUri = itemUri;
-	}
+        /** Create a new detail click listener for a specific To-Do item */
+        public OnDetailsClickListener(long itemId) {
+            itemUri = ContentUris.withAppendedId(
+                    ToDoSchema.ToDoItemColumns.CONTENT_URI, itemId);
+        }
 
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, ".onClick(EditText)");
-	    Intent intent = new Intent(v.getContext(),
-		    ToDoDetailsActivity.class);
-	    intent.setData(itemUri);
-	    v.getContext().startActivity(intent);
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, ".onClick(EditText)");
+            Intent intent = new Intent(v.getContext(),
+                    ToDoDetailsActivity.class);
+            intent.setData(itemUri);
+            v.getContext().startActivity(intent);
+        }
 
-	@Override
-	public boolean onLongClick(View v) {
-	    Log.d(TAG, ".onLongClick(EditText)");
-	    Intent intent = new Intent(v.getContext(),
-		    ToDoDetailsActivity.class);
-	    intent.setData(itemUri);
-	    v.getContext().startActivity(intent);
-	    return true;
-	}
+        @Override
+        public boolean onLongClick(View v) {
+            Log.d(TAG, ".onLongClick(EditText)");
+            Intent intent = new Intent(v.getContext(),
+                    ToDoDetailsActivity.class);
+            intent.setData(itemUri);
+            v.getContext().startActivity(intent);
+            return true;
+        }
     }
 }

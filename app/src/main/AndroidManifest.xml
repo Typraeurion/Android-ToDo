@@ -4,8 +4,8 @@
     package="com.xmission.trevin.android.todo"
     android:installLocation="auto"
     android:targetSandboxVersion="1"
-    android:versionCode="1040301"
-    android:versionName="1.4.3">
+    android:versionCode="1050001"
+    android:versionName="1.5.0">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
@@ -77,11 +77,6 @@
             </intent-filter>
         </activity>
 
-        <provider android:name=".provider.ToDoProvider"
-                  android:authorities="com.xmission.trevin.android.todo.provider.ToDo"
-                  android:exported="false">
-        </provider>
-
         <activity android:name=".ui.CategoryListActivity"
                   android:exported="false"
                   android:launchMode="standard">
@@ -130,33 +125,6 @@
                 <data android:mimeType="vnd.android.cursor.dir/vnd.xmission.trevin.todo"/>
             </intent-filter>
         </activity>
-
-        <service android:exported="false"
-                 android:label="@string/service_name_password_change"
-                 android:name=".service.PasswordChangeService">
-        </service>
-
-        <!-- service android:exported="false"
-                 android:label="@string/service_name_alarm"
-                 android:name=".service.AlarmService"
-                 android:directBootAware="true"
-                 android:foregroundServiceType="dataSync">
-        </service -->
-
-        <service android:exported="false"
-                 android:label="@string/service_name_import_palm"
-                 android:name=".service.PalmImporterService">
-        </service>
-
-        <service android:exported="false"
-                 android:label="@string/service_name_import_xml"
-                 android:name=".service.XMLImporterService">
-        </service>
-
-        <service android:exported="false"
-                 android:label="@string/service_name_export"
-                 android:name=".service.XMLExporterService">
-        </service>
 
         <receiver android:name=".receiver.AlarmInitReceiver"
                   android:exported="false">

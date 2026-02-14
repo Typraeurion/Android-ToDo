@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Trevin Beattie
+ * Copyright © 2011–2026 Trevin Beattie
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,21 +16,29 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
+import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_ITEM_ID;
+
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.ToDoItem;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 import android.app.*;
 import android.content.*;
-import android.database.Cursor;
-import android.database.SQLException;
-import android.database.sqlite.SQLiteDoneException;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+
+import androidx.annotation.Nullable;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Displays the note of a To Do item.  Will display the item from the
@@ -43,7 +51,22 @@ public class ToDoNoteActivity extends Activity {
     private static final String TAG = "ToDoNoteActivity";
 
     /**
+     * Name of the intent extra that holds the current item description
+     * if we are being started from {@link ToDoDetailsActivity}, since the
+     * description may be for a new item or may be in the middle of changes.
+     */
+    public static final String EXTRA_ITEM_DESCRIPTION = "ToDoDescription";
+
+    /**
+     * Name of the intent extra that holds the note content if we&rsquo;re
+     * returning it to {@link ToDoDetailsActivity}.
+     */
+    public static final String EXTRA_ITEM_NOTE = "ToDoNote";
+
+    /**
      * The columns we are interested in from the item table
+     *
+     * @deprecated
      */
     private static final String[] ITEM_PROJECTION = new String[] {
             ToDoItemColumns._ID,
@@ -52,8 +75,26 @@ public class ToDoNoteActivity extends Activity {
             ToDoItemColumns.PRIVATE,
     };
 
-    /** The URI by which we were started for the To-Do item */
-    private Uri todoUri = ToDoItemColumns.CONTENT_URI;
+    /**
+     * The ID of the To-Do item whose note we are editing;
+     * {@code null} for a new item.
+     */
+    private Long todoId;
+
+    /** The description of the To Do item that we are working on. */
+    private String description;
+
+    /** The original contents of the note (or an empty string for a new note) */
+    private String oldNoteText;
+
+    /** Whether we are handling a note from ToDoDetailsActivity */
+    boolean isDetailHandoff;
+
+    /** The To Do database */
+    ToDoRepository repository = null;
+
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
 
     /** The note */
     EditText toDoNote = null;
@@ -69,184 +110,339 @@ public class ToDoNoteActivity extends Activity {
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
         Intent intent = getIntent();
-        if (intent.getData() == null)
-            throw new NullPointerException("No data provided with the intent");
-        todoUri = intent.getData();
+        todoId = null;
+        description = getString(R.string.UntitledItem);
+        oldNoteText = "";
+        if (intent.hasExtra(EXTRA_ITEM_ID)) {
+            todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+        }
+        isDetailHandoff = intent.hasExtra(EXTRA_ITEM_DESCRIPTION);
+        if (isDetailHandoff) {
+            description = intent.getStringExtra(EXTRA_ITEM_DESCRIPTION);
+            oldNoteText = intent.getStringExtra(EXTRA_ITEM_NOTE);
+            if (oldNoteText == null)
+                oldNoteText = "";
+        }
+        Object savedData = getLastNonConfigurationInstance();
+        boolean hasSavedState = (savedData instanceof NoteFormData);
 
-        // Perform a managed query. The Activity will handle closing and
-        // requerying the cursor when needed.
-        Cursor itemCursor = getContentResolver().query(todoUri,
-        	ITEM_PROJECTION, null, null, null);
-        if (!itemCursor.moveToFirst())
-            throw new SQLiteDoneException();
+        if (repository == null)
+            repository = ToDoRepositoryImpl.getInstance();
+        encryptor = StringEncryption.holdGlobalEncryption();
 
         // Inflate our view so we can find our field
-	setContentView(R.layout.note);
+        setContentView(R.layout.note);
+        toDoNote = (EditText) findViewById(R.id.NoteEditText);
 
-	int isPrivate = itemCursor.getInt(
-        	itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
-
-	encryptor = StringEncryption.holdGlobalEncryption();
-        String description = getResources().getString(R.string.PasswordProtected);
-        String note = description;
-	int i = itemCursor.getColumnIndex(ToDoItemColumns.DESCRIPTION);
-        if (isPrivate > 1) {
-            if (encryptor.hasKey()) {
-                try {
-                    description = encryptor.decrypt(itemCursor.getBlob(i));
-                } catch (EncryptionException e) {
-                    Toast.makeText(this, e.getMessage(),
-                            Toast.LENGTH_LONG).show();
-                    finish();
-                }
-            } else {
-        	Toast.makeText(this, R.string.PasswordProtected,
-        		Toast.LENGTH_LONG).show();
-        	finish();
-            }
-        } else {
-            description = itemCursor.getString(i);
-        }
-        i = itemCursor.getColumnIndex(ToDoItemColumns.NOTE);
-        if (itemCursor.isNull(i)) {
-            note = "";
-        } else {
-            if (isPrivate > 1) {
-        	if (encryptor.hasKey()) {
-                    try {
-                        note = encryptor.decrypt(itemCursor.getBlob(i));
-                    } catch (EncryptionException e) {
-                        Toast.makeText(this, e.getMessage(),
-                                Toast.LENGTH_LONG).show();
-                        finish();
-                    }
-        	} else {
-        	    Toast.makeText(this, R.string.PasswordProtected,
-        		    Toast.LENGTH_LONG).show();
-        	    finish();
-        	}
-            } else {
-        	note = itemCursor.getString(i);
-            }
+        if (hasSavedState) {
+            restoreState((NoteFormData) savedData);
         }
 
-        setTitle(getResources().getString(R.string.app_name)
-		+ " \u2015 " + description);
+        else {
+            // Initialize the default state for now; the OpenRepositoryRunner
+            // will load any item and update the form when it's ready.
+            setTitle(getResources().getString(R.string.app_name)
+                    + " \u2015 " + description);
 
-	toDoNote = (EditText) findViewById(R.id.NoteEditText);
-	toDoNote.setText(note);
+            toDoNote.setText("");
+        }
 
         // Set callbacks
         Button button = (Button) findViewById(R.id.NoteButtonOK);
         button.setOnClickListener(new OKButtonOnClickListener());
+        button.setEnabled(isDetailHandoff);
 
         button = (Button) findViewById(R.id.NoteButtonDelete);
         button.setOnClickListener(new DeleteButtonOnClickListener());
+        button.setEnabled(isDetailHandoff);
 
-	itemCursor.close();
+        // Connect to the database (on a non-UI thread) and populate the UI
+        Runnable openRepo = new OpenRepositoryRunner(
+                !(isDetailHandoff || hasSavedState));
+        executor.submit(openRepo);
     }
 
+    /**
+     * A runner to open the database on a non-UI thread
+     * (if on Honeycomb or later) and then load the note if needed.
+     */
+    private class OpenRepositoryRunner implements Runnable {
+        final boolean loadNote;
+        OpenRepositoryRunner(boolean loadNote) {
+            this.loadNote = loadNote;
+        }
+        @Override
+        public void run() {
+            repository.open(ToDoNoteActivity.this);
+            ToDoItem todo = null;
+            if (!isDetailHandoff)
+                todo = repository.getItemById(todoId);
+            runOnUiThread(new FinalizeUIRunner(todo));
+        }
+    }
+
+    /**
+     * Called (on the UI thread) after we&rsquo;ve established a
+     * connection to the databaase and read the To Do item (if any)
+     * to populate the UI and enable buttons.
+     */
+    private class FinalizeUIRunner implements Runnable {
+        final ToDoItem todo;
+        /**
+         * @param loadedItem the item to read the description and note
+         * from, or {@code null} if we were called from the details
+         * activity or restored from a saved state.
+         */
+        FinalizeUIRunner(@Nullable ToDoItem loadedItem) {
+            todo = loadedItem;
+        }
+        @Override
+        public void run() {
+            if (todo != null) {
+                description = todo.isEncrypted()
+                        ? getResources().getString(R.string.PasswordProtected)
+                        : todo.getDescription();
+                oldNoteText = todo.isEncrypted()
+                        ? description : todo.getNote();
+                if (todo.isEncrypted()) {
+                    if (encryptor.hasKey()) {
+                        try {
+                            description = encryptor.decrypt(
+                                    todo.getEncryptedDescription());
+                            if (todo.getEncryptedNote() != null)
+                                oldNoteText = encryptor.decrypt(
+                                        todo.getEncryptedNote());
+                        } catch (EncryptionException e) {
+                            Toast.makeText(ToDoNoteActivity.this,
+                                    e.getMessage(), Toast.LENGTH_LONG)
+                                    .show();
+                            finish();
+                            return;
+                        }
+                    } else {
+                        Toast.makeText(ToDoNoteActivity.this,
+                                R.string.PasswordProtected, Toast.LENGTH_LONG)
+                                .show();
+                        finish();
+                        return;
+                    }
+                }
+                if (oldNoteText == null)
+                    oldNoteText = "";
+                setTitle(getResources().getString(R.string.app_name)
+                        + " \u2015 " + description);
+                toDoNote.setText(oldNoteText);
+
+                // Enable the OK and Delete buttons
+                Button button = (Button) findViewById(R.id.NoteButtonOK);
+                button.setEnabled(true);
+                button = (Button) findViewById(R.id.NoteButtonDelete);
+                button.setEnabled(true);
+            }
+        }
+    }
+
+    /**
+     * Restore the state of the activity from a saved configuration
+     *
+     * @param data the saved configuration data
+     */
+    private void restoreState(NoteFormData data) {
+        todoId = data.todoId;
+        description = data.description;
+        oldNoteText = data.oldNoteText;
+        isDetailHandoff = data.isDetailHandoff;
+
+        setTitle(getResources().getString(R.string.app_name)
+                + " \u2015 " + description);
+        toDoNote.setText(data.currentNoteText);
+    }
+
+    /**
+     * Called when the activity is about to be destroyed
+     * and then immediately restarted (such as an orientation change).
+     */
+    @Override
+    public NoteFormData onRetainNonConfigurationInstance() {
+        NoteFormData data = new NoteFormData();
+        data.todoId = todoId;
+        data.isDetailHandoff = isDetailHandoff;
+        data.description = description;
+        data.oldNoteText = oldNoteText;
+        data.currentNoteText = toDoNote.getText().toString();
+        return data;
+    }
+
+    /** Called when the user presses the Back button */
+    @Override
+    public void onBackPressed() {
+        Log.d(TAG, "Back button pressed");
+        // Did the user make any changes to the note?
+        String note = toDoNote.getText().toString();
+        if (!TextUtils.equals(oldNoteText, note)) {
+            Log.d(TAG, "Note has been changed; asking for confirmation");
+            new AlertDialog.Builder(this)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setMessage(R.string.ConfirmUnsavedChanges)
+                    .setTitle(R.string.AlertUnsavedChangesTitle)
+                    .setNegativeButton(R.string.ConfirmationButtonCancel,
+                            ToDoDetailsActivity.DISMISS_LISTENER)
+                    .setPositiveButton(R.string.ConfirmationButtonDiscard,
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog,
+                                                    int which) {
+                                    dialog.dismiss();
+                                    Log.d(TAG, "Calling superclass onBackPressed");
+                                    ToDoNoteActivity.super.onBackPressed();
+                                }
+                            })
+                    .create().show();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    /** Called when the activity is about to be destroyed */
     @Override
     public void onDestroy() {
-	StringEncryption.releaseGlobalEncryption(this);
-	super.onDestroy();
+        repository.release(this);
+        StringEncryption.releaseGlobalEncryption(this);
+        super.onDestroy();
     }
 
     class OKButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "NoteButtonOK.onClick");
-	    ContentValues values = new ContentValues();
-	    String note = toDoNote.getText().toString();
-	    if (note.length() == 0) {
-		values.putNull(ToDoItemColumns.NOTE);
-	    } else {
-		/*
-		 * Figure out whether to encrypt this record.
-		 * We read the database again in case the private
-		 * flag has changed.
-		 */
-		Cursor itemCursor = getContentResolver().query(todoUri,
-			ITEM_PROJECTION, null, null, null);
-		if (!itemCursor.moveToFirst())
-		    throw new SQLiteDoneException();
-		int isPrivate = itemCursor.getInt(
-			itemCursor.getColumnIndex(ToDoItemColumns.PRIVATE));
-		itemCursor.close();
-		values.put(ToDoItemColumns.NOTE, note);
-		if (isPrivate > 1) {
-		    if (encryptor.hasKey()) {
-			try {
-			    values.put(ToDoItemColumns.NOTE, encryptor.encrypt(note));
-                        } catch (EncryptionException e) {
-                            values.put(ToDoItemColumns.PRIVATE, 1);
-                        }
-		    } else {
-			values.put(ToDoItemColumns.PRIVATE, 1);
-		    }
-		}
-	    }
-	    values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
-	    try {
-		getContentResolver().update(todoUri, values, null, null);
-		ToDoNoteActivity.this.finish();
-	    } catch (SQLException sx) {
-		new AlertDialog.Builder(ToDoNoteActivity.this)
-		.setMessage(sx.getMessage())
-		.setIcon(android.R.drawable.ic_dialog_alert)
-		.setNeutralButton(R.string.ConfirmationButtonCancel,
-			new DialogInterface.OnClickListener() {
-		    @Override
-		    public void onClick(DialogInterface dialog, int which) {
-			dialog.dismiss();
-		    }
-		}).create().show();
-	    }
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "NoteButtonOK.onClick");
+            String note = toDoNote.getText().toString();
+            // If the note content hasn't changed, skip saving it.
+            if (TextUtils.equals(oldNoteText, note)) {
+                if (isDetailHandoff)
+                    setResult(RESULT_CANCELED);
+                SAVE_FINISHED_RUNNER.run();
+                return;
+            }
+            if (note.length() == 0)
+                note = null;
+            if (isDetailHandoff) {
+                Intent returnIntent = new Intent();
+                returnIntent.putExtra(EXTRA_ITEM_NOTE, note);
+                setResult(RESULT_OK, returnIntent);
+                SAVE_FINISHED_RUNNER.run();
+            } else {
+                executor.submit(new SaveNoteRunner(todoId, note));
+            }
+        }
+    }
+
+    /**
+     * Saves changes to the note on a non-UI thread.
+     * Closes the activity when finished.  If an error occurs,
+     * shows an alert (on the UI thread) instead.
+     */
+    private class SaveNoteRunner implements Runnable {
+        private final long todoId;
+        private final String note;
+        SaveNoteRunner(long todoId, @Nullable String newNote) {
+            this.todoId = todoId;
+            note = newNote;
+        }
+        @Override
+        public void run() {
+            try {
+                ToDoItem todo = repository.getItemById(todoId);
+                if (todo.isEncrypted()) {
+                    if (encryptor.hasKey()) {
+                        todo.setEncryptedNote(encryptor.encrypt(note));
+                    } else {
+                        runOnUiThread(new SaveExceptionAlertRunner(
+                                new IllegalStateException(
+                                        "Cannot update a locked note")));
+                        return;
+                    }
+                } else {
+                    todo.setNote(note);
+                }
+                todo.setModTimeNow();
+                repository.updateItem(todo);
+                runOnUiThread(SAVE_FINISHED_RUNNER);
+            } catch (Exception sx) {
+                runOnUiThread(new SaveExceptionAlertRunner(sx));
+            }
+        }
     }
 
     class DeleteButtonOnClickListener implements View.OnClickListener {
-	@Override
-	public void onClick(View v) {
-	    Log.d(TAG, "NoteButtonDelete.onClick");
-	    AlertDialog.Builder builder =
-		new AlertDialog.Builder(ToDoNoteActivity.this);
-	    builder.setIcon(android.R.drawable.ic_dialog_alert);
-	    builder.setMessage(R.string.ConfirmationTextDeleteNote);
-	    builder.setNegativeButton(R.string.ConfirmationButtonCancel,
-		    new DialogInterface.OnClickListener() {
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-		    dialog.dismiss();
-		}
-	    });
-	    builder.setPositiveButton(R.string.ConfirmationButtonOK,
-		    new DialogInterface.OnClickListener() {
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-		    dialog.dismiss();
-		    try {
-			ContentValues values = new ContentValues();
-			values.putNull(ToDoItemColumns.NOTE);
-			values.put(ToDoItemColumns.MOD_TIME, System.currentTimeMillis());
-			ToDoNoteActivity.this.getContentResolver().update(
-				ToDoNoteActivity.this.todoUri, values, null, null);
-			ToDoNoteActivity.this.finish();
-		    } catch (SQLException sx) {
-			new AlertDialog.Builder(ToDoNoteActivity.this)
-			.setMessage(sx.getMessage())
-			.setIcon(android.R.drawable.ic_dialog_alert)
-			.setNeutralButton(R.string.ConfirmationButtonCancel,
-				new DialogInterface.OnClickListener() {
-			    @Override
-			    public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-			    }
-			}).create().show();
-		    }
-		}
-	    });
-	    builder.create().show();
-	}
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "NoteButtonDelete.onClick");
+            AlertDialog.Builder builder =
+                    new AlertDialog.Builder(ToDoNoteActivity.this);
+            builder.setIcon(android.R.drawable.ic_dialog_alert);
+            builder.setMessage(R.string.ConfirmationTextDeleteNote);
+            builder.setNegativeButton(R.string.ConfirmationButtonCancel,
+                    ToDoDetailsActivity.DISMISS_LISTENER);
+            builder.setPositiveButton(R.string.ConfirmationButtonOK,
+                    new DeleteConfirmedOnClickListener());
+            builder.create().show();
+        }
     }
+
+    /** Second-level click listener for confirming note deletion */
+    class DeleteConfirmedOnClickListener
+            implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            dialog.dismiss();
+            // If the item didn't have a note to begin with, skip deleting it.
+            if (TextUtils.equals(oldNoteText, "")) {
+                if (isDetailHandoff)
+                    setResult(RESULT_CANCELED);
+                SAVE_FINISHED_RUNNER.run();
+                return;
+            }
+            if (isDetailHandoff) {
+                Intent returnIntent = new Intent();
+                returnIntent.putExtra(EXTRA_ITEM_NOTE, (String) null);
+                setResult(RESULT_OK, returnIntent);
+                SAVE_FINISHED_RUNNER.run();
+            } else {
+                executor.submit(new SaveNoteRunner(todoId, null));
+            }
+        }
+    }
+
+    /** A runner to clean up the note activity and finish on the UI thread. */
+    private final Runnable SAVE_FINISHED_RUNNER = new Runnable() {
+        @Override
+        public void run() {
+            todoId = null;
+            description = null;
+            oldNoteText = null;
+            ToDoNoteActivity.this.finish();
+        }
+    };
+
+    /** A runner to display an exception message on the UI thread. */
+    class SaveExceptionAlertRunner implements Runnable {
+        private final Exception e;
+        SaveExceptionAlertRunner(Exception exception) {
+            e = exception;
+        }
+        @Override
+        public void run() {
+            new AlertDialog.Builder(ToDoNoteActivity.this)
+                    .setMessage(e.getMessage())
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setNeutralButton(R.string.ConfirmationButtonCancel,
+                            ToDoDetailsActivity.DISMISS_LISTENER)
+                    .create().show();
+            Button button = (Button) findViewById(R.id.NoteButtonOK);
+            button.setEnabled(true);
+            button = (Button) findViewById(R.id.NoteButtonDelete);
+            button.setEnabled(true);
+        }
+    }
+
 }
