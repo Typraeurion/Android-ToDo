@@ -262,6 +262,17 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
         }
     }
 
+    /**
+     * Update the async progress indicator.
+     *
+     * @param modeString the current mode of operation (reading,
+     *                   adding categories, adding items)
+     * @param currentCount the number of items imported so far
+     * @param totalCount the total number of items to be imported
+     * @param throttle if {@code true}, skip updating the progress
+     *                 if it&rsquo;s been less than 250 ms since
+     *                 we last posted our progress.
+     */
     @Override
     public void updateProgress(String modeString,
                                int currentCount, int totalCount,
@@ -270,11 +281,12 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
             long now = System.nanoTime();
             if ((now - lastProgressTimeNano) < 250000000L)
                 return;
+            lastProgressTimeNano = now;
         }
         Data progressData = new Data.Builder()
                 .putString(PROGRESS_CURRENT_MODE, modeString)
                 .putInt(PROGRESS_MAX_COUNT, totalCount)
-                .putInt(PROGRESS_CURRENT_COUNT, totalCount)
+                .putInt(PROGRESS_CURRENT_COUNT, currentCount)
                 .build();
         setProgressAsync(progressData);
     }

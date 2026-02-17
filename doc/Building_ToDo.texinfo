@@ -11,7 +11,7 @@
 @author Trevin Beattie
 
 @page
-Copyleft @copyright{} 2011–-2025 Trevin Beattie
+Copyleft @copyright{} 2011–-2026 Trevin Beattie
 
 To Do for Android is distributed under the terms of the Gnu Public
 License, version 3.0.
@@ -355,6 +355,9 @@ to build version 1.3.0:
 @item Gradle 8.12.1
 
 @end itemize
+
+Version 1.5 was built with Android Studio 2025.2.2 (``Otter'') and
+Gradle 8.14.3.
 
 See @uref{http://developer.android.com/sdk/index.html} for information
 on how to set up a project using the Android SDK.

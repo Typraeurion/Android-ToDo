@@ -31,6 +31,7 @@ import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.service.AlarmWorker;
+import com.xmission.trevin.android.todo.service.ProgressBarUpdater;
 import com.xmission.trevin.android.todo.util.AuthenticationException;
 import com.xmission.trevin.android.todo.util.PasswordMismatchException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
@@ -971,7 +972,7 @@ public class ToDoListActivity extends ListActivity {
         @Override
         public void run() {
             boolean oldHasPassword = hasPassword;
-            hasPassword = encryptor.hasPassword(getContentResolver());
+            hasPassword = encryptor.hasPassword(repository);
             if (hasPassword != oldHasPassword)
                 runOnUiThread(updatePasswordVisibility);
         }
@@ -1186,7 +1187,7 @@ public class ToDoListActivity extends ListActivity {
                                 PasswordChangeWorker.DATA_NEW_PASSWORD,
                                 new String(newPassword));
 
-                    if (encryptor.hasPassword(getContentResolver())) {
+                    if (encryptor.hasPassword(repository)) {
                         char[] oldPassword =
                                 new char[passwordChangeEditText[0].length()];
                         passwordChangeEditText[0].getText().getChars(
@@ -1194,8 +1195,7 @@ public class ToDoListActivity extends ListActivity {
                         StringEncryption oldEncryptor = new StringEncryption();
                         oldEncryptor.setPassword(oldPassword);
                         try {
-                            if (!oldEncryptor.checkPassword(
-                                    getContentResolver())) {
+                            if (!oldEncryptor.checkPassword(repository)) {
                                 Arrays.fill(newPassword, (char) 0);
                                 Arrays.fill(oldPassword, (char) 0);
                                 AlertDialog.Builder builder =
@@ -1307,17 +1307,17 @@ public class ToDoListActivity extends ListActivity {
             }
             Data progress = workInfo.getProgress();
             int max = progress.getInt(
-                    PasswordChangeWorker.PROGRESS_MAX_COUNT, 0);
+                    ProgressBarUpdater.PROGRESS_MAX_COUNT, 0);
             if (max <= 0) {
                 progressDialog.setIndeterminate(true);
             } else {
                 progressDialog.setIndeterminate(false);
                 progressDialog.setMax(max);
                 progressDialog.setProgress(progress.getInt(
-                        PasswordChangeWorker.PROGRESS_CHANGED_COUNT, 0));
+                        ProgressBarUpdater.PROGRESS_CURRENT_COUNT, 0));
             }
             progressDialog.setMessage(progress.getString(
-                    PasswordChangeWorker.PROGRESS_CURRENT_MODE));
+                    ProgressBarUpdater.PROGRESS_CURRENT_MODE));
         }
     }
 

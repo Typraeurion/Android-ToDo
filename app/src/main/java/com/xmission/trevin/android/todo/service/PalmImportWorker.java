@@ -250,6 +250,8 @@ public class PalmImportWorker extends Worker implements ProgressBarUpdater {
      *
      * @param modeString the current mode of operation (reading,
      *                   adding categories, adding items)
+     * @param importCount the number of items imported so far
+     * @param totalCount the total number of items to be imported
      * @param throttle if {@code true}, skip updating the progress
      *                 if it&rsquo;s been less than 250 ms since
      *                 we last posted our progress.
@@ -262,6 +264,7 @@ public class PalmImportWorker extends Worker implements ProgressBarUpdater {
             long now = System.nanoTime();
             if ((now - lastProgressTimeNano) < 250000000L)
                 return;
+            lastProgressTimeNano = now;
         }
         Data progressData = new Data.Builder()
                 .putString(PROGRESS_CURRENT_MODE, modeString)

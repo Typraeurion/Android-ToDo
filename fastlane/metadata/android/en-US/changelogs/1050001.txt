@@ -6,6 +6,9 @@ Version 1.5.0
   follow local time or remain in a fixed alternate zone.
 * Replaced all Service classes with equivalent Workers.  This
   allows them to be tested independently of the application.
+* Refactored the importers to merge To Do records as they
+  are read in from the backup file, which allows them to
+  handle much larger data sets without using too much memory.
 * Added unit tests for the XML exporter, XML importer, and Palm importer
   workers along with several test import files in older and newer formats.
   Fixed some bugs from the previous Palm importer service when importing Palm

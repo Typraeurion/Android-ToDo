@@ -30,11 +30,8 @@ import com.xmission.trevin.android.crypto.*;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
-import com.xmission.trevin.android.todo.provider.ToDoSchema;
-import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoMetadataColumns;
 
 import android.content.*;
-import android.database.Cursor;
 import android.util.Log;
 
 /**
@@ -162,14 +159,9 @@ public class StringEncryption {
     /** The encryption key */
     private byte[] key = null;
 
-    /** Metadata projection fields */
-    private final static String[] METADATA_PROJECTION = { ToDoMetadataColumns.VALUE };
-
     /** Name of the metadata used to store the hash of the user's password */
     public final static String METADATA_PASSWORD_HASH =
             "StringEncryption.HashedPassword";
-
-    private final static String[] COUNT_PROJECTION = { ToDoSchema.ToDoItemColumns._ID };
 
     /** @return whether the encryption key has been set */
     public boolean hasKey() { return key != null; }
@@ -244,22 +236,6 @@ public class StringEncryption {
     }
 
     /**
-     * @return whether a password has been set on the database.
-     * @deprecated use {@link #hasPassword(ToDoRepository)}
-     */
-    public boolean hasPassword(ContentResolver resolver) {
-	Cursor c = resolver.query(
-		ToDoMetadataColumns.CONTENT_URI, METADATA_PROJECTION,
-		ToDoMetadataColumns.NAME + " = ?",
-                new String[] { METADATA_PASSWORD_HASH }, null);
-	try {
-	    return c.moveToFirst();
-	} finally {
-	    c.close();
-	}
-    }
-
-    /**
      * @param repository the repository that may contain the password hash
      *
      * @return whether a password has been set on the database.
@@ -268,39 +244,6 @@ public class StringEncryption {
         ToDoMetadata passwordHash =
                 repository.getMetadataByName(METADATA_PASSWORD_HASH);
         return passwordHash != null;
-    }
-
-    /**
-     * Check the password against what was stored in the database.
-     *
-     * @return true if the password matches, false if it does not match.
-     *
-     * @throws InvalidPasswordHashException if the password hash
-     * in the database is invalid.
-     * @throws PasswordMismatchException if there is no password hash
-     * stored in the database.
-     *
-     * @deprecated use {@link #checkPassword(ToDoRepository)}
-     */
-    public boolean checkPassword(ContentResolver resolver)
-		throws InvalidPasswordHashException, PasswordMismatchException {
-	byte[] hashedPassword = null;
-	Cursor c = resolver.query(
-		ToDoSchema.ToDoMetadataColumns.CONTENT_URI, METADATA_PROJECTION,
-		ToDoSchema.ToDoMetadataColumns.NAME + " = ?",
-                new String[] { METADATA_PASSWORD_HASH }, null);
-	try {
-	    if (c.moveToFirst()) {
-		hashedPassword = c.getBlob(c.getColumnIndex(ToDoMetadataColumns.VALUE));
-	    } else {
-		throw new PasswordMismatchException(
-			"checkPassword(resolver) called with no password in the database");
-	    }
-	}
-	finally {
-	    c.close();
-	}
-	return checkPassword(hashedPassword);
     }
 
     /**
@@ -347,7 +290,7 @@ public class StringEncryption {
         ByteBuffer bb = ByteBuffer.wrap(hashedPassword)
                 .order(ByteOrder.BIG_ENDIAN);
         byte[] storedHash;
-        int hLen = 0;
+        int hLen;
         try {
             int crypType = bb.get() & 0xff;
             if ((crypType <= NO_ENCRYPTION) ||
@@ -407,63 +350,6 @@ public class StringEncryption {
      * new password to the database.  All changes must be
      * done as a transaction with the database locked!
      *
-     * @deprecated use {@link #storePassword(ToDoRepository)}
-     */
-    public void storePassword(ContentResolver resolver)
-            throws PasswordRequiredException {
-        if (key == null) {
-            if (salt == null)
-                addSalt();
-            generateKey();
-        }
-
-	byte[] header = new byte[6];
-	ByteBuffer bb = ByteBuffer.wrap(header).order(ByteOrder.BIG_ENDIAN);
-	bb.put((byte) BUNDLED_ENCRYPTION);
-	bb.put((byte) (salt.length - 2));
-	bb.putShort((short) (keyLength / 8 - 2));
-	bb.putShort((short) (keyIterationCount - 1));
-	MessageDigest md = new SHA256.Digest();
-	md.update(header);
-	md.update(salt);
-	md.update(key);
-	byte[] hash = md.digest();
-
-	// Combine the header, salt, and hash
-	byte[] hash2 = new byte[header.length + salt.length + hash.length];
-	System.arraycopy(header, 0, hash2, 0, header.length);
-	System.arraycopy(salt, 0, hash2, header.length, salt.length);
-	System.arraycopy(hash, 0, hash2, header.length + salt.length, hash.length);
-
-	ContentValues values = new ContentValues();
-	values.put(ToDoSchema.ToDoMetadataColumns.NAME, METADATA_PASSWORD_HASH);
-	values.put(ToDoSchema.ToDoMetadataColumns.VALUE, hash2);
-	resolver.insert(ToDoMetadataColumns.CONTENT_URI, values);
-    }
-
-    /**
-     * Store the salt and hashed password key in the database.
-     * The stored bytes consists of:
-     * <table>
-     *   <tr><th>Size</th><th>Content</th></tr>
-     *   <tr><td>1</td><td>Encryption scheme <i>(only "2" in this version,
-     *   representing a PKCS5S2 key hashed by SHA256, and AES cipher.)</i></td></tr>
-     *   <tr><td>1</td><td>Number of bytes of salt (unsigned, bias 2)</td></tr>
-     *   <tr><td>2</td><td>Number of bytes in the encryption key
-     *   (unsigned, bias 2, in MSB order)</td></tr>
-     *   <tr><td>2</td><td>Iteration count for key derivation
-     *   (unsigned, bias 1, in MSB order)</td></tr>
-     *   <tr><td>?</td><td>Salt bytes</td></tr>
-     *   <tr><td>?</td><td>The result of hashing the above header, salt,
-     *   and encryption key with SHA256.</td></tr>
-     * </table>
-     * <p>
-     * If any records in the database have been encrypted,
-     * they must be decrypted with the old password and
-     * the old password removed before committing the
-     * new password to the database.  All changes must be
-     * done as a transaction with the database locked!
-     *
      * @param repository the repository in which to store the password hash
      *
      * @throws PasswordRequiredException if the password has not been set.
@@ -495,31 +381,6 @@ public class StringEncryption {
         System.arraycopy(hash, 0, hash2, header.length + salt.length, hash.length);
 
         repository.upsertMetadata(METADATA_PASSWORD_HASH, hash2);
-    }
-
-    /**
-     * Remove the stored password from the database.
-     * <p>
-     * Any encrypted records in the database must be successfully decrypted
-     * before the old password is removed!
-     *
-     * @deprecated use {@link #removePassword(ToDoRepository)}
-     */
-    public void removePassword(ContentResolver resolver) {
-	Cursor c = resolver.query(ToDoSchema.ToDoItemColumns.CONTENT_URI,
-                COUNT_PROJECTION,
-		ToDoSchema.ToDoItemColumns.PRIVATE + " > 1", null, null);
-	try {
-	    if (c.moveToFirst())
-		// There are encrypted records!
-		throw new IllegalStateException(c.getInt(c.getColumnIndex(
-			ToDoSchema.ToDoItemColumns._COUNT)) + " records are still encrypted");
-	} finally {
-	    c.close();
-	}
-	resolver.delete(ToDoMetadataColumns.CONTENT_URI,
-		ToDoMetadataColumns.NAME + " = ?",
-                new String[] { METADATA_PASSWORD_HASH });
     }
 
     /**

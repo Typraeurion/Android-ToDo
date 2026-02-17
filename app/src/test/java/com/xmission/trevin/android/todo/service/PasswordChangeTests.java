@@ -16,67 +16,49 @@
  */
 package com.xmission.trevin.android.todo.service;
 
-import static com.xmission.trevin.android.todo.service.PasswordChangeWorker.*;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomParagraph;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomToDo;
 import static com.xmission.trevin.android.todo.util.StringEncryption.METADATA_PASSWORD_HASH;
 import static org.junit.Assert.*;
-
-import android.content.Context;
-import android.util.Log;
-
-import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.filters.LargeTest;
-import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.work.Data;
-import androidx.work.ListenableWorker.Result;
-import androidx.work.testing.TestListenableWorkerBuilder;
 
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
 import com.xmission.trevin.android.todo.provider.MockToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.util.AuthenticationException;
+import com.xmission.trevin.android.todo.util.PasswordMismatchException;
+import com.xmission.trevin.android.todo.util.PasswordRequiredException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.*;
-import org.junit.runner.RunWith;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Unit tests for setting, changing, and removing a password.
  */
-@LargeTest
-@RunWith(AndroidJUnit4.class)
-public class PasswordChangeWorkerTests {
+public class PasswordChangeTests {
 
-    private Context testContext = null;
+    private static final RandomStringUtils SRAND = RandomStringUtils.insecure();
+
     private MockToDoRepository mockRepo = null;
     private StringEncryption globalEncryption = null;
 
     @Before
     public void initializeRepository() {
-        if (testContext == null)
-            testContext = InstrumentationRegistry.getInstrumentation()
-                    .getTargetContext();
         if (mockRepo == null) {
             mockRepo = MockToDoRepository.getInstance();
             ToDoRepositoryImpl.setInstance(mockRepo);
         }
-        mockRepo.open(testContext);
         mockRepo.clear();
         globalEncryption = StringEncryption.holdGlobalEncryption();
     }
 
     @After
     public void releaseRepository() {
-        StringEncryption.releaseGlobalEncryption(testContext);
-        mockRepo.release(testContext);
+        StringEncryption.releaseGlobalEncryption();
     }
 
     /**
@@ -87,48 +69,33 @@ public class PasswordChangeWorkerTests {
      * or {@code null} if setting a new one.
      * @param newPassword the new password,
      * or {@code null} if clearing the old one.
-     * @param expectedResult the class of the expected result
-     * ({@link Result.Success} or {@link Result.Failure}).
+     * @param expectedException the class of the expected exception,
+     * if any; {@code null} otherwise.
      *
-     * @return the {@link Result} of the password change call.
+     * @return the progress of the password change call.
      *
      * @throws AssertionError if the result is not the expected type.
+     * @throws AuthenticationException if there is an unexpected
+     * error with the password change
      */
-    private Result runPasswordChangeWorker(
+    private MockProgressBar runPasswordChangeWorker(
             String oldPassword, String newPassword,
-            Class<? extends Result> expectedResult) throws AssertionError {
-        PasswordChangeWorker worker = TestListenableWorkerBuilder.from(
-                        testContext, PasswordChangeWorker.class)
-                .setInputData(new Data.Builder()
-                        .putString(DATA_OLD_PASSWORD, oldPassword)
-                        .putString(DATA_NEW_PASSWORD, newPassword)
-                        .build())
-                .setRunAttemptCount(1)
-                .build();
+            Class<? extends AuthenticationException> expectedException)
+            throws AssertionError, AuthenticationException {
+        MockProgressBar progress = new MockProgressBar();
         try {
-            Result result = worker.startWork().get(10, TimeUnit.SECONDS);
-            Map<String,Object> data = result.getOutputData().getKeyValueMap();
-            if (!data.isEmpty())
-                Log.i("Tests", "PasswordChangeWorker return data: " + data);
-            assertEquals("Result of password change worker call",
-                    expectedResult, result.getClass());
-            return result;
-        } catch (ExecutionException ee) {
-            Log.e("Tests", "Worker threw an exception", ee);
-            fail("Worker was aborted: " + ee.getMessage());
-            // Unreachable
-            return null;
-        } catch (InterruptedException ie) {
-            Log.e("Tests", "Worker was interrupted", ie);
-            fail("Worker was interrupted");
-            // Unreachable
-            return null;
-        } catch (TimeoutException te) {
-            Log.e("Tests", "Worker timed out", te);
-            fail("Worker timed out after 10 seconds");
-            // Unreachable
-            return null;
+            PasswordChanger.changePassword(mockRepo,
+                    (oldPassword == null) ? null : oldPassword.toCharArray(),
+                    (newPassword == null) ? null : newPassword.toCharArray(),
+                    progress);
+            assertEquals("Exception thrown ", expectedException, null);
+        } catch (AuthenticationException ae) {
+            if (ae.getClass() != expectedException)
+                throw ae;
+        } finally {
+            progress.setEndTime();
         }
+        return progress;
     }
 
     /**
@@ -136,7 +103,7 @@ public class PasswordChangeWorkerTests {
      * All private records should become encrypted.
      */
     @Test
-    public void testNewPassword() throws Exception {
+    public void testNewPassword() {
 
         // Set up the test data
         ToDoItem publicItem = randomToDo();
@@ -153,10 +120,11 @@ public class PasswordChangeWorkerTests {
             privateItem.setNote(randomParagraph());
         mockRepo.insertItem(privateItem);
 
-        final String password = RandomStringUtils.randomAlphanumeric(8);
+        final String password = SRAND.nextAlphanumeric(8);
 
         // Call the password change worker
-        runPasswordChangeWorker(null, password, Result.Success.class);
+        MockProgressBar progressBar = runPasswordChangeWorker(
+                null, password, null);
 
         // Verify the results
         ToDoMetadata passwordHash =
@@ -187,6 +155,11 @@ public class PasswordChangeWorkerTests {
                 : se.decrypt(savedItem.getEncryptedNote());
         assertEquals("Decrypted note does not match original",
                 privateItem.getNote(), decrypted);
+
+        MockProgressBar.Progress lastProgress = progressBar.getEndProgress();
+        assertNotNull("Progress meter was not updated", lastProgress);
+        assertEquals("Size of the progress meter", 1, lastProgress.total);
+        assertEquals("Number of records encrypted", 1, lastProgress.current);
     }
 
     /**
@@ -194,10 +167,10 @@ public class PasswordChangeWorkerTests {
      * All encrypted records should be unencrypted but private.
      */
     @Test
-    public void testRemovePassword() throws Exception {
+    public void testRemovePassword() {
 
         // Set up the test data
-        final String password = RandomStringUtils.randomAlphanumeric(8);
+        final String password = SRAND.nextAlphanumeric(8);
         globalEncryption.setPassword(password.toCharArray());
         globalEncryption.addSalt();
         globalEncryption.storePassword(mockRepo);
@@ -224,7 +197,8 @@ public class PasswordChangeWorkerTests {
         globalEncryption.forgetPassword();
 
         // Call the password change worker
-        runPasswordChangeWorker(password, null, Result.Success.class);
+        MockProgressBar progressBar = runPasswordChangeWorker(
+                password, null, null);
 
         // Verify the results
         assertNull("Password was not removed",
@@ -243,103 +217,69 @@ public class PasswordChangeWorkerTests {
                 clearDescription, savedItem.getDescription());
         assertEquals("Private To Do item note",
                 clearNote, savedItem.getNote());
+
+        MockProgressBar.Progress lastProgress = progressBar.getEndProgress();
+        assertNotNull("Progress meter was not updated", lastProgress);
+        assertEquals("Size of the progress meter", 1, lastProgress.total);
+        assertEquals("Number of records decrypted", 1, lastProgress.current);
     }
 
     /**
      * Test clearing the password when the proper old password has
-     * not been given.  Should result in a bad password toast.
+     * not been given.  Should result in a bad password exception.
      */
     @Test
-    public void testRemoveBadPassword() throws Exception {
+    public void testRemoveBadPassword() {
 
         // Set up the test data
-        String password = RandomStringUtils.randomAlphanumeric(12);
+        String password = SRAND.nextAlphanumeric(12);
         globalEncryption.setPassword(password.toCharArray());
         globalEncryption.addSalt();
         globalEncryption.storePassword(mockRepo);
 
         globalEncryption.forgetPassword();
 
-        password = RandomStringUtils.randomAlphabetic(8);
+        password = SRAND.nextAlphabetic(8);
 
         // Call the password change worker
-        Result result = runPasswordChangeWorker(
-                password, null, Result.Failure.class);
-
-        // Verify the results
-        Data data = result.getOutputData();
-        assertNotNull("Worker result did not return any dada", data);
-        assertTrue("Worker result does not include \"message\"",
-                data.hasKeyWithValueOfType("message", String.class));
-        assertTrue("Worker result does not include \"Error\"",
-                data.hasKeyWithValueOfType("Error", String.class));
-        assertTrue("Worker result message did not report a bad password",
-                data.getString("message").toLowerCase().contains("password"));
-        assertEquals("Worker result Error",
-                "Old password does not match hash in the database",
-                data.getString("Error"));
+        runPasswordChangeWorker( password, null,
+                PasswordMismatchException.class);
     }
 
     /**
      * Test clearing the password when there is no password set.
-     * Should result in a bad password toast.
+     * Should result in a bad password exception.
      */
     @Test
     public void testRemoveNoPassword() {
 
-        String password = RandomStringUtils.randomAlphabetic(8);
+        String password = SRAND.nextAlphabetic(8);
 
         // Call the password change worker
-        Result result = runPasswordChangeWorker(
-                password, null, Result.Failure.class);
-
-        // Verify the results
-        Data data = result.getOutputData();
-        assertNotNull("Worker result did not return any dada", data);
-        assertTrue("Worker result does not include \"message\"",
-                data.hasKeyWithValueOfType("message", String.class));
-        assertTrue("Worker result does not include \"Error\"",
-                data.hasKeyWithValueOfType("Error", String.class));
-        assertTrue("Worker result message did not report a bad password",
-                data.getString("message").toLowerCase().contains("password"));
-        assertEquals("Worker result Error",
-                "Old password provided but no password has been set",
-                data.getString("Error"));
+        runPasswordChangeWorker(password, null,
+                PasswordMismatchException.class);
     }
 
     /**
      * Test setting a &ldquo;new&rdquo; password when the database already
-     * has a password.  Should result in a bad password toast.
+     * has a password.  Should result in a bad password exception.
      */
     @Test
-    public void testNewPasswordConflict() throws Exception {
+    public void testNewPasswordConflict() {
 
         // Set up the test data
-        String password = RandomStringUtils.randomAlphanumeric(12);
+        String password = SRAND.nextAlphanumeric(12);
         globalEncryption.setPassword(password.toCharArray());
         globalEncryption.addSalt();
         globalEncryption.storePassword(mockRepo);
 
         globalEncryption.forgetPassword();
 
-        password = RandomStringUtils.randomAlphabetic(12);
+        password = SRAND.nextAlphabetic(12);
 
         // Call the password change worker
-        Result result = runPasswordChangeWorker(
-                null, password, Result.Failure.class);
-
-        // Verify the results
-        Data data = result.getOutputData();
-        assertNotNull("Worker result did not return any dada", data);
-        assertTrue("Worker result does not include \"message\"",
-                data.hasKeyWithValueOfType("message", String.class));
-        assertTrue("Worker result does not include \"Error\"",
-                data.hasKeyWithValueOfType("Error", String.class));
-        assertTrue("Worker result message did not report a bad password",
-                data.getString("message").toLowerCase().contains("password"));
-        assertEquals("Worker result Error",
-                "Current password was not provided",
-                data.getString("Error"));
+        runPasswordChangeWorker(null, password,
+                PasswordRequiredException.class);
     }
 
     /**
@@ -349,10 +289,10 @@ public class PasswordChangeWorkerTests {
      * encrypted as well.
      */
     @Test
-    public void testChangePassword() throws Exception {
+    public void testChangePassword() {
 
         // Set up the test data
-        final String oldPassword = RandomStringUtils.randomAlphanumeric(8);
+        final String oldPassword = SRAND.nextAlphanumeric(8);
         globalEncryption.setPassword(oldPassword.toCharArray());
         globalEncryption.addSalt();
         globalEncryption.storePassword(mockRepo);
@@ -388,12 +328,12 @@ public class PasswordChangeWorkerTests {
                 globalEncryption.encrypt(clearNote2));
         mockRepo.insertItem(encryptedItem);
 
-        final String newPassword = RandomStringUtils.randomAlphanumeric(12);
+        final String newPassword = SRAND.nextAlphanumeric(12);
         globalEncryption.forgetPassword();
 
         // Call the password change worker
-        runPasswordChangeWorker(oldPassword, newPassword,
-                Result.Success.class);
+        MockProgressBar progressBar = runPasswordChangeWorker(
+                oldPassword, newPassword, null);
 
         // Verify the results
         ToDoMetadata passwordHash =
@@ -435,6 +375,11 @@ public class PasswordChangeWorkerTests {
                 : globalEncryption.decrypt(savedItem.getEncryptedNote());
         assertEquals("Decrypted note (#2) does not match original",
                 clearNote2, decrypted);
+
+        MockProgressBar.Progress lastProgress = progressBar.getEndProgress();
+        assertNotNull("Progress meter was not updated", lastProgress);
+        assertEquals("Size of the progress meter", 2, lastProgress.total);
+        assertEquals("Number of records re-encrypted", 2, lastProgress.current);
     }
 
 }

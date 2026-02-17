@@ -11,7 +11,7 @@
 @author Trevin Beattie
 
 @page
-Copyleft @copyright{} 2011--2025 Trevin Beattie
+Copyleft @copyright{} 2011--2026 Trevin Beattie
 
 To Do for Android is distributed under the terms of the Gnu Public
 License, version 3.0.
@@ -777,8 +777,8 @@ wish.)}
 @node Known Bugs, , Exporting and Importing, Top
 @chapter Known Bugs
 
-The following bugs are known to exist in version 1.4.3 (build date
-2025.12.29) of To Do.  If you encounter any other bugs, please go to
+The following bugs are known to exist in version 1.5.0 (build date
+2026.02.17) of To Do.  If you encounter any other bugs, please go to
 my project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}
@@ -789,10 +789,6 @@ It is not possible to enter a new item or change the text of an existing
 item directly in the To Do list; this can only be done in the item
 details form.  I tried making the text in the list editable, but had
 difficulty getting it to work.
-
-@item
-If you start to create a new item and then press ``Cancel'' instead of
-``OK'', a blank item will be left in the list.
 
 @item
 If all categories are shown in the list page and you click ``New'', the
@@ -814,15 +810,24 @@ If an end date has been chosen for a repeating task, there is no way to
 change it back to ``no end date.''
 
 @item
+When importing a backup file, the progress bar may not update properly.
+@end itemize
+
+The following bugs were in the 1.4.3 release (built 2025.12.29) but
+have been fixed as of 1.5.0 (built 2026.12.17).
+
+@itemize @bullet
+@item
+If you start to create a new item and then press ``Cancel'' instead of
+``OK'', a blank item will be left in the list.
+
+@item
 The number of records that can be imported from a previously exported
 file is limited by the amount of memory available to the application.
 If you find that the application dies when importing a file, try
 splitting the file into two or more smaller files, copying the
 @samp{<Metadata>} and @samp{<Categories>} sections into each file, and
 import them separately.
-
-@item
-When importing a backup file, the progress bar may not update properly.
 @end itemize
 
 The following bugs were in the 1.2.1 release (built 2025.02.24) but
