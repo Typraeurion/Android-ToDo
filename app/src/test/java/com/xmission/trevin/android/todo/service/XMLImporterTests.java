@@ -17,7 +17,6 @@
 package com.xmission.trevin.android.todo.service;
 
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.*;
-import static com.xmission.trevin.android.todo.service.XMLExporter.*;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomToDo;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomWord;
 

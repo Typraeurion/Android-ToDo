@@ -49,7 +49,7 @@ public class MockToDoRepository implements ToDoRepository {
     /** Singleton instance of this repository */
     private static MockToDoRepository instance;
 
-    private final String unfiledCategoryName = "Unfiled";
+    public static final String unfiledCategoryName = "Unfiled";
 
     private final LinkedHashMap<Context,Integer> openContexts =
             new LinkedHashMap<>();

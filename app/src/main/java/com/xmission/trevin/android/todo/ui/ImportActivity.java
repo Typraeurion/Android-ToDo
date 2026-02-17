@@ -47,6 +47,7 @@ import androidx.work.WorkRequest;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.service.PalmImportWorker;
+import com.xmission.trevin.android.todo.service.PalmImporter;
 import com.xmission.trevin.android.todo.service.ProgressBarUpdater;
 import com.xmission.trevin.android.todo.service.XMLImporter;
 import com.xmission.trevin.android.todo.service.XMLImportWorker;
@@ -159,13 +160,13 @@ public class ImportActivity extends Activity {
      * Map of entries in the Import Type spinner
      * to import types used by the PalmImporterService
      */
-    private static final PalmImportWorker.ImportType[] palmImportTypes = {
-        PalmImportWorker.ImportType.CLEAN,
-            PalmImportWorker.ImportType.OVERWRITE,
+    private static final PalmImporter.ImportType[] palmImportTypes = {
+        PalmImporter.ImportType.CLEAN,
+            PalmImporter.ImportType.OVERWRITE,
         null,        // The Palm imported doesn't have "update"
-            PalmImportWorker.ImportType.MERGE,
-            PalmImportWorker.ImportType.ADD,
-            PalmImportWorker.ImportType.TEST,
+            PalmImporter.ImportType.MERGE,
+            PalmImporter.ImportType.ADD,
+            PalmImporter.ImportType.TEST,
     };
 
     /** Called when the activity is first created. */
@@ -622,8 +623,10 @@ public class ImportActivity extends Activity {
                         .setInputData(new Data.Builder()
                                 .putString(PalmImportWorker.PALM_DATA_FILENAME,
                                         fullName)
-                                .putInt(PalmImportWorker.PALM_IMPORT_TYPE,
-                                        palmImportTypes[importType].getIntValue())
+                                .putString(PalmImportWorker.PALM_IMPORT_TYPE,
+                                        palmImportTypes[importType].name())
+                                .putBoolean(PalmImportWorker.IMPORT_PRIVATE,
+                                        importPrivateCheckBox.isChecked())
                                 .build())
                         .addTag("Import")
                         .build();
@@ -645,8 +648,8 @@ public class ImportActivity extends Activity {
 //                serviceConnection = new XMLImportServiceConnection();
                 Data.Builder dataBuilder = new Data.Builder()
                         .putString(XMLImportWorker.XML_DATA_FILENAME, fullName)
-                        .putInt(XMLImportWorker.XML_IMPORT_TYPE,
-                                xmlImportTypes[importType].getIntValue())
+                        .putString(XMLImportWorker.XML_IMPORT_TYPE,
+                                xmlImportTypes[importType].name())
                         .putBoolean(XMLImportWorker.IMPORT_PRIVATE,
                                 importPrivateCheckBox.isChecked());
                 if (importPrivateCheckBox.isChecked() &&

@@ -57,12 +57,12 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
      */
     public static final String XML_DATA_FILENAME = "XMLDataFileName";
 
-    /** The key of the input data that holds the import type */
+    /** The key of the input data that holds the import type (enum name) */
     public static final String XML_IMPORT_TYPE = "XMLImportType";
 
     /**
      * The key of the input data that indicates
-     * whether to import private records
+     * whether to import private records (boolean)
      */
     public static final String IMPORT_PRIVATE = "XMLImportPrivate";
 

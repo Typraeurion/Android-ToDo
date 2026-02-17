@@ -16,14 +16,14 @@
  */
 package com.xmission.trevin.android.todo.service;
 
-import static com.xmission.trevin.android.todo.service.PalmImportWorker.*;
 import static org.junit.Assert.*;
 
 import androidx.annotation.Nullable;
 
 import com.xmission.trevin.android.todo.data.ToDoCategory;
-import com.xmission.trevin.android.todo.service.PalmImportWorker.CategoryEntry;
-import com.xmission.trevin.android.todo.service.PalmImportWorker.ToDoEntry;
+import com.xmission.trevin.android.todo.data.palm.CategoryEntry;
+import com.xmission.trevin.android.todo.data.palm.RepeatEvent;
+import com.xmission.trevin.android.todo.data.palm.ToDoEntry;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -79,18 +79,18 @@ public class PalmTestDatGenerator {
                 new BufferedOutputStream(new FileOutputStream(out)))) {
 
             if (usePalmSG) {
-                writeInteger(outStream, PalmImportWorker.MAGIC);
+                writeInteger(outStream, PalmImporter.MAGIC);
                 writeString(outStream, "PalmSG Database");
                 outStream.writeBytes("00RV");
             }
 
             if (useTD20) {
-                writeInteger(outStream, PalmImportWorker.TD20_MAGIC);
+                writeInteger(outStream, PalmImporter.TD20_MAGIC);
                 writeZeroes(outStream, 12);
                 writeInteger(outStream, 0x1165);
                 writeZeroes(outStream, 8);
             } else {
-                writeInteger(outStream, PalmImportWorker.TD10_MAGIC);
+                writeInteger(outStream, PalmImporter.TD10_MAGIC);
             }
 
             writeString(outStream, saveFile);
@@ -281,24 +281,24 @@ public class PalmTestDatGenerator {
                     case ToDoEntry.FIELD_UNKNOWN:
                     default:
                         switch (types[i]) {
-                            case TYPE_INTEGER:
-                            case TYPE_UNKNOWN40:
-                            case TYPE_UNKNOWN41:
-                            case TYPE_UNKNOWN42:
-                            case TYPE_UNKNOWN43:
+                            case ToDoEntry.TYPE_INTEGER:
+                            case ToDoEntry.TYPE_UNKNOWN40:
+                            case ToDoEntry.TYPE_UNKNOWN41:
+                            case ToDoEntry.TYPE_UNKNOWN42:
+                            case ToDoEntry.TYPE_UNKNOWN43:
                                 writeInteger(outStream, 0);
                                 break;
-                            case TYPE_REPEAT:
+                            case ToDoEntry.TYPE_REPEAT:
                                 writeRepeatEvent(outStream,
                                         todo.repeat, useTD20);
                                 break;
-                            case TYPE_BOOLEAN:
+                            case ToDoEntry.TYPE_BOOLEAN:
                                 writeInteger(outStream, 0);
                                 break;
-                            case TYPE_DATE:
+                            case ToDoEntry.TYPE_DATE:
                                 writeInteger(outStream, (int) UNSET_DATE);
                                 break;
-                            case TYPE_CSTRING:
+                            case ToDoEntry.TYPE_CSTRING:
                                 writeZeroes(outStream, 4);
                                 writeString(outStream, "");
                                 break;
@@ -606,7 +606,7 @@ public class PalmTestDatGenerator {
 
     /**
      * Generate a V1 file with all supported fields in a To Do record.
-     * This is used to test {@link PalmImportWorker.ToDoEntry} parsing.
+     * This is used to test {@link ToDoEntry} parsing.
      */
     //Test
     public void generateMaximalV1File() throws IOException {
@@ -656,7 +656,7 @@ public class PalmTestDatGenerator {
     /**
      * Generate a V2 file with most of the supported scalar fields
      * in a To Do record.  This does not include the repeat entry.
-     * This is used to test {@link PalmImportWorker.ToDoEntry} parsing.
+     * This is used to test {@link ToDoEntry} parsing.
      */
     //Test
     public void testV2FileWithAlarm() throws IOException {
@@ -712,7 +712,7 @@ public class PalmTestDatGenerator {
 
     /**
      * Generate a V2 file with a To Do item with a day-of-week repeating
-     * interval.  This is used to test {@link PalmImportWorker.RepeatEvent}
+     * interval.  This is used to test {@link RepeatEvent}
      * parsing.
      */
     //Test
@@ -752,7 +752,7 @@ public class PalmTestDatGenerator {
 
     /**
      * Generate a V2 file with a To Do item with a weekly repeating interval.
-     * This is used to test {@link PalmImportWorker.RepeatEvent} parsing.
+     * This is used to test {@link RepeatEvent} parsing.
      */
     //Test
     public void testV2FileWithRepeatByWeek() throws IOException {
@@ -791,8 +791,7 @@ public class PalmTestDatGenerator {
 
     /**
      * Generate a V2 file with a To Do item with a monthly repeating interval
-     * by day and week.  This is used to test
-     * {@link PalmImportWorker.RepeatEvent} parsing.
+     * by day and week.  This is used to test {@link RepeatEvent} parsing.
      */
     //Test
     public void testV2FileWithRepeatByMonthOnDayOfWeek() throws IOException {
@@ -832,8 +831,7 @@ public class PalmTestDatGenerator {
 
     /**
      * Generate a V2 file with a To Do item with a monthly repeating interval
-     * by date.  This is used to test {@link PalmImportWorker.RepeatEvent}
-     * parsing.
+     * by date.  This is used to test {@link RepeatEvent} parsing.
      */
     //Test
     public void testV2FileWithRepeatByMonthOnDate() throws IOException {
@@ -872,7 +870,7 @@ public class PalmTestDatGenerator {
 
     /**
      * Generate a V2 file with a To Do item with a yearly repeating interval.
-     * This is used to test {@link PalmImportWorker.RepeatEvent} parsing.
+     * This is used to test {@link RepeatEvent} parsing.
      */
     //Test
     public void testV2FileWithRepeatByYear() throws IOException {
