@@ -222,6 +222,17 @@ public class CategoryListActivity extends AppCompatActivity {
             categoryList.add(newCategory);
             // Tell the adapter to refresh the display
             categoryAdapter.notifyDataSetChanged();
+            // Scroll to the bottom of the list.
+            listView.setSelection(categoryList.size() - 1);
+            // Once the display has been updated, change the focus to the new row.
+            listView.post(new Runnable() {
+                @Override
+                public void run() {
+                    View newRow = listView.getChildAt(listView.getChildCount() - 1);
+                    if (newRow instanceof EditText)
+                        newRow.requestFocus();
+                }
+            });
         }
     }
 

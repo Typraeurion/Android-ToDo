@@ -402,55 +402,74 @@ public class ToDoCursorAdapter extends BaseAdapter {
             Log.d(TAG, String.format(Locale.US,
                     ".onCheckedChanged(ToDoItem(id=%d),isChecked=%s",
                     itemId, isChecked));
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    ToDoItem todo = repo.getItemById(itemId);
-                    todo.setChecked(isChecked);
-                    if (isChecked) {
-                        todo.setCompletedNow();
-                        /*
-                         * If the item has a repeat interval,
-                         * see if we need to change the due date
-                         * and reset the completed checkbox.
-                         */
-                        if ((todo.getRepeatInterval() != null) &&
-                                !(todo.getRepeatInterval() instanceof RepeatNone)) {
-                            LocalDate oldDue = todo.getDue();
-                            LocalDate today = LocalDate.now(prefs.getTimeZone());
-                            // Sanity check in case the due date was cleared
-                            if (oldDue == null)
-                                oldDue = today;
-                            LocalDate nextDueDate = todo.getRepeatInterval()
-                                    .computeNextDueDate(oldDue, today);
-                            if (nextDueDate != null) {
-                                todo.setDue(nextDueDate);
-                                todo.setChecked(false);
-                            }
-                        }
-                        if (todo.getAlarm() != null) {
-                            // Clear any related notification
-                            Log.d(TAG, String.format(Locale.US,
-                                    "Clearing any notification for item %d",
-                                    todo.getId()));
-                            notificationManager.cancel(todo.getId().intValue());
-                        }
-                    }
-                    todo.setModTimeNow();
-                    repo.updateItem(todo);
-                }
-            });
+            executor.submit(new ToggleCheckedRunner(itemId, isChecked));
         }
     }
 
+    /**
+     * Runner which toggles the {@code checked} state of a To Do item,
+     * updating it in the repository on a non-UI thread.
+     */
+    class ToggleCheckedRunner implements Runnable {
+        private final long itemId;
+        private final boolean isChecked;
+        public ToggleCheckedRunner(long itemId, boolean isChecked) {
+            this.itemId = itemId;
+            this.isChecked = isChecked;
+        }
+        @Override
+        public void run() {
+            Log.d(TAG, "ToggleCheckedRunner.run()");
+            ToDoItem todo = repo.getItemById(itemId);
+            todo.setChecked(isChecked);
+            if (isChecked) {
+                todo.setCompletedNow();
+                /*
+                 * If the item has a repeat interval,
+                 * see if we need to change the due date
+                 * and reset the completed checkbox.
+                 */
+                if ((todo.getRepeatInterval() != null) &&
+                        !(todo.getRepeatInterval() instanceof RepeatNone)) {
+                    LocalDate oldDue = todo.getDue();
+                    LocalDate today = LocalDate.now(prefs.getTimeZone());
+                    // Sanity check in case the due date was cleared
+                    if (oldDue == null)
+                        oldDue = today;
+                    LocalDate nextDueDate = todo.getRepeatInterval()
+                            .computeNextDueDate(oldDue, today);
+                    if (nextDueDate != null) {
+                        Log.d(TAG, String.format(Locale.US,
+                                "Changing the next due date for item %d from %s to %s",
+                                itemId, oldDue.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                                nextDueDate.format(DateTimeFormatter.ISO_LOCAL_DATE)));
+                        todo.setDue(nextDueDate);
+                        todo.setChecked(false);
+                    } else {
+                        Log.d(TAG, String.format(Locale.US,
+                                "No more repeats for item %d", itemId));
+                    }
+                }
+                if (todo.getAlarm() != null) {
+                    // Clear any related notification
+                    Log.d(TAG, String.format(Locale.US,
+                            "Clearing any notification for item %d",
+                            todo.getId()));
+                    notificationManager.cancel(todo.getId().intValue());
+                }
+            }
+            todo.setModTimeNow();
+            repo.updateItem(todo);
+        }
+    };
+
     /** Listener for click events on the note icon */
     static class OnNoteClickListener implements View.OnClickListener {
-        private final Uri itemUri;
+        private final long itemId;
 
         /** Create a new click listener for a specific To-Do item's note */
         public OnNoteClickListener(long itemId) {
-            itemUri = ContentUris.withAppendedId(
-                    ToDoSchema.ToDoItemColumns.CONTENT_URI, itemId);
+            this.itemId = itemId;
         }
 
         @Override
@@ -458,7 +477,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
             Log.d(TAG, "ToDoNoteImage.onClick");
             Intent intent = new Intent(v.getContext(),
                     ToDoNoteActivity.class);
-            intent.setData(itemUri);
+            intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, itemId);
             v.getContext().startActivity(intent);
         }
     }
@@ -484,12 +503,11 @@ public class ToDoCursorAdapter extends BaseAdapter {
     /** Listener for (long-)click events on the To Do item */
     static class OnDetailsClickListener
     implements View.OnLongClickListener, View.OnClickListener {
-        private final Uri itemUri;
+        private final long itemId;
 
         /** Create a new detail click listener for a specific To-Do item */
         public OnDetailsClickListener(long itemId) {
-            itemUri = ContentUris.withAppendedId(
-                    ToDoSchema.ToDoItemColumns.CONTENT_URI, itemId);
+            this.itemId = itemId;
         }
 
         @Override
@@ -497,7 +515,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
             Log.d(TAG, ".onClick(EditText)");
             Intent intent = new Intent(v.getContext(),
                     ToDoDetailsActivity.class);
-            intent.setData(itemUri);
+            intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, itemId);
             v.getContext().startActivity(intent);
         }
 
@@ -506,7 +524,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
             Log.d(TAG, ".onLongClick(EditText)");
             Intent intent = new Intent(v.getContext(),
                     ToDoDetailsActivity.class);
-            intent.setData(itemUri);
+            intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, itemId);
             v.getContext().startActivity(intent);
             return true;
         }

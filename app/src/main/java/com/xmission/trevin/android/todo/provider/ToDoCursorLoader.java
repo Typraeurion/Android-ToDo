@@ -29,6 +29,8 @@ import androidx.annotation.Nullable;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.ui.ToDoCursorAdapter;
 
+import java.time.LocalDate;
+
 /**
  * An asynchronous loader which provides a {@link ToDoCursor}
  * for use by {@link ToDoCursorAdapter}.
@@ -88,6 +90,7 @@ public class ToDoCursorLoader extends AsyncTaskLoader<ToDoCursor> {
         }
 
         return repository.getItems(prefs.getSelectedCategory(),
+                prefs.showChecked(), LocalDate.now(prefs.getTimeZone()),
                 prefs.showPrivate(), prefs.showPrivate(),
                 USER_SORT_ORDERS[selectedSortOrder]);
     }

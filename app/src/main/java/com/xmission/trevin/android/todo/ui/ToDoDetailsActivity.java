@@ -16,6 +16,7 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
+import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_CATEGORY_ID;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_ITEM_ID;
 
 import java.text.DateFormat;
@@ -48,6 +49,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
@@ -151,6 +153,12 @@ public class ToDoDetailsActivity extends Activity {
     /** Checkbox for private records */
     CheckBox privateCheckBox = null;
 
+    /** The &ldquoOK&rdquo; button for saving the item */
+    Button okButton = null;
+
+    /** The &ldquo;Delete&rdquo; button for existing items */
+    Button deleteButton = null;
+
     /** Due date list dialog */
     Dialog dueDateListDialog = null;
 
@@ -218,20 +226,43 @@ public class ToDoDetailsActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, ".onCreate");
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        Intent intent = getIntent();
-        todoId = null;
-        if (intent.hasExtra(EXTRA_ITEM_ID)) {
-            todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
-            isNewToDo = false;
+        Object savedData = null;
+        if (savedInstanceState != null) {
+            savedData = savedInstanceState.getSerializable("detailFormData");
         } else {
-            isNewToDo = true;
+            savedData = getLastNonConfigurationInstance();
         }
-        Object savedData = getLastNonConfigurationInstance();
         boolean hasSavedState = (savedData instanceof DetailFormData);
+
+        if (hasSavedState) {
+            todoId = ((DetailFormData) savedData).todoId;
+            isNewToDo = (todoId == null);
+
+            if (Log.isLoggable(TAG, Log.DEBUG))
+                Log.d(TAG, String.format(Locale.US,
+                        ".onCreate(%s); savedData=%s",
+                        savedInstanceState, savedData));
+        } else {
+            Intent intent = getIntent();
+            todoId = null;
+            todo = new ToDoItem();
+            if (intent.hasExtra(EXTRA_ITEM_ID)) {
+                todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+                todo.setId(todoId);
+                isNewToDo = false;
+            } else {
+                isNewToDo = true;
+            }
+            todo.setCategoryId(intent.getLongExtra(EXTRA_CATEGORY_ID,
+                    ToDoCategory.UNFILED));
+
+            Log.d(TAG, String.format(Locale.US,
+                    ".onCreate(%s); id=%s, categoryId=%d",
+                    savedInstanceState, todoId, todo.getCategoryId()));
+        }
 
         notificationManager = (NotificationManager)
                 getSystemService(NOTIFICATION_SERVICE);
@@ -276,12 +307,14 @@ public class ToDoDetailsActivity extends Activity {
         else {
             // Initialize the default state for now; the OpenRepositoryRunner
             // will load any item and update the form when it's ready.
-            todo = new ToDoItem();
             privateCheckBox.setChecked(false);
             toDoDescription.setText("");
+            toDoDescription.setEnabled(isNewToDo);
             priorityText.setText("1");
             // The data set observer will set the selected category
             // once the adapter has loaded its list.
+            categoryList.setSelection(categoryAdapter.getCategoryPosition(
+                    todo.getCategoryId()));
 
             completedDateText.setText("");
             View lastCompletedTableRow = findViewById(R.id.LastCompletedTableRow);
@@ -296,16 +329,17 @@ public class ToDoDetailsActivity extends Activity {
         }
 
         // Set callbacks
+        toDoDescription.addTextChangedListener(new DescriptionChangedListener());
         dueDateButton.setOnClickListener(new DueDateButtonOnClickListener());
         hideText.setOnClickListener(new HideButtonOnClickListener());
         alarmText.setOnClickListener(new AlarmButtonOnClickListener());
         repeatButton.setOnClickListener(new RepeatButtonOnClickListener());
 
         // Disable the Done and Delete buttons until the repository is ready
-        Button button = (Button) findViewById(R.id.DetailButtonOK);
-        button.setEnabled(false);
-        button = (Button) findViewById(R.id.DetailButtonDelete);
-        button.setEnabled(false);
+        okButton = (Button) findViewById(R.id.DetailButtonOK);
+        okButton.setEnabled(false);
+        deleteButton = (Button) findViewById(R.id.DetailButtonDelete);
+        deleteButton.setEnabled(false);
 
         ImageButton noteButton = (ImageButton) findViewById(R.id.DetailButtonNote);
         noteButton.setOnClickListener(new View.OnClickListener() {
@@ -394,6 +428,7 @@ public class ToDoDetailsActivity extends Activity {
                     }
                 }
                 toDoDescription.setText(todo.getDescription());
+                toDoDescription.setEnabled(true);
 
                 priorityText.setText(Integer.toString(todo.getPriority()));
                 categoryList.setSelection(categoryAdapter
@@ -426,11 +461,10 @@ public class ToDoDetailsActivity extends Activity {
             }
 
             // Set more callbacks and enable the OK button
-            Button button = (Button) findViewById(R.id.DetailButtonOK);
-            button.setOnClickListener(new OKButtonOnClickListener());
-            button.setEnabled(true);
+            okButton.setOnClickListener(new OKButtonOnClickListener());
+            okButton.setEnabled(!TextUtils.isEmpty(todo.getDescription()));
 
-            button = (Button) findViewById(R.id.DetailButtonCancel);
+            Button button = (Button) findViewById(R.id.DetailButtonCancel);
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -440,14 +474,14 @@ public class ToDoDetailsActivity extends Activity {
             });
 
             // If this is a new item, remove the Delete button.
-            button = (Button) findViewById(R.id.DetailButtonDelete);
             if (isNewToDo) {
-                button.setVisibility(View.GONE);
-                button.setEnabled(false);
+                deleteButton.setVisibility(View.GONE);
+                deleteButton.setEnabled(false);
             } else {
-                button.setVisibility(View.VISIBLE);
-                button.setOnClickListener(new DeleteButtonOnClickListener());
-                button.setEnabled(true);
+                deleteButton.setVisibility(View.VISIBLE);
+                deleteButton.setOnClickListener(
+                        new DeleteButtonOnClickListener());
+                deleteButton.setEnabled(true);
             }
         }
     }
@@ -459,8 +493,10 @@ public class ToDoDetailsActivity extends Activity {
      */
     private void restoreState(DetailFormData data) {
         todoId = data.todoId;
+        isNewToDo = (todoId == null);
         todo = data.item;
         toDoDescription.setText(todo.getDescription());
+        toDoDescription.setEnabled(true);
         priorityText.setText(Integer.toString(todo.getPriority()));
         updateDueDateButton();
         categoryList.setSelection(categoryAdapter
@@ -516,9 +552,12 @@ public class ToDoDetailsActivity extends Activity {
     /**
      * Called when the activity is about to be destroyed
      * and then immediately restarted (such as an orientation change).
+     *
+     * @return the form data needed to restore the state
      */
     @Override
     public DetailFormData onRetainNonConfigurationInstance() {
+        Log.d(TAG, ".onRetainNonConfigurationInstance");
         // Save the current dialog state
         DetailFormData data = new DetailFormData();
         data.todoId = todoId;
@@ -561,18 +600,27 @@ public class ToDoDetailsActivity extends Activity {
         return data;
     }
 
+    /**
+     * Called when the activity is about to be destroyed and then
+     * restarted at some indefinite point in the future,
+     * for example when Android needs to reclaim resources.
+     *
+     * @param outState a container in which to save the state.
+     */
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        Log.d(TAG, ".onSaveInstanceState");
+        outState.putSerializable("detailFormData",
+                onRetainNonConfigurationInstance());
+        super.onSaveInstanceState(outState);
+    }
+
     /** Called when the activity is about to be destroyed */
     @Override
     public void onDestroy() {
         repository.release(this);
         StringEncryption.releaseGlobalEncryption(this);
         super.onDestroy();
-    }
-
-    /** Look up the spinner item corresponding to a category ID and select it. */
-    void setCategorySpinnerByID(long id) {
-        int position = categoryAdapter.getCategoryPosition(id);
-        categoryList.setSelection(position);
     }
 
     /** Set the date in the due date button */
@@ -885,6 +933,22 @@ public class ToDoDetailsActivity extends Activity {
                 break;
 
             default: break;
+        }
+    }
+
+    /** Called when the user changes the item description */
+    class DescriptionChangedListener implements TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s,
+                                      int start, int count, int after) {
+        }
+        @Override
+        public void onTextChanged(CharSequence s,
+                                  int start, int before, int count) {
+        }
+        @Override
+        public void afterTextChanged(Editable e) {
+            okButton.setEnabled(e.length() > 0);
         }
     }
 
@@ -1290,12 +1354,11 @@ public class ToDoDetailsActivity extends Activity {
                 builder.setMessage(sb.toString());
                 builder.create().show();
             } else {
-                // Disable the Done and Delete buttons
+                // Disable the description field and Done and Delete buttons
                 // until the save is finished
-                Button button = (Button) findViewById(R.id.DetailButtonOK);
-                button.setEnabled(false);
-                button = (Button) findViewById(R.id.DetailButtonDelete);
-                button.setEnabled(false);
+                toDoDescription.setEnabled(false);
+                okButton.setEnabled(false);
+                deleteButton.setEnabled(false);
 
                 // Write and commit the changes
                 executor.submit(new SaveToDoItemRunner(todo, isNewToDo));
@@ -1403,10 +1466,9 @@ public class ToDoDetailsActivity extends Activity {
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setNeutralButton(R.string.ConfirmationButtonCancel,
                             DISMISS_LISTENER).create().show();
-            Button button = (Button) findViewById(R.id.DetailButtonOK);
-            button.setEnabled(true);
-            button = (Button) findViewById(R.id.DetailButtonDelete);
-            button.setEnabled(!isNewToDo);
+            toDoDescription.setEnabled(true);
+            okButton.setEnabled(true);
+            deleteButton.setEnabled(!isNewToDo);
         }
     }
 

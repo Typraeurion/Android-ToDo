@@ -29,6 +29,7 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -277,7 +278,8 @@ public class XMLExporter {
                     prefsCount + metaCount + catCount, totalCount, true);
             long maxItemId = repository.getMaxItemId();
             ToDoCursor cursor = repository.getItems(
-                    ToDoPreferences.ALL_CATEGORIES,
+                    ToDoPreferences.ALL_CATEGORIES, true,
+                    LocalDate.now(prefs.getTimeZone()),
                     exportPrivate, exportPrivate,
                     ToDoRepositoryImpl.TODO_TABLE_NAME + "."
                             + ToDoSchema.ToDoItemColumns._ID);

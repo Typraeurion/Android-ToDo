@@ -293,7 +293,7 @@ public class ToDoListActivity extends ListActivity {
 
         categoryAdapter = new CategoryFilterAdapter(this, repository);
         itemAdapter = new ToDoCursorAdapter(
-                this, null, null, encryptor,
+                this, null, repository, encryptor,
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE));
         Log.d(TAG, ".onCreate: initializing a To Do item loader manager");
         itemLoaderCallbacks = new ItemLoaderCallbacks(this,

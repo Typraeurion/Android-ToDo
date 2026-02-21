@@ -213,8 +213,8 @@ public class ToDoRepositoryTests {
     @Test
     public void testGetMaxCategoryId() {
         long maxId = repo.getMaxCategoryId();
-        assertTrue(String.format("Expected a positive category ID, got %d",
-                maxId), maxId > 0);
+        assertTrue(String.format("Expected a non-negative category ID, got %d",
+                maxId), maxId >= 0);
     }
 
     /**
@@ -669,8 +669,8 @@ public class ToDoRepositoryTests {
     @Test
     public void testGetMaxItemId() {
         long maxId = repo.getMaxItemId();
-        assertTrue(String.format("Expected a positive item ID, got %d",
-                maxId), maxId > 0);
+        assertTrue(String.format("Expected a non-negative item ID, got %d",
+                maxId), maxId >= 0);
     }
 
     /**
@@ -1256,6 +1256,10 @@ public class ToDoRepositoryTests {
      *
      * @param categoryId the ID of the category whose items to count,
      * or {@link ToDoPreferences#ALL_CATEGORIES} to include all items.
+     * @param includeCheckedAndHidden whether to include items that have
+     * been checked off as well as those that are hidden until near due.
+     * @param referenceDate the date to use in determining whether upcoming
+     * due items should remain hidden.
      * @param includePrivate whether to include private items.
      * @param includeEncrypted whether to include encrypted items.
      * If {@code true}, {@code includePrivate} must also be {@code true}.
@@ -1274,11 +1278,14 @@ public class ToDoRepositoryTests {
      * @throws AssertionError if any part of the test failed
      */
     private void runGetItemsTest(long categoryId,
+                                 boolean includeCheckedAndHidden,
+                                 LocalDate referenceDate,
                                  boolean includePrivate,
                                  boolean includeEncrypted,
                                  String sortOrder,
                                  LinkedHashMap<Long, ToDoItem> expectedItems) {
         ToDoCursor cursor = repo.getItems(categoryId,
+                includeCheckedAndHidden, referenceDate,
                 includePrivate, includeEncrypted, sortOrder);
         assertNotNull("Repository returned a null cursor", cursor);
         LinkedHashMap<Long, ToDoItem> actualItems = new LinkedHashMap<>();
@@ -1423,6 +1430,7 @@ public class ToDoRepositoryTests {
         assertNotNull("New category ID", testCategory.getId());
         testCategoryIds[1] = testCategory.getId();
         final List<ToDoItem> testToDos = new ArrayList<>();
+        final LocalDate today = LocalDate.now();
 
         try {
             int targetCount = 10 + RAND.nextInt(10);
@@ -1430,7 +1438,8 @@ public class ToDoRepositoryTests {
                 ToDoItem item = new ToDoItem();
                 item.setCategoryId(testCategoryIds[
                         RAND.nextInt(testCategoryIds.length)]);
-                item.setPrivate(RAND.nextInt(4));
+                item.setPrivate(RAND.nextInt(
+                        StringEncryption.MAX_SUPPORTED_ENCRYPTION + 1));
                 if (item.getPrivate() <= 1) {
                     targetLen = RAND.nextInt(16) + 5;
                     item.setDescription(RandomStringUtils
@@ -1451,9 +1460,12 @@ public class ToDoRepositoryTests {
                 // the rest should miss one or more.
                 int alarmCheck =RAND.nextInt(15) + 1;
                 item.setChecked((alarmCheck & 0x9) == 1);
-                if ((alarmCheck & 0xa) != 2)
+                if ((alarmCheck & 0xa) != 2) {
                     item.setDue(LocalDate.now().plusDays(
                             RAND.nextInt(15) - 7));
+                    if (RAND.nextBoolean())
+                        item.setHideDaysEarlier(RAND.nextInt(8));
+                }
                 if ((alarmCheck & 0xc) != 4)
                     item.setAlarm(alarm);
                 item.setCreateTime(Instant.now()
@@ -1475,8 +1487,8 @@ public class ToDoRepositoryTests {
             LinkedHashMap<Long, ToDoItem> expectedItems = new LinkedHashMap<>();
             for (ToDoItem item : testToDos)
                 expectedItems.put(item.getId(), item);
-            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES, true, true,
-                    ToDoSchema.ToDoItemColumns.DESCRIPTION,
+            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES, true, today,
+                    true, true, ToDoSchema.ToDoItemColumns.DESCRIPTION,
                     expectedItems);
 
             // Second, get all public items ordered by description
@@ -1487,7 +1499,8 @@ public class ToDoRepositoryTests {
                 if (item.getPrivate() <= 0)
                     expectedItems.put(item.getId(), item);
             }
-            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES, false, false,
+            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES,
+                    true, today, false, false,
                     "lower(" + ToDoSchema.ToDoItemColumns.DESCRIPTION + ")",
                     expectedItems);
 
@@ -1501,7 +1514,7 @@ public class ToDoRepositoryTests {
                         (item.getCategoryId() == ToDoCategory.UNFILED))
                     expectedItems.put(item.getId(), item);
             }
-            runGetItemsTest(ToDoCategory.UNFILED, true, false,
+            runGetItemsTest(ToDoCategory.UNFILED, true, today, true, false,
                     ToDoSchema.ToDoItemColumns.MOD_TIME + " desc",
                     expectedItems);
 
@@ -1512,12 +1525,31 @@ public class ToDoRepositoryTests {
             expectedItems.clear();
             for (ToDoItem item : testToDos)
                 expectedItems.put(item.getId(), item);
-            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES, true, true,
+            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES,
+                    true, today, true, true,
                     "lower(" + ToDoSchema.ToDoItemColumns.CATEGORY_NAME
                             + "), " + ToDoSchema.ToDoItemColumns.CREATE_TIME,
                     expectedItems);
 
-            // Fifth, get all items with a pending alarm
+            // Fifth, exclude all completed and hidden items
+            Collections.sort(testToDos, TODO_DESCRIPTION_COMPARATOR);
+            expectedItems.clear();
+            for (ToDoItem item : testToDos) {
+                if (item.isChecked())
+                    continue;
+                if ((item.getDue() != null) &&
+                        (item.getHideDaysEarlier() != null)) {
+                    if (item.getDue().minusDays(item.getHideDaysEarlier())
+                            .isAfter(today))
+                        continue;
+                }
+                expectedItems.put(item.getId(), item);
+            }
+            runGetItemsTest(ToDoPreferences.ALL_CATEGORIES, false, today,
+                    true, true, ToDoSchema.ToDoItemColumns.DESCRIPTION,
+                    expectedItems);
+
+            // Sixth, get all items with a pending alarm
             expectedItems.clear();
             for (ToDoItem item : testToDos) {
                 if (!item.isChecked() && (item.getDue() != null) &&

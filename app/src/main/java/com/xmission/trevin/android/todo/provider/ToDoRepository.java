@@ -30,6 +30,7 @@ import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.service.PasswordChangeWorker;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.SortedSet;
@@ -304,6 +305,11 @@ public interface ToDoRepository {
      *
      * @param categoryId the ID of the category whose items to include,
      * or {@link ToDoPreferences#ALL_CATEGORIES}) to include all items.
+     * @param includeCheckedAndHidden whether to include items that have
+     * been checked off as well as those that are hidden until near due.
+     * @param today the current date according to the user&rsquo;s
+     * chosen time zone.  This is used in determining whether upcoming
+     * due items should remain hidden.
      * @param includePrivate whether to include private items.
      * @param includeEncrypted whether to include encrypted items.
      * If {@code true}, {@code includePrivate} must also be {@code true}.
@@ -316,8 +322,12 @@ public interface ToDoRepository {
      *
      * @return a cursor for retrieving the To Do items
      */
-    ToDoCursor getItems(long categoryId, boolean includePrivate,
-                        boolean includeEncrypted, String sortOrder);
+    ToDoCursor getItems(long categoryId,
+                        boolean includeCheckedAndHidden,
+                        LocalDate today,
+                        boolean includePrivate,
+                        boolean includeEncrypted,
+                        String sortOrder);
 
     /**
      * Read the alarm info out of all To Do items which have an alarm set

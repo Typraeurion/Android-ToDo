@@ -37,6 +37,7 @@ import android.widget.*;
 
 import androidx.annotation.Nullable;
 
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -99,32 +100,60 @@ public class ToDoNoteActivity extends Activity {
     /** The note */
     EditText toDoNote = null;
 
+    /** The &ldquoOK&rdquo; button for saving the note */
+    Button okButton = null;
+
+    /** The &ldquo;Delete&rdquo; button for existing notes */
+    Button deleteButton = null;
+
     StringEncryption encryptor;
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, ".onCreate");
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        Intent intent = getIntent();
-        todoId = null;
-        description = getString(R.string.UntitledItem);
-        oldNoteText = "";
-        if (intent.hasExtra(EXTRA_ITEM_ID)) {
-            todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+        Object savedData = null;
+        if (savedInstanceState != null) {
+            savedData = savedInstanceState.getSerializable("noteFormData");
+        } else {
+            savedData = getLastNonConfigurationInstance();
         }
-        isDetailHandoff = intent.hasExtra(EXTRA_ITEM_DESCRIPTION);
-        if (isDetailHandoff) {
-            description = intent.getStringExtra(EXTRA_ITEM_DESCRIPTION);
-            oldNoteText = intent.getStringExtra(EXTRA_ITEM_NOTE);
-            if (oldNoteText == null)
-                oldNoteText = "";
-        }
-        Object savedData = getLastNonConfigurationInstance();
         boolean hasSavedState = (savedData instanceof NoteFormData);
+
+        if (hasSavedState) {
+            todoId = ((NoteFormData) savedData).todoId;
+
+            Log.d(TAG, String.format(Locale.US,
+                    ".onCreate(%s); savedData=%s",
+                    savedInstanceState, savedData));
+
+        } else {
+            Intent intent = getIntent();
+            todoId = null;
+            description = getString(R.string.UntitledItem);
+            oldNoteText = "";
+            if (intent.hasExtra(EXTRA_ITEM_ID)) {
+                todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+            }
+            isDetailHandoff = intent.hasExtra(EXTRA_ITEM_DESCRIPTION);
+            if (isDetailHandoff) {
+                description = intent.getStringExtra(EXTRA_ITEM_DESCRIPTION);
+                oldNoteText = intent.getStringExtra(EXTRA_ITEM_NOTE);
+                if (oldNoteText == null)
+                    oldNoteText = "";
+                Log.d(TAG, String.format(Locale.US,
+                        ".onCreate(%s); id=%s, description=\"%s\", note=\"%s%s\"",
+                        savedInstanceState, todoId, description,
+                        oldNoteText.substring(0, 80),
+                        (oldNoteText.length() > 80) ? "\u2026" : ""));
+            } else {
+                Log.d(TAG, String.format(Locale.US,
+                        ".onCreate(%s); id=%s", savedInstanceState, todoId));
+            }
+        }
 
         if (repository == null)
             repository = ToDoRepositoryImpl.getInstance();
@@ -144,17 +173,17 @@ public class ToDoNoteActivity extends Activity {
             setTitle(getResources().getString(R.string.app_name)
                     + " \u2015 " + description);
 
-            toDoNote.setText("");
+            toDoNote.setText(oldNoteText);
         }
 
         // Set callbacks
-        Button button = (Button) findViewById(R.id.NoteButtonOK);
-        button.setOnClickListener(new OKButtonOnClickListener());
-        button.setEnabled(isDetailHandoff);
+        okButton = (Button) findViewById(R.id.NoteButtonOK);
+        okButton.setOnClickListener(new OKButtonOnClickListener());
+        okButton.setEnabled(isDetailHandoff);
 
-        button = (Button) findViewById(R.id.NoteButtonDelete);
-        button.setOnClickListener(new DeleteButtonOnClickListener());
-        button.setEnabled(isDetailHandoff);
+        deleteButton = (Button) findViewById(R.id.NoteButtonDelete);
+        deleteButton.setOnClickListener(new DeleteButtonOnClickListener());
+        deleteButton.setEnabled(isDetailHandoff);
 
         // Connect to the database (on a non-UI thread) and populate the UI
         Runnable openRepo = new OpenRepositoryRunner(
@@ -233,12 +262,9 @@ public class ToDoNoteActivity extends Activity {
                         + " \u2015 " + description);
                 toDoNote.setText(oldNoteText);
 
-                // Enable the OK and Delete buttons
-                Button button = (Button) findViewById(R.id.NoteButtonOK);
-                button.setEnabled(true);
-                button = (Button) findViewById(R.id.NoteButtonDelete);
-                button.setEnabled(true);
             }
+            okButton.setEnabled(true);
+            deleteButton.setEnabled(true);
         }
     }
 
@@ -264,6 +290,7 @@ public class ToDoNoteActivity extends Activity {
      */
     @Override
     public NoteFormData onRetainNonConfigurationInstance() {
+        Log.d(TAG, ".onRetainNonConfigurationInstance");
         NoteFormData data = new NoteFormData();
         data.todoId = todoId;
         data.isDetailHandoff = isDetailHandoff;
@@ -271,6 +298,21 @@ public class ToDoNoteActivity extends Activity {
         data.oldNoteText = oldNoteText;
         data.currentNoteText = toDoNote.getText().toString();
         return data;
+    }
+
+    /**
+     * Called when the activity is about to be destroyed and then
+     * restarted at some indefinite point in the future,
+     * for example when Android needs to reclaim resources.
+     *
+     * @param outState a container in which to save the state.
+     */
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        Log.d(TAG, ".onSaveInstanceState");
+        outState.putSerializable("noteFormData",
+                onRetainNonConfigurationInstance());
+        super.onSaveInstanceState(outState);
     }
 
     /** Called when the user presses the Back button */
@@ -331,6 +373,10 @@ public class ToDoNoteActivity extends Activity {
                 setResult(RESULT_OK, returnIntent);
                 SAVE_FINISHED_RUNNER.run();
             } else {
+                // Disable the UI until the save is finished
+                toDoNote.setEnabled(false);
+                okButton.setEnabled(false);
+                deleteButton.setEnabled(false);
                 executor.submit(new SaveNoteRunner(todoId, note));
             }
         }
@@ -438,10 +484,8 @@ public class ToDoNoteActivity extends Activity {
                     .setNeutralButton(R.string.ConfirmationButtonCancel,
                             ToDoDetailsActivity.DISMISS_LISTENER)
                     .create().show();
-            Button button = (Button) findViewById(R.id.NoteButtonOK);
-            button.setEnabled(true);
-            button = (Button) findViewById(R.id.NoteButtonDelete);
-            button.setEnabled(true);
+            okButton.setEnabled(true);
+            deleteButton.setEnabled(true);
         }
     }
 

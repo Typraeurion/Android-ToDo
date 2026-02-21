@@ -12,6 +12,7 @@
     android:orientation="vertical">
     <EditText android:text="@string/DetailDescriptionPlaceholder"
      android:id="@+id/DetailEditTextDescription"
+     android:enabled="false"
      android:layout_width="fill_parent"
      android:layout_height="wrap_content"
      android:inputType="text|textCapSentences|textMultiLine">

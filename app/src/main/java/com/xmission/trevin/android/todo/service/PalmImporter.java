@@ -23,12 +23,9 @@ import android.util.Log;
 import com.xmission.trevin.android.todo.data.ToDoAlarm;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
-import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.data.palm.*;
 import com.xmission.trevin.android.todo.data.repeat.*;
-import com.xmission.trevin.android.todo.provider.ToDoCursor;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
-import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.PasswordMismatchException;
@@ -306,20 +303,7 @@ public class PalmImporter implements Runnable {
             mergeCategories();
 
             // Find the highest available record ID
-            ToDoCursor cursor = repository.getItems(
-                    ToDoPreferences.ALL_CATEGORIES, true, true,
-                    ToDoRepositoryImpl.TODO_TABLE_NAME + "."
-                            + ToDoSchema.ToDoItemColumns._ID + " desc");
-            try {
-                if (cursor.moveToFirst()) {
-                    ToDoItem lastItem = cursor.getItem();
-                    nextFreeRecordID = lastItem.getId() + 1;
-                } else {
-                    nextFreeRecordID = 1;
-                }
-            } finally {
-                cursor.close();
-            }
+            nextFreeRecordID = repository.getMaxItemId() + 1;
 
             if (importType == ImportType.CLEAN) {
                 // Wipe them all out

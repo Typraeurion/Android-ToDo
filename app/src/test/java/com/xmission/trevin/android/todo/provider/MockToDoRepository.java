@@ -34,7 +34,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -870,16 +872,30 @@ public class MockToDoRepository implements ToDoRepository {
 
     @Override
     public ToDoCursor getItems(long categoryId,
+                               boolean includeCheckedAndHidden,
+                               LocalDate today,
                                boolean includePrivate,
                                boolean includeEncrypted,
                                @NonNull String sortOrder) {
-        Log.d(TAG, String.format(".getItems(%d,%s,%s,%s)",
-                categoryId, includePrivate, includeEncrypted, sortOrder));
+        Log.d(TAG, String.format(".getItems(%d,%s,%s,%s,%s,%s)",
+                categoryId, includeCheckedAndHidden,
+                today.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                includePrivate, includeEncrypted, sortOrder));
         List<ToDoItem> foundItems = new ArrayList<>();
         for (ToDoItem item : itemTable.values()) {
             if (categoryId != ToDoPreferences.ALL_CATEGORIES) {
                 if (item.getCategoryId() != categoryId)
                     continue;
+            }
+            if (!includeCheckedAndHidden) {
+                if (item.isChecked())
+                    continue;
+                if ((item.getDue() != null) &&
+                        (item.getHideDaysEarlier() != null)) {
+                    if (item.getDue().minusDays(item.getHideDaysEarlier())
+                            .isAfter(today))
+                        continue;
+                }
             }
             if (!includePrivate && item.isPrivate())
                 continue;

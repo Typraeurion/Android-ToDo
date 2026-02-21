@@ -36,6 +36,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import com.xmission.trevin.android.todo.R;
@@ -895,7 +896,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                 + ") FROM " + TODO_TABLE_NAME, null);
         try {
             if (c.moveToFirst()) {
-                return c.getLong(0);
+                return c.isNull(0) ? 0 : c.getLong(0);
             }
             // If there are no items, fall through.
         } catch (SQLException e) {
@@ -922,28 +923,39 @@ public class ToDoRepositoryImpl implements ToDoRepository {
 
     @Override
     public ToDoCursor getItems(long categoryId,
+                               boolean includeCheckedAndHidden,
+                               LocalDate today,
                                boolean includePrivate,
                                boolean includeEncrypted,
                                String sortOrder) {
-        Log.d(TAG, String.format(".getItems(%d,%s,%s,\"%s\")",
-                categoryId, includePrivate, includeEncrypted, sortOrder));
+        Log.d(TAG, String.format(".getItems(%d,%s,%s,%s,%s,\"%s\")",
+                categoryId, includeCheckedAndHidden,
+                today.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                includePrivate, includeEncrypted, sortOrder));
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(TODO_TABLE_NAME + " JOIN " + CATEGORY_TABLE_NAME
                 + " ON (" + TODO_TABLE_NAME + "." + ToDoItemColumns.CATEGORY_ID
                 + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns._ID + ")");
         qb.setProjectionMap(ITEM_PROJECTION_MAP);
         List<String> selectors = new ArrayList<>();
-        List<String> selectorArgs = new ArrayList<>();
+        List<String> selectorArgs = new ArrayList<>(2);
         if (categoryId > ToDoPreferences.ALL_CATEGORIES) {
             selectors.add(ToDoItemColumns.CATEGORY_ID + " = ?");
             selectorArgs.add(Long.toString(categoryId));
         }
+        if (!includeCheckedAndHidden) {
+            selectors.add(ToDoItemColumns.CHECKED + " = 0");
+            selectors.add("(" + ToDoItemColumns.DUE_TIME + " IS NULL OR "
+                    + ToDoItemColumns.HIDE_DAYS_EARLIER + " IS NULL OR "
+                    + ToDoItemColumns.DUE_TIME + " - (86400000 * "
+                    + ToDoItemColumns.HIDE_DAYS_EARLIER + ") < ?)");
+            selectorArgs.add(Long.toString(today.atStartOfDay(
+                    ZoneOffset.UTC).toInstant().toEpochMilli()));
+        }
         if (!includePrivate) {
-            selectors.add(ToDoItemColumns.PRIVATE + " <= ?");
-            selectorArgs.add("0");
+            selectors.add(ToDoItemColumns.PRIVATE + " <= 0");
         } else if (!includeEncrypted) {
-            selectors.add(ToDoItemColumns.PRIVATE + " <= ?");
-            selectorArgs.add("1");
+            selectors.add(ToDoItemColumns.PRIVATE + " <= 1");
         }
         String selection = null;
         if (!selectors.isEmpty())

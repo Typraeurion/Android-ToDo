@@ -195,11 +195,6 @@ public class CategoryEditorAdapter extends BaseAdapter {
             et.setTag(POSITION_KEY, position);
             et.setOnFocusChangeListener(FOCUS_CHANGE_LISTENER);
 
-            // If this is a new entry, request focus
-            if (TextUtils.isEmpty(category.getName()) ||
-                    (category.getId() == null))
-                et.requestFocus();
-
             return outerView;
         }
         catch (ClassCastException cx) {
