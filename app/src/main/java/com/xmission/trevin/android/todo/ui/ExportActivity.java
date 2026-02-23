@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,6 +49,8 @@ import androidx.work.WorkRequest;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.provider.ToDoRepository;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.service.ProgressBarUpdater;
 import com.xmission.trevin.android.todo.service.XMLExportWorker;
 import com.xmission.trevin.android.todo.util.FileUtils;
@@ -94,6 +97,12 @@ public class ExportActivity extends Activity {
 
     /** Checkbox for including private records */
     CheckBox exportPrivateCheckBox = null;
+
+    /**
+     * Whether the database has a password set.  We check this
+     * in a repository runner on a non-UI thread.
+     */
+    boolean hasPassword = false;
 
     /** Export button */
     Button exportButton = null;
@@ -225,9 +234,25 @@ public class ExportActivity extends Activity {
         boolean exportPrivate = prefs.exportPrivate();
         exportPrivateCheckBox.setChecked(exportPrivate);
 
-        findViewById(R.id.TableRowPasswordNotSetWarning)
-        .setVisibility((encryptor.getPassword() == null)
-                ? View.VISIBLE : View.GONE);
+        // Check for a password in the database.  If there isn't one,
+        // show a warning if the "Include Private" option is checked.
+        final ToDoRepository repository = ToDoRepositoryImpl.getInstance();
+        Executors.newSingleThreadExecutor().submit(new Runnable() {
+            @Override
+            public void run() {
+                repository.open(ExportActivity.this);
+                hasPassword = encryptor.hasPassword(repository);
+                repository.release(ExportActivity.this);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        findViewById(R.id.TableRowPasswordNotSetWarning)
+                                .setVisibility((prefs.exportPrivate() && !hasPassword)
+                                        ? View.VISIBLE : View.GONE);
+                    }
+                });
+            }
+        });
 
         // At least until we know how big the input file is...
         exportProgressBar.setIndeterminate(true);
@@ -317,6 +342,9 @@ public class ExportActivity extends Activity {
                     public void onCheckedChanged(
                             CompoundButton b, boolean checked) {
                         prefs.setExportPrivate(checked);
+                        findViewById(R.id.TableRowPasswordNotSetWarning)
+                                .setVisibility((checked && !hasPassword)
+                                        ? View.VISIBLE : View.GONE);
                     }
                 });
 
@@ -497,13 +525,6 @@ public class ExportActivity extends Activity {
                 fullName = exportDocUri.toString();
             }
 
-//            Intent intent = new Intent(ExportActivity.this,
-//                    XMLExporterService.class);
-//            intent.putExtra(XMLExporterService.XML_DATA_FILENAME, fullName);
-//            intent.putExtra(XMLExporterService.EXPORT_PRIVATE,
-//                    exportPrivateCheckBox.isChecked());
-//            ServiceConnection serviceConnection =
-//                new XMLExportServiceConnection();
             WorkRequest exportRequest = new OneTimeWorkRequest
                     .Builder(XMLExportWorker.class)
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -515,37 +536,6 @@ public class ExportActivity extends Activity {
                     .build();
             workManager.enqueue(exportRequest);
 
-            // Set up a callback to update the progress bar
-//            final Handler progressHandler = new Handler();
-//            progressHandler.postDelayed(new Runnable() {
-//                int oldMax = 0;
-//                String oldMessage = "...";
-//                @Override
-//                public void run() {
-//                    if (progressService != null) {
-//                        String newMessage = progressService.getCurrentMode();
-//                        int newMax = progressService.getMaxCount();
-//                        int newProgress = progressService.getChangedCount();
-//                        Log.d(TAG, ".Runnable: Updating the progress dialog to "
-//                                + newMessage + " " + newProgress + "/" + newMax);
-//                        if (!oldMessage.equals(newMessage)) {
-//                            exportProgressMessage.setText(newMessage);
-//                            oldMessage = newMessage;
-//                        }
-//                        if (newMax != oldMax) {
-//                            exportProgressBar.setIndeterminate(newMax == 0);
-//                            exportProgressBar.setMax(newMax);
-//                            oldMax = newMax;
-//                        }
-//                        exportProgressBar.setProgress(newProgress);
-//                        // To do: also display the values (if max > 0)
-//                        progressHandler.postDelayed(this, 100);
-//                    }
-//                }
-//            }, 100);
-//            startService(intent);
-//            Log.d(TAG, "ExportButtonOK.onClick: binding to the export service");
-//            bindService(intent, serviceConnection, 0);
             // Sanity checks
             if ((progressLiveData != null) && (progressObserver != null))
                 progressLiveData.removeObserver(progressObserver);
@@ -629,32 +619,6 @@ public class ExportActivity extends Activity {
                 .create();
         errorDialog.show();
     }
-
-//    class XMLExportServiceConnection implements ServiceConnection {
-//        public void onServiceConnected(ComponentName name, IBinder service) {
-//            String interfaceDescriptor;
-//            try {
-//                interfaceDescriptor = service.getInterfaceDescriptor();
-//            } catch (RemoteException rx) {
-//                interfaceDescriptor = rx.getMessage();
-//            }
-//            Log.d(TAG, String.format(".XMLExportServiceConnection.onServiceConnected(%s, %s)",
-//                    name.getShortClassName(), interfaceDescriptor));
-//            XMLExporterService.ExportBinder xbinder =
-//                (XMLExporterService.ExportBinder) service;
-//            progressService = xbinder.getService();
-//        }
-//
-//        /** Called when a connection to the service has been lost */
-//        public void onServiceDisconnected(ComponentName name) {
-//            Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
-//            xableFormElements(true);
-//            progressService = null;
-//            unbindService(this);
-//            // To do: was the export successful?
-//            ExportActivity.this.finish();
-//        }
-//    }
 
     /** Observer of an export worker&rsquo;s progress. */
     private class ExportProgressObserver implements Observer<WorkInfo> {

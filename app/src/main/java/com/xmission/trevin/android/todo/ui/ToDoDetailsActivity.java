@@ -187,7 +187,14 @@ public class ToDoDetailsActivity extends Activity {
      * but re-enables it before saving, so we don&rsquo;t lose
      * any extra data (i.e. the last notification time).
      */
-    ToDoAlarm alarm;
+    ToDoAlarm alarm = null;
+
+    /**
+     * Copy of any original alarm in the item to see whether it
+     * has changed before saving, in which case we want to
+     * clear the last notification time.
+     */
+    ToDoAlarm originalAlarm = null;
 
     /** Alarm dialog box */
     Dialog alarmDialog = null;
@@ -248,6 +255,7 @@ public class ToDoDetailsActivity extends Activity {
             Intent intent = getIntent();
             todoId = null;
             todo = new ToDoItem();
+            originalAlarm = null;
             if (intent.hasExtra(EXTRA_ITEM_ID)) {
                 todoId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
                 todo.setId(todoId);
@@ -376,8 +384,10 @@ public class ToDoDetailsActivity extends Activity {
         @Override
         public void run() {
             repository.open(ToDoDetailsActivity.this);
-            if (loadItem)
+            if (loadItem) {
                 todo = repository.getItemById(todoId);
+                originalAlarm = todo.getAlarm();
+            }
             runOnUiThread(new FinalizeUIRunner(loadItem));
         }
     }
@@ -501,6 +511,7 @@ public class ToDoDetailsActivity extends Activity {
         categoryList.setSelection(categoryAdapter
                 .getCategoryPosition(todo.getCategoryId()));
         alarm = data.alarm;
+        originalAlarm = data.originalAlarm;
         repeatSettings = data.repeatDialogSettings;
         updateAlarmButton();
         updateHideButton();
@@ -582,6 +593,7 @@ public class ToDoDetailsActivity extends Activity {
         data.alarmDialogIsShowing =
                 (alarmDialog != null) && alarmDialog.isShowing();
         data.alarm = todo.getAlarm();
+        data.originalAlarm = originalAlarm;
         if (data.alarmDialogIsShowing) {
             if (data.alarm == null)
                 data.alarm = new ToDoAlarm();
@@ -1351,9 +1363,6 @@ public class ToDoDetailsActivity extends Activity {
                 validationErrors.add(getResources().getString(
                         R.string.ErrorCategoryID));
 
-            if (todo.getDue() == null)
-                todo.setRepeatInterval(null);
-
             if (validationErrors.size() > 0) {
                 // Show an alert dialog
                 AlertDialog.Builder builder =
@@ -1370,6 +1379,21 @@ public class ToDoDetailsActivity extends Activity {
                 builder.setMessage(sb.toString());
                 builder.create().show();
             } else {
+
+                // Final item cleanup
+                if (todo.getDue() == null)
+                    todo.setRepeatInterval(null);
+                if (todo.getAlarm() != null) {
+                    // If the alarm time has changed,
+                    // clear any prior notification time.
+                    if ((originalAlarm == null) ||
+                            !todo.getAlarm().getTime().equals(
+                                    originalAlarm.getTime()) ||
+                            (todo.getAlarm().getAlarmDaysEarlier() !=
+                                    originalAlarm.getAlarmDaysEarlier()))
+                        todo.getAlarm().setNotificationTime(null);
+                }
+
                 // Disable the description field and Done and Delete buttons
                 // until the save is finished
                 toDoDescription.setEnabled(false);

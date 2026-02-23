@@ -438,13 +438,13 @@ public class CategoryFilterAdapter extends BaseAdapter {
         if (convertView instanceof TextView) {
             tv = (TextView) convertView;
         } else {
-            int layoutId = android.R.layout.simple_spinner_dropdown_item;
+            int layoutId = R.layout.simple_spinner_dropdown_item;
             if (category == ALL_CATEGORY) {
                 Log.d(TAG, "Creating a new simple_spinner_dropdown_item for the \"All\" filter");
             }
             else if (category == EDIT_CATEGORY) {
                 Log.d(TAG, "Creating a new simple_list_item_1 for \"Edit categories\"");
-                layoutId = android.R.layout.simple_list_item_1;
+                layoutId = R.layout.simple_dropdown_item_1line;
             }
             else {
                 Log.d(TAG, "Creating a new simple_spinner_item for the \""

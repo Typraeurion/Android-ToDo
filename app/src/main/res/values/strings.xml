@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.5.0 (2026.02.22)\n
+version 1.5.0 (2026.02.23)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -154,7 +154,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="ExportTextDirectory">Folder:</string>
     <string name="ExportTextFile">File Name:</string>
     <string name="ExportTextIncludePrivate">Include Private:</string>
-    <string name="ExportTextPasswordNotSetWarning">No password has been entered in Settings.  Encrypted records will not be exported!</string>
+    <string name="ExportTextPasswordNotSetWarning">No password has been set.  Private records will not be encrypted.</string>
     <string name="HideButtonCancel">Cancel</string>
     <string name="HideButtonOK">OK</string>
     <string name="HideTextHide">Hide until</string>

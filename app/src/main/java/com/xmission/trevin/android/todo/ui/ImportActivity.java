@@ -604,8 +604,6 @@ public class ImportActivity extends Activity {
                         ImportActivity.this, importDocUri);
             }
 
-//            Intent intent;
-//            ServiceConnection serviceConnection;
             WorkRequest importRequest;
             int importType = importTypeList.getSelectedItemPosition();
             if (importType == AdapterView.INVALID_POSITION)
@@ -613,12 +611,6 @@ public class ImportActivity extends Activity {
             // Make an educated guess about the file type, based on the extension.
             if (realName.toLowerCase().endsWith(".dat")) {
                 // Assume Palm data
-//                intent = new Intent(ImportActivity.this, PalmImporterService.class);
-//                intent.putExtra(PalmImportWorker.PALM_DATA_FILENAME,
-//                        fullName);
-//                intent.putExtra(PalmImportWorker.PALM_IMPORT_TYPE,
-//                        palmImportTypes[importType]);
-//                serviceConnection = new PalmImportServiceConnection();
                 importRequest = new OneTimeWorkRequest
                         .Builder(PalmImportWorker.class)
                         .setInputData(new Data.Builder()
@@ -632,21 +624,6 @@ public class ImportActivity extends Activity {
                         .addTag("Import")
                         .build();
             } else {
-//                // Assume XML data exported by this application
-//                intent = new Intent(ImportActivity.this, XMLImporterService.class);
-//                intent.putExtra(XMLImportWorker.XML_DATA_FILENAME, fullName);
-//                intent.putExtra(XMLImportWorker.XML_IMPORT_TYPE,
-//                        xmlImportTypes[importType]);
-//                intent.putExtra(XMLImportWorker.IMPORT_PRIVATE,
-//                        importPrivateCheckBox.isChecked());
-//                if (importPrivateCheckBox.isChecked()) {
-//                    char[] password = new char[importPassword.length()];
-//                    importPassword.getText().getChars(0, importPassword.length(), password, 0);
-//                    if (password.length > 0)
-//                        intent.putExtra(XMLImportWorker.XML_PASSWORD,
-//                                password);
-//                }
-//                serviceConnection = new XMLImportServiceConnection();
                 Data.Builder dataBuilder = new Data.Builder()
                         .putString(XMLImportWorker.XML_DATA_FILENAME, fullName)
                         .putString(XMLImportWorker.XML_IMPORT_TYPE,
@@ -667,37 +644,6 @@ public class ImportActivity extends Activity {
             }
             workManager.enqueue(importRequest);
 
-            // Set up a callback to update the progress bar
-//            final Handler progressHandler = new Handler();
-//            progressHandler.postDelayed(new Runnable() {
-//                int oldMax = 0;
-//                String oldMessage = "...";
-//                @Override
-//                public void run() {
-//                    if (progressService != null) {
-//                        String newMessage = progressService.getCurrentMode();
-//                        int newMax = progressService.getMaxCount();
-//                        int newProgress = progressService.getChangedCount();
-//                        Log.d(TAG, ".Runnable: Updating the progress dialog to "
-//                                + newMessage + " " + newProgress + "/" + newMax);
-//                        if (!oldMessage.equals(newMessage)) {
-//                            importProgressMessage.setText(newMessage);
-//                            oldMessage = newMessage;
-//                        }
-//                        if (newMax != oldMax) {
-//                            importProgressBar.setIndeterminate(newMax == 0);
-//                            importProgressBar.setMax(newMax);
-//                            oldMax = newMax;
-//                        }
-//                        importProgressBar.setProgress(newProgress);
-//                        // To do: also display the values (if max > 0)
-//                        progressHandler.postDelayed(this, 100);
-//                    }
-//                }
-//            }, 100);
-//            startService(intent);
-//            Log.d(TAG, "ImportButtonOK.onClick: binding to the import service");
-//            bindService(intent, serviceConnection, 0);
             // Sanity checks
             if ((progressLiveData != null) && (progressObserver != null))
                 progressLiveData.removeObserver(progressObserver);
@@ -782,57 +728,6 @@ public class ImportActivity extends Activity {
                 .create();
         errorDialog.show();
     }
-
-//    class PalmImportServiceConnection implements ServiceConnection {
-//        public void onServiceConnected(ComponentName name, IBinder service) {
-//            String interfaceDescriptor;
-//            try {
-//                interfaceDescriptor = service.getInterfaceDescriptor();
-//            } catch (RemoteException rx) {
-//                interfaceDescriptor = rx.getMessage();
-//            }
-//            Log.d(TAG, String.format(".PalmImportServiceConnection.onServiceConnected(%s, %s)",
-//                    name.getShortClassName(), interfaceDescriptor));
-//            PalmImporterService.ImportBinder xbinder =
-//                (PalmImporterService.ImportBinder) service;
-//            progressService = xbinder.getService();
-//        }
-//
-//        /** Called when a connection to the service has been lost */
-//        public void onServiceDisconnected(ComponentName name) {
-//            Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
-//            xableFormElements(true);
-//            progressService = null;
-//            unbindService(this);
-//	    ImportActivity.this.finish();
-//        }
-//    }
-
-//    class XMLImportServiceConnection implements ServiceConnection {
-//        public void onServiceConnected(ComponentName name, IBinder service) {
-//            String interfaceDescriptor;
-//            try {
-//                interfaceDescriptor = service.getInterfaceDescriptor();
-//            } catch (RemoteException rx) {
-//                interfaceDescriptor = rx.getMessage();
-//            }
-//            Log.d(TAG, String.format(".XMLImportServiceConnection.onServiceConnected(%s, %s)",
-//                    name.getShortClassName(), interfaceDescriptor));
-//            XMLImporterService.ImportBinder xbinder =
-//                (XMLImporterService.ImportBinder) service;
-//            progressService = xbinder.getService();
-//        }
-//
-//        /** Called when a connection to the service has been lost */
-//        public void onServiceDisconnected(ComponentName name) {
-//            Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
-//            xableFormElements(true);
-//            progressService = null;
-//            unbindService(this);
-//            // To do: was the import successful?
-//            ImportActivity.this.finish();
-//        }
-//    }
 
     /** Observer of an import worker&rsquo;s progress. */
     private class ImportProgressObserver implements Observer<WorkInfo> {

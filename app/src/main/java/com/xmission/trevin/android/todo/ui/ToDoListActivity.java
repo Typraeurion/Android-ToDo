@@ -38,10 +38,7 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
 import com.xmission.trevin.android.todo.provider.ItemLoaderCallbacks;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
-//import com.xmission.trevin.android.todo.service.AlarmService;
-//import com.xmission.trevin.android.todo.service.PasswordChangeService;
 import com.xmission.trevin.android.todo.service.PasswordChangeWorker;
-//import com.xmission.trevin.android.todo.service.ProgressReportingService;
 
 import android.annotation.SuppressLint;
 import android.app.*;
@@ -50,17 +47,14 @@ import android.database.DataSetObserver;
 import android.database.SQLException;
 import android.net.Uri;
 import android.os.Bundle;
-//import android.os.IBinder;
-//import android.os.RemoteException;
 import android.text.InputType;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
-
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
-import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
@@ -77,7 +71,7 @@ import androidx.work.WorkRequest;
  */
 @SuppressLint("NewApi")
 @SuppressWarnings("deprecation")
-public class ToDoListActivity extends ListActivity {
+public class ToDoListActivity extends AppCompatActivity {
 
     private static final String TAG = "ToDoListActivity";
 
@@ -101,49 +95,8 @@ public class ToDoListActivity extends ListActivity {
     private static final int PROGRESS_DIALOG_ID = 9;
     private static final int UNLOCK_DIALOG_ID = 10;
 
-    /**
-     * The columns we are interested in from the category table
-     */
-    static final String[] CATEGORY_PROJECTION = new String[] {
-            ToDoCategoryColumns._ID,
-            ToDoCategoryColumns.NAME,
-    };
-
-    /**
-     * The columns we are interested in from the item table
-     *
-     * @deprecated
-     */
-    static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItemColumns._ID,
-            ToDoItemColumns.DESCRIPTION,
-            ToDoItemColumns.CHECKED,
-            ToDoItemColumns.NOTE,
-            ToDoItemColumns.ALARM_DAYS_EARLIER,
-            ToDoItemColumns.REPEAT_INTERVAL,
-            ToDoItemColumns.DUE_TIME,
-            ToDoItemColumns.COMPLETED_TIME,
-            ToDoItemColumns.CATEGORY_NAME,
-            ToDoItemColumns.PRIVATE,
-            ToDoItemColumns.PRIORITY,
-            ToDoItemColumns.REPEAT_DAY,
-            ToDoItemColumns.REPEAT_DAY2,
-            ToDoItemColumns.REPEAT_END,
-            ToDoItemColumns.REPEAT_INCREMENT,
-            ToDoItemColumns.REPEAT_MONTH,
-            ToDoItemColumns.REPEAT_WEEK,
-            ToDoItemColumns.REPEAT_WEEK2,
-            ToDoItemColumns.REPEAT_WEEK_DAYS,
-    };
-
     /** Shared preferences */
     private ToDoPreferences prefs;
-
-    /** The URI by which we were started for the To-Do items */
-    private Uri todoUri = ToDoItemColumns.CONTENT_URI;
-
-    /** The corresponding URI for the categories */
-    private Uri categoryUri = ToDoCategoryColumns.CONTENT_URI;
 
     /** Category filter spinner */
     Spinner categoryList = null;
@@ -153,6 +106,8 @@ public class ToDoListActivity extends ListActivity {
 
     /** Used to map categories from the database to views */
     CategoryFilterAdapter categoryAdapter = null;
+
+    ListView listView;
 
     /** Used to map To Do entries from the database to views */
     ToDoCursorAdapter itemAdapter = null;
@@ -229,8 +184,9 @@ public class ToDoListActivity extends ListActivity {
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
         // Inflate our view so we can find our lists
-        setContentView(R.layout.list);
+        setContentView(R.layout.todo_list);
         categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
+        listView = (ListView) findViewById(R.id.todo_list);
 
         /*
          * If no data was given in the intent (because we were started
@@ -241,14 +197,10 @@ public class ToDoListActivity extends ListActivity {
             Log.d(TAG, String.format("No intent data; defaulting to %s",
                     ToDoItemColumns.CONTENT_URI.toString()));
             intent.setData(ToDoItemColumns.CONTENT_URI);
-            todoUri = ToDoItemColumns.CONTENT_URI;
-            categoryUri = ToDoCategoryColumns.CONTENT_URI;
         } else {
             Log.d(TAG, String.format("intent data = %s: %s",
                     intent.getAction(), intent.getDataString()));
             // Fix Me: what are the other actions that could lead here?
-            todoUri = intent.getData();
-            categoryUri = todoUri.buildUpon().encodedPath("/categories").build();
         }
 
         encryptor = StringEncryption.holdGlobalEncryption();
@@ -302,6 +254,7 @@ public class ToDoListActivity extends ListActivity {
         itemAdapter = new ToDoCursorAdapter(
                 this, null, repository, encryptor,
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE));
+        itemAdapter.registerDataSetObserver(new ToDoAdapterObserver());
         Log.d(TAG, ".onCreate: initializing a To Do item loader manager");
         itemLoaderCallbacks = new ItemLoaderCallbacks(this,
                 prefs, itemAdapter, repository);
@@ -310,7 +263,6 @@ public class ToDoListActivity extends ListActivity {
 
         repository.registerDataSetObserver(registeredObserver);
 
-        ListView listView = getListView();
         listView.setAdapter(itemAdapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -373,12 +325,37 @@ public class ToDoListActivity extends ListActivity {
         @Override
         public void onChanged() {
             Log.d(TAG, "CategoryAdapterObserver.onChanged()");
+            if (getIntent().hasExtra(EXTRA_CATEGORY_ID)) {
+                showCategoryFromIntent(getIntent());
+                return;
+            }
             // Check whether the category has changed
+            long currentCategory = categoryList.getSelectedItemId();
             long selectedCategory = prefs.getSelectedCategory();
-            if (categoryList.getSelectedItemId() != selectedCategory) {
-                Log.w(TAG, "The category ID at the selected position has changed!");
+            if (currentCategory != selectedCategory) {
+                int newPosition = categoryAdapter
+                        .getCategoryPosition(selectedCategory);
+                Log.w(TAG, String.format(Locale.US,
+                        "The category ID has changed to %d at position %d;"
+                                + " changing to category %d at position %d",
+                        currentCategory, categoryList.getSelectedItemPosition(),
+                        selectedCategory, newPosition));
                 setCategorySpinnerByID(selectedCategory);
             }
+        }
+    }
+
+    /**
+     * Watch for changes from the item adapter.  This is normally a
+     * passthrough from a repository observer, but is also called
+     * when the adapter first loads its data.
+     */
+    private class ToDoAdapterObserver extends DataSetObserver {
+        @Override
+        public void onChanged() {
+            Log.d(TAG, "ToDoAdapterObserver.onChanged()");
+            // Check whether the Intent requests a specific item
+            showItemFromIntent(getIntent());
         }
     }
 
@@ -418,10 +395,6 @@ public class ToDoListActivity extends ListActivity {
     public void onStart() {
         Log.d(TAG, ".onStart");
         super.onStart();
-
-        // Check whether we were called with a specific item,
-        // e.g. by the user clicking on an alarm notification.
-        showItemFromIntent(getIntent());
     }
 
     /**
@@ -443,79 +416,93 @@ public class ToDoListActivity extends ListActivity {
                 newIntent.getAction(), newIntent.getExtras()));
         super.onNewIntent(newIntent);
         setIntent(newIntent);
+        if (!showCategoryFromIntent(newIntent)) {
+            // This should eventually trigger a list change,
+            // so don't continue with looking for the target item.
+            return;
+        }
         showItemFromIntent(newIntent);
     }
 
     /**
-     * Update the view if necessary to ensure a particular To Do item is shown,
-     * if the given {@link Intent} includes a category and item ID.
+     * If the Intent data contains an {@link #EXTRA_CATEGORY_ID},
+     * check whether that category exists in the category adapter and
+     * if either that or &ldquo;All Categories&rdquo; isn&rsquo;t
+     * selected change the selection to the intended category.
+     * Removes {@link #EXTRA_CATEGORY_ID} from the Intent if the category
+     * is in our list; otherwise leaves it for the
+     * {@link CategoryAdapterObserver} to handle later.
      *
-     * @param intent the {link Intent} by which this activity was called
+     * @param intent the Intent from which to check for a category ID
+     *
+     * @return {@code true} if there was no category ID in the Intent
+     * or if we found the category and selected it; {@code false} if
+     * there was a category ID but it was not found in the category adapter.
+     * The Intent will retain an category ID iff we return {@code false}.
      */
-    private void showItemFromIntent(Intent intent) {
-        if (intent.hasExtra(EXTRA_ITEM_ID)) {
-            long categoryId = intent.getLongExtra(EXTRA_CATEGORY_ID, -1);
-            long itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1);
-            if ((categoryId >= 0) && (itemId >= 0))
-                showItemIfNeeded(categoryId, itemId);
+    private boolean showCategoryFromIntent(Intent intent) {
+        long intendedCategory = intent.getLongExtra(EXTRA_CATEGORY_ID, -1);
+        if (intendedCategory < 0)
+            return true;
+        long currentCategory = prefs.getSelectedCategory();
+        if ((currentCategory != intendedCategory) &&
+                (currentCategory != ALL_CATEGORIES)) {
+            int position = categoryAdapter.getCategoryPosition(intendedCategory);
+            if ((position >= categoryAdapter.getCount() ||
+                    (categoryAdapter.getItemId(position) != intendedCategory))) {
+                Log.i(TAG, String.format(Locale.US,
+                        "Intended category %d not currently"
+                                + " in the adapter data", intendedCategory));
+                return false;
+            }
+            Log.d(TAG, String.format(Locale.US,
+                    "Changing category spinner to category %d at position %d /%d",
+                    intendedCategory, position, categoryAdapter.getCount()));
+            categoryList.setSelection(position);
         }
+        // We can remove this from the Intent
+        getIntent().removeExtra(EXTRA_CATEGORY_ID);
+        return true;
     }
 
     /**
-     * Update the view if necessary to ensure a particular To Do item is shown.
-     * <p>
-     * There is a potential race condition if the activity is not already
-     * running, where this method may be called before
-     * {@link CategoryFilterAdapter} and/or {@link ToDoCursorAdapter}
-     * have received cursors for their data.  In that case we need
-     * to defer the selection until the data is available.
-     * </p>
+     * If the Intent data contains an {@link #EXTRA_ITEM_ID},
+     * check whether that item exists in the list adapter and if it
+     * isn&rsquo;t visible scroll to it.  Removes {@link #EXTRA_ITEM_ID}
+     * from the Intent if the item is in our list; otherwise leaves it
+     * for the {@link ToDoAdapterObserver} to handle later.
      *
-     * @param categoryId the ID of the category which should be shown.  If
-     *        the current category is &ldquo;All&rdquo; or this category,
-     *        we do nothing; otherwise change the category to this value.
-     * @param itemId the ID of the To Do item which should be visible.
-     *        <i>(Currently does nothing; Fix Me)</i>
+     * @param intent the Intent from which to check for an item ID
+     *
+     * @return {@code true} if there was no item ID in the Intent
+     * or if we found the item and scrolled to it; {@code false} if
+     * there was an item ID but it was not found in the item adapter.
+     * The Intent will retain an item ID iff we return {@code false}.
      */
-    private void showItemIfNeeded(final long categoryId, final long itemId) {
-        long selectedCategory = prefs.getSelectedCategory();
-        boolean deferItemScroll = (itemAdapter.getCount() <= 0);
-        if ((selectedCategory >= 0) && (categoryId != selectedCategory)) {
-            Log.d(TAG, String.format("Changing the selected category from %d to %d",
-                    selectedCategory, categoryId));
-            prefs.setSelectedCategory(categoryId);
-            // Switch to the category this item is in
-            if (categoryAdapter.getCount() > 2) {
-                setCategorySpinnerByID(categoryId);
-            } else {
-                final DataSetObserver initObserver = new DataSetObserver() {
-                    @Override
-                    public void onChanged() {
-                        categoryAdapter.unregisterDataSetObserver(this);
-                        setCategorySpinnerByID(categoryId);
-                    }
-                };
-                categoryAdapter.registerDataSetObserver(initObserver);
-            }
-            deferItemScroll = true;
+    private boolean showItemFromIntent(Intent intent) {
+        long intendedItem = intent.getLongExtra(EXTRA_ITEM_ID, -1);
+        if (intendedItem < 0)
+            return true;
+        // This will return the first position in the list if the item was
+        // not found, so we have to double-check whether we have the item.
+        int position = itemAdapter.getItemPosition(intendedItem);
+        if ((position >= itemAdapter.getCount()) ||
+                (itemAdapter.getItemId(position) != intendedItem)) {
+            Log.i(TAG, String.format(Locale.US,
+                    "Intended item %d not currently"
+                            + " in the adapter data",
+                    intendedItem));
+            return false;
         }
-
-        ListView listView = getListView();
-        Log.d(TAG, String.format("Target item for display is %d", itemId));
-        if (deferItemScroll) {
-            final DataSetObserver initObserver = new DataSetObserver() {
-                @Override
-                public void onChanged() {
-                    itemAdapter.unregisterDataSetObserver(this);
-                    int position = itemAdapter.getItemPosition(itemId);
-                    listView.smoothScrollToPosition(position);
-                }
-            };
-            itemAdapter.registerDataSetObserver(initObserver);
-        } else {
-            int position = itemAdapter.getItemPosition(itemId);
+        if ((position < listView.getFirstVisiblePosition()) ||
+                (position > listView.getLastVisiblePosition())) {
+            Log.i(TAG, String.format(Locale.US,
+                    "Scrolling to item %d", intendedItem));
             listView.smoothScrollToPosition(position);
         }
+        // We can now remove this ID from the Intent
+        getIntent().removeExtra(EXTRA_ITEM_ID);
+        return true;
     }
 
     /** Called when the activity is ready for user interaction */
@@ -556,7 +543,7 @@ public class ToDoListActivity extends ListActivity {
     /**
      * Generate the WHERE clause for the list query.
      * This is only used for logging; the repository does the
-     * actualy query generation when called by ToDoCursorLoader.
+     * actual query generation when called by ToDoCursorLoader.
      */
     public String generateWhereClause() {
         StringBuilder whereClause = new StringBuilder();
@@ -646,19 +633,24 @@ public class ToDoListActivity extends ListActivity {
         @Override
         public void onNothingSelected(AdapterView<?> parent) {
             Log.d(TAG, ".CategorySpinnerListener.onNothingSelected()");
-            /* // Remove the filter
-            lastSelectedPosition = 0;
-            parent.setSelection(0);
-            prefs.edit().putLong(TPREF_SELECTED_CATEGORY, -1).commit(); */
         }
     }
 
-    /** Look up the spinner item corresponding to a category ID and select it. */
-    void setCategorySpinnerByID(long id) {
-        Log.w(TAG, "Changing category spinner to item " + id
-                + " of " + categoryList.getCount());
+    /**
+     * Look up the spinner item corresponding to a category ID and select it.
+     *
+     * @param id the ID of the category to select
+     *
+     * @return {@code true} if the category was found and selected,
+     * {@code false} otherwise
+     */
+    boolean setCategorySpinnerByID(long id) {
         int position = categoryAdapter.getCategoryPosition(id);
+        Log.d(TAG, String.format(Locale.US,
+                "Changing category spinner to category %d at position %d /%d",
+                id, position, categoryAdapter.getCount()));
         categoryList.setSelection(position);
+        return categoryList.getSelectedItemId() == id;
     }
 
     /**
@@ -702,8 +694,7 @@ public class ToDoListActivity extends ListActivity {
         MenuItem unlockItem = menu.findItem(R.id.menuUnlock);
         unlockItem.setVisible(hasPassword && prefs.showPrivate());
         unlockItem.setTitle(encryptor.hasKey()
-                ? R.string.MenuLock
-                : R.string.MenuUnlock);
+                ? R.string.MenuLock : R.string.MenuUnlock);
         menu.findItem(R.id.menuPassword).setTitle(hasPassword
                 ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
         menu.findItem(R.id.menuSettings).setIntent(
@@ -788,51 +779,36 @@ public class ToDoListActivity extends ListActivity {
                 }
     };
 
+    private static final DialogInterface.OnClickListener DISMISS_LISTENER
+            = new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            dialog.dismiss();
+        }
+    };
+
     /** Called when opening a dialog for the first time */
     @Override
     public Dialog onCreateDialog(int id) {
+        AlertDialog.Builder builder;
         switch (id) {
             case ABOUT_DIALOG_ID:
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder = new AlertDialog.Builder(this);
                 builder.setTitle(R.string.about);
                 builder.setMessage(getText(R.string.InfoPopupText));
                 builder.setCancelable(true);
-                builder.setNeutralButton(R.string.InfoButtonOK,
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int i) {
-                                dialog.dismiss();
-                            }
-                        });
+                builder.setNeutralButton(R.string.InfoButtonOK, DISMISS_LISTENER);
                 return builder.create();
 
             case DUEDATE_LIST_ID:
-            if (dueDateAdapter == null) {
-                dueDateAdapter = new DueDateSelectAdapter(this, prefs);
-            }
-//	    Resources r = getResources();
-//	    String[] dueDateOptionFormats =
-//		r.getStringArray(R.array.DueDateFormatList);
-//	    String[] dueDateListItems =
-//		new String[dueDateOptionFormats.length + 2];
-//	    Calendar c = Calendar.getInstance();
-//	    for (int i = 0; i < dueDateOptionFormats.length; i++) {
-//		SimpleDateFormat formatter =
-//		    new SimpleDateFormat(dueDateOptionFormats[i],
-//			    Locale.getDefault());
-//		dueDateListItems[i] = formatter.format(c.getTime());
-//		c.add(Calendar.DATE, 1);
-//	    }
-//	    dueDateListItems[dueDateOptionFormats.length] =
-//		r.getString(R.string.DueDateNoDate);
-//	    dueDateListItems[dueDateOptionFormats.length + 1] =
-//		r.getString(R.string.DueDateOther);
-            builder = new AlertDialog.Builder(this);
-            builder.setAdapter(dueDateAdapter,
-                    new DueDateListSelectionListener());
-//	    builder.setItems(dueDateListItems,
-//		    new DueDateListSelectionListener());
-            dueDateListDialog = builder.create();
-            return dueDateListDialog;
+                if (dueDateAdapter == null) {
+                    dueDateAdapter = new DueDateSelectAdapter(this, prefs);
+                }
+                builder = new AlertDialog.Builder(this);
+                builder.setAdapter(dueDateAdapter,
+                        new DueDateListSelectionListener());
+                dueDateListDialog = builder.create();
+                return dueDateListDialog;
 
             case DUEDATE_DIALOG_ID:
                 dueDateDialog = new CalendarDatePickerDialog(this,
@@ -850,16 +826,16 @@ public class ToDoListActivity extends ListActivity {
                                         findViewById(R.id.UnlockLayoutRoot));
                 builder.setView(unlockLayout);
                 final DialogInterface.OnClickListener listener1 =
-                    new UnlockOnClickListener();
-            builder.setPositiveButton(R.string.ConfirmationButtonOK, listener1);
-            builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener1);
-            unlockDialog = builder.create();
-            CheckBox showPasswordCheckBox1 =
-                    (CheckBox) unlockLayout.findViewById(R.id.CheckBoxShowPassword);
-            unlockPasswordEditText =
-                    (EditText) unlockLayout.findViewById(R.id.EditTextPassword);
-            showPasswordCheckBox1.setOnCheckedChangeListener(unlockShowPasswordListener);
-            return unlockDialog;
+                        new UnlockOnClickListener();
+                builder.setPositiveButton(R.string.ConfirmationButtonOK, listener1);
+                builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener1);
+                unlockDialog = builder.create();
+                CheckBox showPasswordCheckBox1 =
+                        (CheckBox) unlockLayout.findViewById(R.id.CheckBoxShowPassword);
+                unlockPasswordEditText =
+                        (EditText) unlockLayout.findViewById(R.id.EditTextPassword);
+                showPasswordCheckBox1.setOnCheckedChangeListener(unlockShowPasswordListener);
+                return unlockDialog;
 
             case PASSWORD_DIALOG_ID:
                 builder = new AlertDialog.Builder(this);
@@ -884,6 +860,7 @@ public class ToDoListActivity extends ListActivity {
                         passwordLayout.findViewById(R.id.EditTextNewPassword);
                 passwordChangeEditText[2] = (EditText)
                         passwordLayout.findViewById(R.id.EditTextConfirmPassword);
+                passwordChangeDialog.setOnShowListener(new PasswordDialogShowListener());
                 showPasswordCheckBox2.setOnCheckedChangeListener(changeShowPasswordListener);
                 return passwordChangeDialog;
 
@@ -992,7 +969,10 @@ public class ToDoListActivity extends ListActivity {
         @Override
         public void run() {
             if (menu != null) {
-                menu.findItem(R.id.menuUnlock).setVisible(hasPassword);
+                MenuItem unlockItem = menu.findItem(R.id.menuUnlock);
+                unlockItem.setVisible(hasPassword && prefs.showPrivate());
+                unlockItem.setTitle(encryptor.hasKey()
+                        ? R.string.MenuLock : R.string.MenuUnlock);
                 menu.findItem(R.id.menuPassword).setTitle(hasPassword
                         ? R.string.MenuPasswordChange
                         : R.string.MenuPasswordSet);
@@ -1040,16 +1020,30 @@ public class ToDoListActivity extends ListActivity {
                     .setMessage(exception.getMessage())
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setNeutralButton(R.string.ConfirmationButtonCancel,
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            })
+                            DISMISS_LISTENER)
                     .create()
                     .show();
         }
 
+    }
+
+    /**
+     * When the password dialog is shown, request focus on the old
+     * password field if it is visible, otherwise the first new
+     * password field
+     */
+    class PasswordDialogShowListener
+            implements DialogInterface.OnShowListener {
+        @Override
+        public void onShow(DialogInterface dialog) {
+            Log.d(TAG, "PasswordDialogShowListener.onShow()");
+            TableRow tr = (TableRow) passwordChangeDialog.findViewById(
+                    R.id.TableRowOldPassword);
+            if (tr.getVisibility() == View.VISIBLE)
+                passwordChangeEditText[0].requestFocus();
+            else
+                passwordChangeEditText[1].requestFocus();
+        }
     }
 
     class DueDateListSelectionListener
@@ -1192,8 +1186,6 @@ public class ToDoListActivity extends ListActivity {
                     return;
 
                 case DialogInterface.BUTTON_POSITIVE:
-                    // Intent passwordChangeIntent = new Intent(ToDoListActivity.this,
-                    //        PasswordChangeService.class);
                     char[] newPassword =
                             new char[passwordChangeEditText[1].length()];
                     passwordChangeEditText[1].getText().getChars(
@@ -1224,10 +1216,7 @@ public class ToDoListActivity extends ListActivity {
                     Arrays.fill(confirmedPassword, (char) 0);
                     Data.Builder inputDataBuilder = new Data.Builder();
                     if (newPassword.length > 0)
-                        // passwordChangeIntent.putExtra(
-                        //    PasswordChangeService.EXTRA_NEW_PASSWORD,
-                        //        newPassword);
-                        inputDataBuilder = inputDataBuilder.putString(
+                        inputDataBuilder.putString(
                                 PasswordChangeWorker.DATA_NEW_PASSWORD,
                                 new String(newPassword));
 
@@ -1247,14 +1236,9 @@ public class ToDoListActivity extends ListActivity {
                                                 ToDoListActivity.this);
                                 builder.setIcon(android.R.drawable.ic_dialog_alert);
                                 builder.setMessage(R.string.ToastBadPassword);
-                                builder.setNeutralButton(R.string.ConfirmationButtonCancel,
-                                        new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog,
-                                                                int which) {
-                                                dialog.dismiss();
-                                            }
-                                        });
+                                builder.setNeutralButton(
+                                        R.string.ConfirmationButtonCancel,
+                                        DISMISS_LISTENER);
                                 builder.show();
                                 return;
                             }
@@ -1264,20 +1248,15 @@ public class ToDoListActivity extends ListActivity {
                             new AlertDialog.Builder(ToDoListActivity.this)
                                     .setMessage(gsx.getMessage())
                                     .setIcon(android.R.drawable.ic_dialog_alert)
-                                    .setNeutralButton(R.string.ConfirmationButtonCancel,
-                                            new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialog, int which) {
-                                                    dialog.dismiss();
-                                                }
-                                            }).create().show();
+                                    .setNeutralButton(
+                                            R.string.ConfirmationButtonCancel,
+                                            DISMISS_LISTENER)
+                                    .create().show();
                             return;
                         }
-                        inputDataBuilder = inputDataBuilder.putString(
+                        inputDataBuilder.putString(
                                 PasswordChangeWorker.DATA_OLD_PASSWORD,
                                 new String(oldPassword));
-                        // passwordChangeIntent.putExtra(
-                        //        PasswordChangeService.EXTRA_OLD_PASSWORD, oldPassword);
                     }
                     WorkRequest changeRequest = new OneTimeWorkRequest
                             .Builder(PasswordChangeWorker.class)
@@ -1296,43 +1275,11 @@ public class ToDoListActivity extends ListActivity {
                             changeRequest.getId());
                     progressLiveData.observeForever(progressObserver);
 
-                    // passwordChangeIntent.setAction(
-                    //        PasswordChangeService.ACTION_CHANGE_PASSWORD);
                     dialog.dismiss();
-                    //Log.d(TAG, "PasswordChangeOnClickListener.onClick:"
-                    //        + " starting the password change service");
-                    // startService(passwordChangeIntent);
-                    // Bind to the service
-                    //Log.d(TAG, "PasswordChangeOnClickListener.onClick:"
-                    //        + " binding to the password change service");
-                    // bindService(passwordChangeIntent,
-                    //        new PasswordChangeServiceConnection(), 0);
                     return;
             }
         }
     }
-
-//    class PasswordChangeServiceConnection implements ServiceConnection {
-//	public void onServiceConnected(ComponentName name, IBinder service) {
-//	    try {
-//		Log.d(TAG, ".onServiceConnected(" + name.getShortClassName()
-//			+ "," + service.getInterfaceDescriptor() + ")");
-//	    } catch (RemoteException rx) {}
-//	    PasswordChangeService.PasswordBinder pbinder =
-//		(PasswordChangeService.PasswordBinder) service;
-//	    progressService = pbinder.getService();
-//	    showDialog(PROGRESS_DIALOG_ID);
-//	}
-//
-//	/** Called when a connection to the service has been lost */
-//	public void onServiceDisconnected(ComponentName name) {
-//	    Log.d(TAG, ".onServiceDisconnected(" + name.getShortClassName() + ")");
-//	    if (progressDialog != null)
-//		progressDialog.dismiss();
-//	    progressService = null;
-//	    unbindService(this);
-//	}
-//    }
 
     /**
      * Observer of the password change worker&rsquo;s progress.

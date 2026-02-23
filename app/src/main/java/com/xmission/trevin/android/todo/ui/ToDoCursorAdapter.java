@@ -245,7 +245,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
         View itemView = convertView;
         if (itemView == null) {
             Log.d(TAG, "Creating a new list item view");
-            itemView = inflater.inflate(R.layout.list_item, parent, false);
+            itemView = inflater.inflate(R.layout.todo_list_item, parent, false);
         }
 
         // Remove any existing callbacks to avoid spurious database changes

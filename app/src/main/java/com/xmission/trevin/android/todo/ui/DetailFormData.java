@@ -33,13 +33,14 @@ import java.io.Serializable;
  */
 class DetailFormData implements Serializable {
 
-    private static final long serialVersionUID = 11;
+    private static final long serialVersionUID = 12;
 
     Long todoId;
     @NonNull
     ToDoItem item;
     boolean dueDateDialogIsShowing;
     ToDoAlarm alarm;
+    ToDoAlarm originalAlarm;
     RepeatSettings repeatDialogSettings;
     boolean endDateDialogIsShowing;
     boolean hideDialogIsShowing;
@@ -61,6 +62,9 @@ class DetailFormData implements Serializable {
         hash *= 31;
         if (alarm != null)
             hash += alarm.hashCode();
+        hash *= 31;
+        if (originalAlarm != null)
+            hash += originalAlarm.hashCode();
         hash *= 31;
         if (repeatDialogSettings != null)
             hash += repeatDialogSettings.hashCode();
@@ -95,6 +99,8 @@ class DetailFormData implements Serializable {
         sb.append("dueDateDialogIsShowing=").append(dueDateDialogIsShowing);
         if (alarm != null)
             sb.append(", alarm=").append(alarm);
+        if (alarm != null)
+            sb.append(", originalAlarm=").append(alarm);
         if (repeatDialogSettings != null)
             sb.append(", repeatDialogSettings=").append(repeatDialogSettings);
         sb.append(", endDateDialogIsShowing=").append(endDateDialogIsShowing);
