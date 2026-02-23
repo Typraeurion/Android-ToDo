@@ -19,6 +19,7 @@ package com.xmission.trevin.android.todo.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.database.DataSetObserver;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -61,6 +62,9 @@ public class CategoryFilterAdapter extends BaseAdapter {
 
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
+
+    /** Handler for making calls involving the UI */
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     private final Runnable READ_RUNNER = new ReadCategoriesRunner();
 
@@ -164,6 +168,13 @@ public class CategoryFilterAdapter extends BaseAdapter {
                 READ_RUNNER.run();
                 observer = new PassthroughObserver();
                 repository.registerDataSetObserver(observer);
+                // Let any existing observers known we're ready
+                uiHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyDataSetChanged();
+                    }
+                });
             }
         }
     }

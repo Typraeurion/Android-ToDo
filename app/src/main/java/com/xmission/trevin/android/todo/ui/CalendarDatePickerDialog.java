@@ -27,6 +27,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+
 import com.xmission.trevin.android.todo.R;
 
 /**
@@ -52,7 +54,7 @@ public class CalendarDatePickerDialog extends AlertDialog
     }
 
     /**
-     * Create a new calendar date picker dialog for the current date.
+     * Create a new calendar date picker dialog.
      *
      * @param context the context in which this dialog is being shown
      * @param title the title of the dialog indicating which date is being set
@@ -83,7 +85,7 @@ public class CalendarDatePickerDialog extends AlertDialog
      *
      * @param date the date to highlight
      */
-    public void setDate(LocalDate date) {
+    public void setDate(@NonNull LocalDate date) {
         datePicker.setDate(date);
     }
 

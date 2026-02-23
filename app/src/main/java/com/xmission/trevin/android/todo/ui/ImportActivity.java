@@ -40,6 +40,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.work.Data;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.OutOfQuotaPolicy;
 import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
@@ -659,6 +660,7 @@ public class ImportActivity extends Activity {
                 }
                 importRequest = new OneTimeWorkRequest
                         .Builder(XMLImportWorker.class)
+                        .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                         .setInputData(dataBuilder.build())
                         .addTag("Import")
                         .build();

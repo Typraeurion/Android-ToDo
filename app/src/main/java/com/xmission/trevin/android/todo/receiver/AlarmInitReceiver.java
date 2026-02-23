@@ -109,7 +109,6 @@ public class AlarmInitReceiver extends BroadcastReceiver {
 
         WorkRequest req = new OneTimeWorkRequest
                 .Builder(AlarmWorker.class)
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .addTag(intent.getAction())
                 .build();
         workManager.enqueue(req);

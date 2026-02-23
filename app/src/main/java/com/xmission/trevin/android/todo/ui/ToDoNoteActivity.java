@@ -147,7 +147,7 @@ public class ToDoNoteActivity extends Activity {
                 Log.d(TAG, String.format(Locale.US,
                         ".onCreate(%s); id=%s, description=\"%s\", note=\"%s%s\"",
                         savedInstanceState, todoId, description,
-                        oldNoteText.substring(0, 80),
+                        oldNoteText.substring(0, Math.min(oldNoteText.length(), 80)),
                         (oldNoteText.length() > 80) ? "\u2026" : ""));
             } else {
                 Log.d(TAG, String.format(Locale.US,

@@ -1060,8 +1060,8 @@ public class PalmImporterTests {
     private List<ToDoItem> readToDos() {
         List<ToDoItem> list = new ArrayList<>(TEST_TODOS_1.size());
         ToDoCursor cursor = mockRepo.getItems(
-                ToDoPreferences.ALL_CATEGORIES, true, true,
-                ToDoRepositoryImpl.TODO_TABLE_NAME + "."
+                ToDoPreferences.ALL_CATEGORIES, true, LocalDate.now(),
+                true, true, ToDoRepositoryImpl.TODO_TABLE_NAME + "."
                         + ToDoSchema.ToDoItemColumns._ID);
         try {
             while (cursor.moveToNext())

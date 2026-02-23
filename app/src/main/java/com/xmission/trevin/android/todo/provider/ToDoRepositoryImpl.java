@@ -948,7 +948,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             selectors.add("(" + ToDoItemColumns.DUE_TIME + " IS NULL OR "
                     + ToDoItemColumns.HIDE_DAYS_EARLIER + " IS NULL OR "
                     + ToDoItemColumns.DUE_TIME + " - (86400000 * "
-                    + ToDoItemColumns.HIDE_DAYS_EARLIER + ") < ?)");
+                    + ToDoItemColumns.HIDE_DAYS_EARLIER
+                    + ") <= CAST(? AS INTEGER))");
             selectorArgs.add(Long.toString(today.atStartOfDay(
                     ZoneOffset.UTC).toInstant().toEpochMilli()));
         }

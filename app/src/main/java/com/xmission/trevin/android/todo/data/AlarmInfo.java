@@ -310,7 +310,7 @@ public class AlarmInfo implements Cloneable,
     public ZonedDateTime getNextAlarmTime() {
         if (nextAlarmTime == null) {
             LocalDate firstDate = dueDate.minusDays(daysEarlier);
-            LocalDate nextNotificationDate = LocalDate.now();
+            LocalDate nextNotificationDate = LocalDate.now(timeZone);
             if (notificationTime != null) {
                 LocalDate lastNotificationDate =
                         notificationTime.atZone(timeZone).toLocalDate();

@@ -19,7 +19,6 @@ package com.xmission.trevin.android.todo.ui;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_CATEGORY_ID;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_ITEM_ID;
 
-import java.text.DateFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -678,11 +677,10 @@ public class ToDoDetailsActivity extends Activity {
                                         ? R.string.RepeatDaily
                                         : R.string.RepeatDailyDots));
                     } else {
-                        final DateFormat df =
-                                DateFormat.getDateInstance(DateFormat.SHORT);
                         String text = String.format(getResources().getString(
-                                    R.string.RepeatDailyUntilWhen),
-                            df.format(ar.getEnd()));
+                                        R.string.RepeatDailyUntilWhen),
+                                ar.getEnd().format(DateTimeFormatter
+                                        .ofLocalizedDate(FormatStyle.SHORT)));
                         repeatButton.setText(text);
                     }
                     break;
@@ -779,7 +777,7 @@ public class ToDoDetailsActivity extends Activity {
             case DUEDATE_DIALOG_ID:
                 dueDateDialog = new CalendarDatePickerDialog(this,
                         getText(R.string.DatePickerTitleDueDate),
-                        new RepeatEndPickListener());
+                        new DueDateCalendarSelectionListener());
                 return dueDateDialog;
 
             case HIDEUNTIL_DIALOG_ID:
@@ -1199,7 +1197,10 @@ public class ToDoDetailsActivity extends Activity {
         }
     }
 
-    /** Called when the user selects a new due date */
+    /**
+     * Called when the user selects a new due date
+     * from a list of this week&rsquo;s dates
+     */
     class DueDateListSelectionListener
             implements DialogInterface.OnClickListener {
         @Override
@@ -1225,6 +1226,21 @@ public class ToDoDetailsActivity extends Activity {
                     showDialog(DUEDATE_DIALOG_ID);
                     break;
             }
+        }
+    }
+
+    /**
+     * Called when the user selects a new due date
+     * from the calendar date picker
+     */
+    class DueDateCalendarSelectionListener
+            implements CalendarDatePickerDialog.OnDateSetListener {
+        @Override
+        public void onDateSet(CalendarDatePicker dp, LocalDate day) {
+            todo.setDue(day);
+            if (repeatSettings != null)
+                repeatSettings.setDueDate(todo.getDue());
+            updateDueDateButton();
         }
     }
 

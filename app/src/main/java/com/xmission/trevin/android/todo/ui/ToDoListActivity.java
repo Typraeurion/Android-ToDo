@@ -228,6 +228,10 @@ public class ToDoListActivity extends ListActivity {
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
+        // Inflate our view so we can find our lists
+        setContentView(R.layout.list);
+        categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
+
         /*
          * If no data was given in the intent (because we were started
          * as a MAIN activity), then use our default content URI.
@@ -292,6 +296,9 @@ public class ToDoListActivity extends ListActivity {
         executor.submit(openRepo);
 
         categoryAdapter = new CategoryFilterAdapter(this, repository);
+        categoryAdapter.registerDataSetObserver(new CategoryAdapterObserver());
+        categoryList.setAdapter(categoryAdapter);
+
         itemAdapter = new ToDoCursorAdapter(
                 this, null, repository, encryptor,
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE));
@@ -302,12 +309,6 @@ public class ToDoListActivity extends ListActivity {
                 null, itemLoaderCallbacks);
 
         repository.registerDataSetObserver(registeredObserver);
-
-        // Inflate our view so we can find our lists
-        setContentView(R.layout.list);
-
-        categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
-        categoryList.setAdapter(categoryAdapter);
 
         ListView listView = getListView();
         listView.setAdapter(itemAdapter);
@@ -364,6 +365,24 @@ public class ToDoListActivity extends ListActivity {
     }
 
     /**
+     * Watch for changes from the category filter adapter.
+     * This is normally a passthrough from a repository observer,
+     * but is also called when the adapter first loads its data.
+     */
+    private class CategoryAdapterObserver extends DataSetObserver {
+        @Override
+        public void onChanged() {
+            Log.d(TAG, "CategoryAdapterObserver.onChanged()");
+            // Check whether the category has changed
+            long selectedCategory = prefs.getSelectedCategory();
+            if (categoryList.getSelectedItemId() != selectedCategory) {
+                Log.w(TAG, "The category ID at the selected position has changed!");
+                setCategorySpinnerByID(selectedCategory);
+            }
+        }
+    }
+
+    /**
      * Keep track of changes so that we can
      * update any alarms and update UI elements
      * related to setting or clearing the password.
@@ -372,30 +391,21 @@ public class ToDoListActivity extends ListActivity {
         @Override
         public void onChanged() {
             Log.d(TAG, "ToDoDataObserver.onChanged()");
-            // Check whether the category has changed
-            long selectedCategory = prefs.getSelectedCategory();
-            if (categoryList.getSelectedItemId() != selectedCategory) {
-                Log.w(TAG, "The category ID at the selected position has changed!");
-                setCategorySpinnerByID(selectedCategory);
-            }
-
             // Update our alarms
             OneTimeWorkRequest req = new OneTimeWorkRequest
                     .Builder(AlarmWorker.class)
-                    .setConstraints(new Constraints.Builder()
-                            .setRequiresDeviceIdle(true)
-                            .build())
                     // Delay a minute to allow contents to settle
                     .setInitialDelay(1, TimeUnit.MINUTES)
                     .addTag("ChangeObserver")
                     .build();
             workManager.enqueueUniqueWork("AlarmChangeWork",
-                    ExistingWorkPolicy.REPLACE, req);
+                    ExistingWorkPolicy.KEEP, req);
 
             // Update UI elements related to the password
             checkForPassword.run();
         }
     }
+
     /** Called when the activity is about to be started after having been stopped */
     @Override
     public void onRestart() {
@@ -453,6 +463,13 @@ public class ToDoListActivity extends ListActivity {
 
     /**
      * Update the view if necessary to ensure a particular To Do item is shown.
+     * <p>
+     * There is a potential race condition if the activity is not already
+     * running, where this method may be called before
+     * {@link CategoryFilterAdapter} and/or {@link ToDoCursorAdapter}
+     * have received cursors for their data.  In that case we need
+     * to defer the selection until the data is available.
+     * </p>
      *
      * @param categoryId the ID of the category which should be shown.  If
      *        the current category is &ldquo;All&rdquo; or this category,
@@ -460,20 +477,45 @@ public class ToDoListActivity extends ListActivity {
      * @param itemId the ID of the To Do item which should be visible.
      *        <i>(Currently does nothing; Fix Me)</i>
      */
-    private void showItemIfNeeded(long categoryId, long itemId) {
+    private void showItemIfNeeded(final long categoryId, final long itemId) {
         long selectedCategory = prefs.getSelectedCategory();
+        boolean deferItemScroll = (itemAdapter.getCount() <= 0);
         if ((selectedCategory >= 0) && (categoryId != selectedCategory)) {
             Log.d(TAG, String.format("Changing the selected category from %d to %d",
                     selectedCategory, categoryId));
-            // Switch to the category this item is in
-            setCategorySpinnerByID(categoryId);
             prefs.setSelectedCategory(categoryId);
+            // Switch to the category this item is in
+            if (categoryAdapter.getCount() > 2) {
+                setCategorySpinnerByID(categoryId);
+            } else {
+                final DataSetObserver initObserver = new DataSetObserver() {
+                    @Override
+                    public void onChanged() {
+                        categoryAdapter.unregisterDataSetObserver(this);
+                        setCategorySpinnerByID(categoryId);
+                    }
+                };
+                categoryAdapter.registerDataSetObserver(initObserver);
+            }
+            deferItemScroll = true;
         }
 
         ListView listView = getListView();
         Log.d(TAG, String.format("Target item for display is %d", itemId));
-        int position = itemAdapter.getItemPosition(itemId);
-        listView.smoothScrollToPosition(position);
+        if (deferItemScroll) {
+            final DataSetObserver initObserver = new DataSetObserver() {
+                @Override
+                public void onChanged() {
+                    itemAdapter.unregisterDataSetObserver(this);
+                    int position = itemAdapter.getItemPosition(itemId);
+                    listView.smoothScrollToPosition(position);
+                }
+            };
+            itemAdapter.registerDataSetObserver(initObserver);
+        } else {
+            int position = itemAdapter.getItemPosition(itemId);
+            listView.smoothScrollToPosition(position);
+        }
     }
 
     /** Called when the activity is ready for user interaction */
@@ -562,53 +604,53 @@ public class ToDoListActivity extends ListActivity {
 
     /** Event listener for the category filter */
     class CategorySpinnerListener
-	implements AdapterView.OnItemSelectedListener {
+            implements AdapterView.OnItemSelectedListener {
 
-	private int lastSelectedPosition = 0;
+        private int lastSelectedPosition = 0;
 
-	/**
-	 * Called when a category filter is selected.
-	 *
-	 * @param parent the Spinner containing the selected item
-	 * @param v the drop-down item which was selected
-	 * @param position the position of the selected item
-	 * @param rowID the ID of the data shown in the selected item
-	 */
-	@Override
-	public void onItemSelected(AdapterView<?> parent, View v,
-		int position, long rowID) {
-	    Log.d(TAG, ".CategorySpinnerListener.onItemSelected(p="
-		    + position + ",id=" + rowID + ")");
-	    if (position == 0) {
-		prefs.setSelectedCategory(ToDoPreferences.ALL_CATEGORIES);
-	    }
-	    else if (position == parent.getCount() - 1) {
-		// This must be the "Edit categories..." button.
-		// We don't keep this selection; instead, start
-		// the EditCategoriesActivity and revert the selection.
-		position = lastSelectedPosition;
-		parent.setSelection(lastSelectedPosition);
-		// To do: Dismiss the spinner
-		Intent intent = new Intent(parent.getContext(),
-			CategoryListActivity.class);
-		// To do: find out why this doesn't do anything.
-		parent.getContext().startActivity(intent);
-	    }
-	    else {
-		prefs.setSelectedCategory(rowID);
-	    }
-	    lastSelectedPosition = position;
-	}
+        /**
+         * Called when a category filter is selected.
+         *
+         * @param parent the Spinner containing the selected item
+         * @param v the drop-down item which was selected
+         * @param position the position of the selected item
+         * @param rowID the ID of the data shown in the selected item
+         */
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View v,
+                                   int position, long rowID) {
+            Log.d(TAG, ".CategorySpinnerListener.onItemSelected(p="
+                    + position + ",id=" + rowID + ")");
+            if (position == 0) {
+                prefs.setSelectedCategory(ToDoPreferences.ALL_CATEGORIES);
+            }
+            else if (position == parent.getCount() - 1) {
+                // This must be the "Edit categories..." button.
+                // We don't keep this selection; instead, start
+                // the EditCategoriesActivity and revert the selection.
+                position = lastSelectedPosition;
+                parent.setSelection(lastSelectedPosition);
+                // To do: Dismiss the spinner
+                Intent intent = new Intent(parent.getContext(),
+                        CategoryListActivity.class);
+                // To do: find out why this doesn't do anything.
+                parent.getContext().startActivity(intent);
+            }
+            else {
+                prefs.setSelectedCategory(rowID);
+            }
+            lastSelectedPosition = position;
+        }
 
-	/** Called when the current selection disappears */
-	@Override
-	public void onNothingSelected(AdapterView<?> parent) {
-	    Log.d(TAG, ".CategorySpinnerListener.onNothingSelected()");
-	    /* // Remove the filter
-	    lastSelectedPosition = 0;
-	    parent.setSelection(0);
-	    prefs.edit().putLong(TPREF_SELECTED_CATEGORY, -1).commit(); */
-	}
+        /** Called when the current selection disappears */
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+            Log.d(TAG, ".CategorySpinnerListener.onNothingSelected()");
+            /* // Remove the filter
+            lastSelectedPosition = 0;
+            parent.setSelection(0);
+            prefs.edit().putLong(TPREF_SELECTED_CATEGORY, -1).commit(); */
+        }
     }
 
     /** Look up the spinner item corresponding to a category ID and select it. */
@@ -881,7 +923,9 @@ public class ToDoListActivity extends ListActivity {
                                     itemId));
                             return;
                         }
-                        final LocalDate due = item.getDue();
+                        final LocalDate due = (item.getDue() == null)
+                                ? LocalDate.now(prefs.getTimeZone())
+                                : item.getDue();
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {

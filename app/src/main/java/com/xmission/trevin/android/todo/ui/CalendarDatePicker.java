@@ -294,8 +294,8 @@ public class CalendarDatePicker extends FrameLayout {
         public void onClick(View v) {
             date = 7 * weekRow + dayColumn - firstDay + 1;
             if (onDateSetListener != null)
-                onDateSetListener.onDateSet(
-                        CalendarDatePicker.this, selectedDate);
+                onDateSetListener.onDateSet(CalendarDatePicker.this,
+                        LocalDate.of(year, month, date));
         }
     }
 

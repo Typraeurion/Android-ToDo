@@ -29,7 +29,6 @@ import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.data.repeat.RepeatNone;
 import com.xmission.trevin.android.todo.provider.ToDoCursor;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
-import com.xmission.trevin.android.todo.provider.ToDoSchema;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
@@ -37,7 +36,6 @@ import android.app.Activity;
 import android.app.LoaderManager;
 import android.app.NotificationManager;
 import android.content.*;
-import android.net.Uri;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
@@ -203,6 +201,10 @@ public class ToDoCursorAdapter extends BaseAdapter {
      * @return the position of the item
      */
     public int getItemPosition(long itemId) {
+        if (cursor == null) {
+            Log.w(TAG, ".getItemPosition: The cursor has not been set!");
+            return 0;
+        }
         for (int i = 0; i < cursor.getCount(); i++) {
             if (cursor.moveToPosition(i)) {
                 if (cursor.getItem().getId() == itemId)
