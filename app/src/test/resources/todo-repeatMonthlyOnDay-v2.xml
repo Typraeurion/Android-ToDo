@@ -13,7 +13,7 @@
       <created time="2018-03-07T17:45:19.696Z"/>
       <modified time="2019-08-31T03:25:05.403Z"/>
       <due date="2022-09-15">
-        <repeat interval="7" name="MONTHLY_ON_DAY" increment="5" day1="THURSDAY" week1="3" end="2024-04-27"/>
+        <repeat type="MONTHLY_ON_DAY" increment="5" day1="THURSDAY" week1="3" end="2024-04-27"/>
       </due>
     </to-do>
   </ToDoList>

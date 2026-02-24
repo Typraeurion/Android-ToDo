@@ -13,7 +13,7 @@
       <created time="2012-06-17T22:06:07.209Z"/>
       <modified time="2018-09-12T05:08:12.020Z"/>
       <due date="2020-10-10">
-	<repeat interval="6" name="SEMI_MONTHLY_ON_DATES" increment="10" week-days="TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" weekday-direction="NEXT" day1="10" day2="22" end="2021-06-09"/>
+	<repeat type="SEMI_MONTHLY_ON_DATES" increment="10" week-days="TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" weekday-direction="NEXT" day1="10" day2="22" end="2021-06-09"/>
       </due>
     </to-do>
   </ToDoList>

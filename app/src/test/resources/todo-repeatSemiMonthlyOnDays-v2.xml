@@ -13,7 +13,7 @@
       <created time="2012-11-28T12:34:47.863Z"/>
       <modified time="2013-04-05T17:34:34.239Z"/>
       <due date="2016-07-11">
-	<repeat interval="5" name="SEMI_MONTHLY_ON_DAYS" increment="10" day1="MONDAY" week1="2" day2="FRIDAY" week2="4" end="2017-07-31"/>
+	<repeat type="SEMI_MONTHLY_ON_DAYS" increment="10" day1="MONDAY" week1="2" day2="FRIDAY" week2="4" end="2017-07-31"/>
       </due>
     </to-do>
   </ToDoList>

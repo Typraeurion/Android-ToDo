@@ -13,7 +13,7 @@
       <created time="2012-05-21T07:06:09.478Z"/>
       <modified time="2019-05-24T21:33:27.465Z"/>
       <due date="2015-06-25">
-	<repeat interval="2" name="DAY_AFTER" increment="7" week-days="SUNDAY,TUESDAY" weekday-direction="PREVIOUS" end="2016-07-05"/>
+	<repeat type="DAY_AFTER" increment="7" week-days="SUNDAY,TUESDAY" weekday-direction="PREVIOUS" end="2016-07-05"/>
       </due>
     </to-do>
   </ToDoList>

@@ -1729,6 +1729,10 @@ public class XMLImporterTests {
         ToDoItem alreadyImportedItem = null;
         while (alreadyImportedItem == null) {
             alreadyImportedItem = TEST_TODOS_1.get(RAND.nextInt(TEST_TODOS_1.size()));
+            if (alreadyImportedItem.getCategoryId() == ToDoCategory.UNFILED) {
+                alreadyImportedItem = null;
+                break;
+            }
             for (ToDoItem todo : oldItems) {
                 if (todo.getId().equals(alreadyImportedItem.getId()) ||
                         (todo.getCategoryId() == ToDoCategory.UNFILED)) {

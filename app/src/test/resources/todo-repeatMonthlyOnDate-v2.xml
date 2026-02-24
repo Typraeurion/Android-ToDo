@@ -13,7 +13,7 @@
       <created time="2019-06-18T13:14:54.183Z"/>
       <modified time="2022-03-05T05:15:37.176Z"/>
       <due date="2022-09-29">
-	<repeat interval="8" name="MONTHLY_ON_DATE" increment="10" week-days="MONDAY,WEDNESDAY,FRIDAY" weekday-direction="PREVIOUS" day1="29" end="2022-12-06"/>
+	<repeat type="MONTHLY_ON_DATE" increment="10" week-days="MONDAY,WEDNESDAY,FRIDAY" weekday-direction="PREVIOUS" day1="29" end="2022-12-06"/>
       </due>
     </to-do>
   </ToDoList>

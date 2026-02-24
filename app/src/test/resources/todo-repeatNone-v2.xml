@@ -13,7 +13,7 @@
       <created time="2012-08-28T12:12:09.489Z"/>
       <modified time="2013-10-11T14:28:41.393Z"/>
       <due date="2024-03-23">
-	<repeat interval="0" name="NONE"/>
+	<repeat type="NONE"/>
       </due>
     </to-do>
   </ToDoList>

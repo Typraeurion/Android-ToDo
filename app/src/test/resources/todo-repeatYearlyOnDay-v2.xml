@@ -13,7 +13,7 @@
       <created time="2013-03-29T19:16:44.306Z"/>
       <modified time="2017-05-30T20:18:55.699Z"/>
       <due date="2018-09-04">
-	<repeat interval="10" name="YEARLY_ON_DAY" increment="8" day1="SUNDAY" week1="2" month="SEPTEMBER" end="2023-12-09"/>
+	<repeat type="YEARLY_ON_DAY" increment="8" day1="SUNDAY" week1="2" month="SEPTEMBER" end="2023-12-09"/>
       </due>
     </to-do>
   </ToDoList>

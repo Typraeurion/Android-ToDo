@@ -143,8 +143,14 @@ public class XMLExporter {
     /** The name of the repeat sub-sub-element */
     public static final String DUE_REPEAT = "repeat";
 
-    /** The interval attribute name (the value is a {@link RepeatInterval} ID) */
+    /**
+     * The interval attribute name (version 1:
+     * the value is a {@link RepeatInterval} ID)
+     */
     public static final String ATTR_INTERVAL = "interval";
+
+    /** The type attribute name (version 2: enum name) */
+    public static final String ATTR_TYPE = "type";
 
     /** The increment attribute name */
     public static final String ATTR_INCREMENT = "increment";
@@ -593,9 +599,8 @@ public class XMLExporter {
      */
     private static void writeNoneRepeat(
             RepeatNone repeat, PrintStream out) {
-        out.printf(Locale.US, "        <%s %s=\"%d\" %s=\"%s\"/>\n",
-                DUE_REPEAT, ATTR_INTERVAL, repeat.getId(),
-                ATTR_NAME, repeat.getType());
+        out.printf(Locale.US, "        <%s %s=\"%s\"/>\n",
+                DUE_REPEAT, ATTR_TYPE, repeat.getType());
     }
 
     /**
@@ -606,9 +611,8 @@ public class XMLExporter {
      */
     private static void writeRepeatHeader(
             AbstractRepeat repeat, PrintStream out) {
-        out.printf(Locale.US, "        <%s %s=\"%d\" %s=\"%s\" %s=\"%d\"",
-                DUE_REPEAT, ATTR_INTERVAL, repeat.getId(),
-                ATTR_NAME, repeat.getType(),
+        out.printf(Locale.US, "        <%s %s=\"%s\" %s=\"%d\"",
+                DUE_REPEAT, ATTR_TYPE, repeat.getType(),
                 ATTR_INCREMENT, repeat.getIncrement());
     }
 

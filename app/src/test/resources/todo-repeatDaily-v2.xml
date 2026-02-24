@@ -13,7 +13,7 @@
       <created time="2013-05-14T15:16:37.277Z"/>
       <modified time="2025-03-04T22:01:47.450Z"/>
       <due date="2011-11-01">
-	<repeat interval="1" name="DAILY" increment="6" week-days="SUNDAY,MONDAY,TUESDAY,WEDNESDAY,FRIDAY,SATURDAY" weekday-direction="CLOSEST_OR_NEXT" end="2019-03-05"/>
+	<repeat type="DAILY" increment="6" week-days="SUNDAY,MONDAY,TUESDAY,WEDNESDAY,FRIDAY,SATURDAY" weekday-direction="CLOSEST_OR_NEXT" end="2019-03-05"/>
       </due>
     </to-do>
   </ToDoList>

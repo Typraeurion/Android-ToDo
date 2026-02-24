@@ -1305,7 +1305,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             case REPEAT:
                 RepeatType repeatType;
                 RepeatInterval repeat;
-                // Version 1 only identified repeat intervals by numeric ID
+                // Version 1 identified repeat intervals by numeric ID
                 if (version <= 1) {
                     repeat = RepeatType.newInstance(
                             parseIntAttribute(attributes,
@@ -1313,15 +1313,15 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                                     REPEAT_NONE, REPEAT_YEAR_AFTER));
                     repeatType = repeat.getType();
                 }
-                // As of version 2, we can identify them by name
+                // As of version 2, we identify them by name
                 else {
                     attrValue = getRequiredStringAttribute(attributes,
-                            DUE_REPEAT, ATTR_NAME);
+                            DUE_REPEAT, ATTR_TYPE);
                     try {
                         repeatType = RepeatType.valueOf(attrValue);
                         repeat = repeatType.newInstance();
                     } catch (IllegalArgumentException e) {
-                        throw new XMLBadValueException(DUE_REPEAT, ATTR_NAME,
+                        throw new XMLBadValueException(DUE_REPEAT, ATTR_TYPE,
                                 attrValue, xmlFileName,
                                 xmlLocator.getLineNumber(),
                                 xmlLocator.getColumnNumber());

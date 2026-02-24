@@ -811,20 +811,13 @@ public class XMLExporterTests {
                 Element grandchild = getOnlyChild(
                         itemId, DUE_REPEAT, childElement);
                 assertTrue(String.format("Exported item #%d %s has no %s"
-                                + " attribute", itemId, DUE_REPEAT, ATTR_INTERVAL),
-                        grandchild.hasAttribute(ATTR_INTERVAL));
-                assertTrue(String.format("Exported item #%d %s has no %s"
-                                + " attribute", itemId, DUE_REPEAT, ATTR_NAME),
-                        grandchild.hasAttribute(ATTR_NAME));
+                                + " attribute", itemId, DUE_REPEAT, ATTR_TYPE),
+                        grandchild.hasAttribute(ATTR_TYPE));
                 RepeatInterval repeat = expectedItem.getRepeatInterval();
                 assertEquals(String.format("Exported item #%d %s %s",
-                                itemId, DUE_REPEAT, ATTR_INTERVAL),
-                        Integer.toString(repeat.getId()),
-                        grandchild.getAttribute(ATTR_INTERVAL));
-                assertEquals(String.format("Exported item #%d %s %s",
-                                itemId, DUE_REPEAT, ATTR_NAME),
+                                itemId, DUE_REPEAT, ATTR_TYPE),
                         repeat.getType().toString(),
-                        grandchild.getAttribute(ATTR_NAME));
+                        grandchild.getAttribute(ATTR_TYPE));
 
                 if (repeat instanceof AbstractAdjustableRepeat) {
                     AbstractAdjustableRepeat aar =
@@ -1089,7 +1082,7 @@ public class XMLExporterTests {
             todo.setHideDaysEarlier(null);
             if (todo.isPrivate() && RAND.nextBoolean()) {
                 // "encrypt" the record
-                todo.setPrivate(RAND.nextInt(8) + 2);
+                todo.setPrivate(StringEncryption.BUNDLED_ENCRYPTION);
                 todo.setEncryptedDescription(todo.getDescription()
                         .getBytes(StandardCharsets.UTF_8));
                 todo.setDescription(null);
