@@ -72,10 +72,14 @@ public class ExportActivity extends Activity {
      */
     private static final int SAF_PICK_XML_DIRECTORY = 4;
 
+    /** Radio group for selecting the storage location */
+    RadioGroup exportRadioGroup;
     /** Radio button for selected app private storage */
     RadioButton exportRadioPrivate;
     /** Radio button for selecting shared storage */
     RadioButton exportRadioShared;
+    /** The last selected radio option in case we need to revert */
+    int exportRadioState;
 
     /**
      * The layout row for the import directory;
@@ -146,6 +150,8 @@ public class ExportActivity extends Activity {
         // Inflate our view so we can find our fields
         setContentView(R.layout.export_options);
 
+        exportRadioGroup = (RadioGroup) findViewById(
+                R.id.ExportFolderRadioGroup);
         exportRadioPrivate = (RadioButton) findViewById(
                 R.id.ExportFolderRadioButtonPrivate);
         exportRadioShared = (RadioButton) findViewById(
@@ -230,6 +236,7 @@ public class ExportActivity extends Activity {
         }
         exportDirectoryName.setText(directoryName);
         exportFileName.setText(fileName);
+        exportRadioState = exportRadioGroup.getCheckedRadioButtonId();
 
         boolean exportPrivate = prefs.exportPrivate();
         exportPrivateCheckBox.setChecked(exportPrivate);
@@ -260,103 +267,19 @@ public class ExportActivity extends Activity {
 
         // Set callbacks
         exportRadioPrivate.setOnCheckedChangeListener(
-                new RadioButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton button, boolean selected) {
-                        if (!selected)
-                            return; // The other radio button will take care of it
-                        exportDocUri = null;
-                        String directoryName = FileUtils
-                                .getDefaultStorageDirectory(ExportActivity.this);
-                        String fileName = exportFileName.getText().toString();
-                        if (!fileName.endsWith(".xml")) {
-                            // The Storage Access Framework may replace the
-                            // actual file name with a temporary substitute;
-                            // revert to the default file name.
-                            fileName = "todo.xml";
-                            exportFileName.setText(fileName);
-                        }
-                        exportDirectoryName.setText(directoryName);
-                        exportDirectoryName.setEnabled(false);
-                        exportFileName.setEnabled(true);
-                        exportDirectoryRow.setVisibility(View.VISIBLE);
-                        prefs.setExportFile(
-                            directoryName + File.separator + fileName);
-                    }
-                });
+                new PrivateStorageCheckedChangeListener());
 
-        exportRadioShared.setOnCheckedChangeListener(
-                new RadioButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton button, boolean selected) {
-                        if (!selected)
-                            return; // The other radio button will take care of it
-                        // Default to local shared storage
-                        String directoryName = FileUtils.getSharedStorageDirectory();
-                        // Although SAF is supposedly supported on KitKat,
-                        // it doesn't work in practice -- import files uploaded
-                        // into the Downloads folder don't show up in the UI
-                        // until sometime > Marshmallow and <= Oreo.
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            Intent createFileActivity =
-                                    new Intent(Intent.ACTION_CREATE_DOCUMENT);
-                            createFileActivity.addCategory(
-                                    Intent.CATEGORY_OPENABLE);
-                            createFileActivity.setFlags(
-                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                            createFileActivity.setType("text/xml");
-                            startActivityForResult(Intent.createChooser(
-                                            createFileActivity,
-                                            getString(R.string.ExportFileDialogTitle)),
-                                    SAF_PICK_XML_DIRECTORY);
-                        } else {
-                            String fileName = exportFileName.getText().toString();
-                            exportDirectoryName.setText(directoryName);
-                            exportDirectoryName.setEnabled(true);
-                            exportFileName.setEnabled(true);
-                            exportDirectoryRow.setVisibility(View.VISIBLE);
-                            prefs.setExportFile(
-                                directoryName + File.separator + fileName);
-                        }
-                    }
-                });
+        exportRadioShared.setOnClickListener(
+                new SharedStorageCheckedChangeListener());
 
-        exportFileName.addTextChangedListener(new TextWatcher () {
-            @Override
-            public void afterTextChanged(Editable s) {
-                String directoryName = exportDirectoryName.getText().toString();
-                String fileName = s.toString();
-                prefs.setExportFile(
-                    directoryName + File.separator + fileName);
-            }
-            @Override
-            public void beforeTextChanged(CharSequence s,
-                    int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s,
-                    int start, int before, int count) {}
-        });
+        exportFileName.addTextChangedListener(
+                new FileNameChangedListener());
 
         exportPrivateCheckBox.setOnCheckedChangeListener(
-                new CompoundButton.OnCheckedChangeListener() {
-                    public void onCheckedChanged(
-                            CompoundButton b, boolean checked) {
-                        prefs.setExportPrivate(checked);
-                        findViewById(R.id.TableRowPasswordNotSetWarning)
-                                .setVisibility((checked && !hasPassword)
-                                        ? View.VISIBLE : View.GONE);
-                    }
-                });
+                new IncludePrivateCheckedChangeListener());
 
         exportButton.setOnClickListener(new ExportButtonOnClickListener());
-        cancelButton.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Log.d(TAG, "ExportButtonCancel.onClick");
-                        ExportActivity.this.finish();
-                    }
-                });
+        cancelButton.setOnClickListener(new CancelClickListener());
     }
 
     /**
@@ -367,16 +290,15 @@ public class ExportActivity extends Activity {
     @TargetApi(19)
     public void onActivityResult(
             int requestCode, int resultCode, Intent resultData) {
-        Log.d(TAG, String.format(".onActivityResult(%d,%d,%s)",
+        Log.d(TAG, String.format(Locale.US, ".onActivityResult(%d,%d,%s)",
                 requestCode, resultCode, (resultData == null) ?
                         null : resultData.getData()));
         if (requestCode != SAF_PICK_XML_DIRECTORY)
             // Request code not recognized; ignore it
             return;
         if (resultCode == Activity.RESULT_CANCELED) {
-            // Revert back to private storage;
-            // the previous state should be unchanged
-            exportRadioPrivate.setChecked(true);
+            // Revert back to the previous state
+            exportRadioGroup.check(exportRadioState);
             return;
         }
         if (resultCode != Activity.RESULT_OK) {
@@ -384,10 +306,15 @@ public class ExportActivity extends Activity {
             return;
         }
         if ((resultData == null) || (resultData.getData() == null)) {
-            Log.w(TAG, "No data returned from result!  Reverting to private storage.");
-            exportRadioPrivate.setChecked(true);
+            Log.w(TAG, String.format(Locale.US,
+                    "No data returned from result!  Reverting to %s",
+                    (exportRadioState == R.id.ExportFolderRadioButtonPrivate)
+                            ? "private storage" : (exportDocUri == null)
+                            ? "shared storage" : exportDocUri.toString()));
+            exportRadioGroup.check(exportRadioState);
             return;
         }
+        Uri oldUri = exportDocUri;
         exportDocUri = resultData.getData();
         getContentResolver().takePersistableUriPermission(exportDocUri,
                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -397,10 +324,11 @@ public class ExportActivity extends Activity {
         Matcher m = DIR_FILE_PATTERN.matcher(
                 FileUtils.getFileNameFromUri(this, exportDocUri));
         if (!m.matches()) {
-            Log.e(TAG, "Failed to parse directory and file from Uri: "
-                    + exportDocUri.toString());
-            exportRadioPrivate.setChecked(true);
-            exportDocUri = null;
+            Log.e(TAG, String.format(Locale.US,
+                    "Failed to parse directory and file from Uri: %s",
+                    exportDocUri.toString()));
+            exportRadioGroup.check(exportRadioState);
+            exportDocUri = oldUri;
             return;
         }
         String directoryName = m.group(3);
@@ -414,6 +342,7 @@ public class ExportActivity extends Activity {
         exportDirectoryRow.setVisibility(directoryName.equals("")
                 ? View.GONE : View.VISIBLE);
         prefs.setExportFile(exportDocUri.toString());
+        exportRadioState = R.id.ExportFolderRadioButtonShared;
     }
 
     /** Called when the activity is about to be destroyed */
@@ -455,6 +384,106 @@ public class ExportActivity extends Activity {
                 errorDialog = null;
             }
         };
+
+    /** Called when the user changes the file location to private storage */
+    private class PrivateStorageCheckedChangeListener
+            implements RadioButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean selected) {
+            Log.d(TAG, String.format(Locale.US,
+                    "PrivateStorageCheckedChangeListener.onCheckedChanged(%s)",
+                    selected));
+            if (!selected)
+                return; // The other radio button will take care of it
+            exportDocUri = null;
+            String directoryName = FileUtils
+                    .getDefaultStorageDirectory(ExportActivity.this);
+            String fileName = exportFileName.getText().toString();
+            if (!fileName.endsWith(".xml")) {
+                // The Storage Access Framework may replace the
+                // actual file name with a temporary substitute;
+                // revert to the default file name.
+                fileName = "todo.xml";
+                exportFileName.setText(fileName);
+            }
+            exportDirectoryName.setText(directoryName);
+            exportDirectoryName.setEnabled(false);
+            exportFileName.setEnabled(true);
+            exportDirectoryRow.setVisibility(View.VISIBLE);
+            prefs.setExportFile(
+                directoryName + File.separator + fileName);
+            exportRadioState = button.getId();
+        }
+    }
+
+    /** Called when the user changes the file location to shared storage */
+    private class SharedStorageCheckedChangeListener
+            implements View.OnClickListener {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, String.format(Locale.US,
+                    "SharedStorageCheckedChangeListener.onClick()"));
+            // Default to local shared storage
+            String directoryName = FileUtils.getSharedStorageDirectory();
+            // Although SAF is supposedly supported on KitKat,
+            // it doesn't work in practice -- import files uploaded
+            // into the Downloads folder don't show up in the UI
+            // until sometime > Marshmallow and <= Oreo.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Intent createFileActivity =
+                        new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                createFileActivity.addCategory(
+                        Intent.CATEGORY_OPENABLE);
+                createFileActivity.setFlags(
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                createFileActivity.setType("text/xml");
+                startActivityForResult(Intent.createChooser(
+                                createFileActivity,
+                                getString(R.string.ExportFileDialogTitle)),
+                        SAF_PICK_XML_DIRECTORY);
+            } else {
+                String fileName = exportFileName.getText().toString();
+                exportDirectoryName.setText(directoryName);
+                exportDirectoryName.setEnabled(true);
+                exportFileName.setEnabled(true);
+                exportDirectoryRow.setVisibility(View.VISIBLE);
+                prefs.setExportFile(
+                    directoryName + File.separator + fileName);
+                exportRadioState = view.getId();
+            }
+        }
+    }
+
+    /** Called when the export file name is changed */
+    private class FileNameChangedListener implements TextWatcher {
+        @Override
+        public void afterTextChanged(Editable s) {
+            String directoryName = exportDirectoryName.getText().toString();
+            String fileName = s.toString();
+            prefs.setExportFile(
+                directoryName + File.separator + fileName);
+        }
+        @Override
+        public void beforeTextChanged(CharSequence s,
+                int start, int count, int after) {}
+        @Override
+        public void onTextChanged(CharSequence s,
+                int start, int before, int count) {}
+    }
+
+    /**
+     * Called when the user toggles the &ldquo;Include private&rdquo; checkbox
+     */
+    private class IncludePrivateCheckedChangeListener
+            implements CompoundButton.OnCheckedChangeListener {
+        public void onCheckedChanged(
+                CompoundButton b, boolean checked) {
+            prefs.setExportPrivate(checked);
+            findViewById(R.id.TableRowPasswordNotSetWarning)
+                    .setVisibility((checked && !hasPassword)
+                            ? View.VISIBLE : View.GONE);
+        }
+    }
 
     /** Called when the user clicks Export to start exporting the data */
     class ExportButtonOnClickListener implements View.OnClickListener {
@@ -544,6 +573,15 @@ public class ExportActivity extends Activity {
             progressLiveData = workManager.getWorkInfoByIdLiveData(
                     exportRequest.getId());
             progressLiveData.observeForever(progressObserver);
+        }
+    }
+
+    /** Called when the user cancels the export */
+    private class CancelClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "ExportButtonCancel.onClick");
+            ExportActivity.this.finish();
         }
     }
 

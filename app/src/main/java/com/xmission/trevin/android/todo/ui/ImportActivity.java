@@ -71,10 +71,14 @@ public class ImportActivity extends Activity {
      */
     private static final int SAF_PICK_XML_FILE = 24;
 
+    /** Radio group for selecting the storage location */
+    RadioGroup importRadioGroup;
     /** Radio button for selected app private storage */
     RadioButton importRadioPrivate;
     /** Radio button for selecting shared storage */
     RadioButton importRadioShared;
+    /** The last selected radio option in case we need to revert */
+    int importRadioState;
 
     /**
      * The layout row for the import directory;
@@ -181,6 +185,8 @@ public class ImportActivity extends Activity {
         // Inflate our view so we can find our fields
         setContentView(R.layout.import_options);
 
+        importRadioGroup = (RadioGroup) findViewById(
+                R.id.ImportFolderRadioGroup);
         importRadioPrivate = (RadioButton) findViewById(
                 R.id.ImportFolderRadioButtonPrivate);
         importRadioShared = (RadioButton) findViewById(
@@ -283,6 +289,7 @@ public class ImportActivity extends Activity {
         }
         importDirectoryName.setText(directoryName);
         importFileName.setText(fileName);
+        importRadioState = importRadioGroup.getCheckedRadioButtonId();
 
         ToDoPreferences.ImportType importType = prefs.getImportType();
         importTypeList.setSelection(importType.ordinal());
@@ -306,140 +313,32 @@ public class ImportActivity extends Activity {
 
         // Set callbacks
         importRadioPrivate.setOnCheckedChangeListener(
-                new RadioButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton button, boolean selected) {
-                        if (!selected)
-                            return; // The other radio button will take care of it
-                        importDocUri = null;
-                        String directoryName = FileUtils
-                                .getDefaultStorageDirectory(ImportActivity.this);
-                        String fileName = importFileName.getText().toString();
-                        if (!fileName.endsWith(".xml")) {
-                            // The Storage Access Framework may replace the
-                            // actual file name with a temporary substitute;
-                            // revert to the default file name.
-                            fileName = "todo.xml";
-                            importFileName.setText(fileName);
-                        }
-                        importDirectoryName.setText(directoryName);
-                        importDirectoryName.setEnabled(false);
-                        importFileName.setEnabled(true);
-                        importDirectoryRow.setVisibility(View.VISIBLE);
-                        prefs.setImportFile(
-                                directoryName + File.separator + fileName);
-                    }
-                });
+                new PrivateStorageCheckedChangeListener());
 
-        importRadioShared.setOnCheckedChangeListener(
-                new RadioButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton button, boolean selected) {
-                        if (!selected)
-                            return; // The other radio button will take care of it
-                        // Default to local shared storage
-                        String directoryName = FileUtils.getSharedStorageDirectory();
-                        // Although SAF is supposedly supported on KitKat,
-                        // it doesn't work in practice -- import files uploaded
-                        // into the Downloads folder don't show up in the UI
-                        // until sometime > Marshmallow and <= Oreo.
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            Intent openFileActivity =
-                                    new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                            openFileActivity.addCategory(
-                                    Intent.CATEGORY_OPENABLE);
-                            openFileActivity.setFlags(
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            openFileActivity.setType("*/*");
-                            openFileActivity.putExtra(Intent.EXTRA_MIME_TYPES,
-                                    new String[] { "application/xml", "text/xml" });
-                            startActivityForResult(Intent.createChooser(
-                                            openFileActivity,
-                                            getString(R.string.ImportFileDialogTitle)),
-                                    SAF_PICK_XML_FILE);
-                        } else {
-                            String fileName = importFileName.getText().toString();
-                            importDirectoryName.setText(directoryName);
-                            importDirectoryName.setEnabled(true);
-                            importFileName.setEnabled(true);
-                            importDirectoryRow.setVisibility(View.VISIBLE);
-                            prefs.setImportFile(
-                                    directoryName + File.separator + fileName);
-                        }
-                    }
-                });
+        SharedStorageCheckedChangeListener sharedListener =
+                new SharedStorageCheckedChangeListener();
+        /*
+         * This button responds to both clicks and check changes
+         * so that the user can change the import file without
+         * having to switch the radio button back and forth.
+         */
+        //importRadioShared.setOnCheckedChangeListener(sharedListener);
+        importRadioShared.setOnClickListener(sharedListener);
 
-        importFileName.addTextChangedListener(new TextWatcher () {
-            @Override
-            public void afterTextChanged(Editable s) {
-                String directoryName = importDirectoryName.getText().toString();
-                String fileName = s.toString();
-                prefs.setImportFile(directoryName + File.separator + fileName);
-            }
-            @Override
-            public void beforeTextChanged(CharSequence s,
-                    int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s,
-                    int start, int before, int count) {}
-        });
+        importFileName.addTextChangedListener(
+                new FileNameChangedListener());
 
         importTypeList.setOnItemSelectedListener(
-                new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-                        // Do nothing
-                    }
-                    @Override
-                    public void onItemSelected(AdapterView<?> parent, View child,
-                            int position, long id) {
-                        Log.d(TAG, "importTypeList.onItemSelected(" + position + ")");
-                        if ((position < 0) || (position >= ToDoPreferences.ImportType.values().length)) {
-                            Log.w(TAG, "Invalid import type index!");
-                            return;
-                        }
-                        ToDoPreferences.ImportType type =
-                                ToDoPreferences.ImportType.values()[position];
-                        prefs.setImportType(type);
-                    }
-                });
+                new ImportTypeChangedListener());
 
         importPrivateCheckBox.setOnCheckedChangeListener(
-                new CompoundButton.OnCheckedChangeListener() {
-                    public void onCheckedChanged(
-                            CompoundButton b, boolean checked) {
-                        prefs.setImportPrivate(checked);
-                        passwordFieldRows[0].setVisibility(checked &&
-                                (encryptor.getPassword() == null)
-                                ? View.VISIBLE : View.GONE);
-                        for (int i = 1; i < passwordFieldRows.length; i++)
-                            passwordFieldRows[i].setVisibility(
-                                    checked ? View.VISIBLE : View.GONE);
-                    }
-                });
+                new IncludePrivateCheckedChangeListener());
 
         showPasswordCheckBox.setOnCheckedChangeListener(
-                new CompoundButton.OnCheckedChangeListener() {
-                    public void onCheckedChanged(
-                            CompoundButton b, boolean checked) {
-                        int oldType = importPassword.getInputType();
-                        if (checked)
-                            oldType &= ~InputType.TYPE_TEXT_VARIATION_PASSWORD;
-                        else
-                            oldType |= InputType.TYPE_TEXT_VARIATION_PASSWORD;
-                        importPassword.setInputType(oldType);
-                    }
-                });
+                new ShowPasswordCheckedChangeListener());
 
         importButton.setOnClickListener(new ImportButtonOnClickListener());
-        cancelButton.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Log.d(TAG, "ImportButtonCancel.onClick");
-                        ImportActivity.this.finish();
-                    }
-                });
+        cancelButton.setOnClickListener(new CancelClickListener());
     }
 
     /**
@@ -450,16 +349,15 @@ public class ImportActivity extends Activity {
     @TargetApi(19)
     public void onActivityResult(
             int requestCode, int resultCode, Intent resultData) {
-        Log.d(TAG, String.format(".onActivityResult(%d,%d,%s)",
+        Log.d(TAG, String.format(Locale.US, ".onActivityResult(%d,%d,%s)",
                 requestCode, resultCode, (resultData == null) ?
                         null : resultData.getData()));
         if (requestCode != SAF_PICK_XML_FILE)
             // Request code not recognized; ignore it
             return;
         if (resultCode == Activity.RESULT_CANCELED) {
-            // Revert back to private storage;
-            // the previous state should be unchanged
-            importRadioPrivate.setChecked(true);
+            // Revert back to the previous state
+            importRadioGroup.check(importRadioState);
             return;
         }
         if (resultCode != Activity.RESULT_OK) {
@@ -467,10 +365,15 @@ public class ImportActivity extends Activity {
             return;
         }
         if ((resultData == null) || (resultData.getData() == null)) {
-            Log.w(TAG, "No data returned from result!  Reverting to private storage.");
-            importRadioPrivate.setChecked(true);
+            Log.w(TAG, String.format(Locale.US,
+                    "No data returned from result!  Reverting to %s",
+                    (importRadioState == R.id.ImportFolderRadioButtonPrivate)
+                            ? "private storage" : (importDocUri == null)
+                            ? "shared storage" : importDocUri.toString()));
+            importRadioGroup.check(importRadioState);
             return;
         }
+        Uri oldUri = importDocUri;
         importDocUri = resultData.getData();
         getContentResolver().takePersistableUriPermission(importDocUri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -480,10 +383,11 @@ public class ImportActivity extends Activity {
         Matcher m = DIR_FILE_PATTERN.matcher(
                 FileUtils.getFileNameFromUri(this, importDocUri));
         if (!m.matches()) {
-            Log.e(TAG, "Failed to parse directory and file from Uri: "
-                    + importDocUri.toString());
-            importRadioPrivate.setChecked(true);
-            importDocUri = null;
+            Log.e(TAG, String.format(Locale.US,
+                    "Failed to parse directory and file from Uri: %s",
+                    importDocUri.toString()));
+            importRadioGroup.check(importRadioState);
+            importDocUri = oldUri;
             return;
         }
         String directoryName = m.group(3);
@@ -497,6 +401,7 @@ public class ImportActivity extends Activity {
         importDirectoryRow.setVisibility(directoryName.equals("")
                 ? View.GONE : View.VISIBLE);
         prefs.setImportFile(importDocUri.toString());
+        importRadioState = R.id.ImportFolderRadioButtonShared;
     }
 
     /** Called when the activity is about to be destroyed */
@@ -544,11 +449,154 @@ public class ImportActivity extends Activity {
             }
         };
 
+    /** Called when the user changes the file location to private storage */
+    private class PrivateStorageCheckedChangeListener
+            implements RadioButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(CompoundButton button, boolean selected) {
+            Log.d(TAG, String.format(Locale.US,
+                    "PrivateStorageCheckedChangeListener.onCheckedChanged(%s)",
+                    selected));
+            if (!selected)
+                return; // The other radio button will take care of it
+            importDocUri = null;
+            String directoryName = FileUtils
+                    .getDefaultStorageDirectory(ImportActivity.this);
+            String fileName = importFileName.getText().toString();
+            if (!fileName.endsWith(".xml")) {
+                // The Storage Access Framework may replace the
+                // actual file name with a temporary substitute;
+                // revert to the default file name.
+                fileName = "todo.xml";
+                importFileName.setText(fileName);
+            }
+            importDirectoryName.setText(directoryName);
+            importDirectoryName.setEnabled(false);
+            importFileName.setEnabled(true);
+            importDirectoryRow.setVisibility(View.VISIBLE);
+            prefs.setImportFile(directoryName + File.separator + fileName);
+            importRadioState = button.getId();
+        }
+    }
+
+    /** Called when the user changes the file location to shared storage */
+    private class SharedStorageCheckedChangeListener
+            implements View.OnClickListener {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, String.format(Locale.US,
+                    "SharedStorageCheckedChangeListener.onClick()"));
+            // Default to local shared storage
+            String directoryName = FileUtils.getSharedStorageDirectory();
+            // Although SAF is supposedly supported on KitKat,
+            // it doesn't work in practice -- import files uploaded
+            // into the Downloads folder don't show up in the UI
+            // until sometime > Marshmallow and <= Oreo.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Intent openFileActivity =
+                        new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                openFileActivity.addCategory(
+                        Intent.CATEGORY_OPENABLE);
+                openFileActivity.setFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                openFileActivity.setType("*/*");
+                openFileActivity.putExtra(Intent.EXTRA_MIME_TYPES,
+                        new String[] { "application/xml", "text/xml" });
+                startActivityForResult(Intent.createChooser(
+                                openFileActivity,
+                                getString(R.string.ImportFileDialogTitle)),
+                        SAF_PICK_XML_FILE);
+            } else {
+                String fileName = importFileName.getText().toString();
+                importDirectoryName.setText(directoryName);
+                importDirectoryName.setEnabled(true);
+                importFileName.setEnabled(true);
+                importDirectoryRow.setVisibility(View.VISIBLE);
+                prefs.setImportFile(directoryName + File.separator + fileName);
+                importRadioState = view.getId();
+            }
+        }
+    }
+
+    /** Called when the import file name is changed */
+    private class FileNameChangedListener implements TextWatcher {
+        @Override
+        public void afterTextChanged(Editable s) {
+            String directoryName = importDirectoryName.getText().toString();
+            String fileName = s.toString();
+            prefs.setImportFile(directoryName + File.separator + fileName);
+        }
+        @Override
+        public void beforeTextChanged(CharSequence s,
+                int start, int count, int after) {}
+        @Override
+        public void onTextChanged(CharSequence s,
+                int start, int before, int count) {}
+    }
+
+    /** Called when the user changes the import type */
+    private class ImportTypeChangedListener
+            implements AdapterView.OnItemSelectedListener {
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+            // Do nothing
+        }
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View child,
+                int position, long id) {
+            Log.d(TAG, String.format(Locale.US,
+                    "ImportTypeChangedListener.onItemSelected(%d,%d)",
+                    position, id));
+            if ((position < 0) || (position >= ToDoPreferences.ImportType.values().length)) {
+                Log.w(TAG, "Invalid import type index!");
+                return;
+            }
+            ToDoPreferences.ImportType type =
+                    ToDoPreferences.ImportType.values()[position];
+            prefs.setImportType(type);
+        }
+    }
+
+    /**
+     * Called when the user toggles the &ldquo;Include private&rdquo; checkbox
+     */
+    private class IncludePrivateCheckedChangeListener
+            implements CompoundButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(
+                CompoundButton b, boolean checked) {
+            prefs.setImportPrivate(checked);
+            passwordFieldRows[0].setVisibility(checked &&
+                    (encryptor.getPassword() == null)
+                    ? View.VISIBLE : View.GONE);
+            for (int i = 1; i < passwordFieldRows.length; i++)
+                passwordFieldRows[i].setVisibility(
+                        checked ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    /**
+     * Called when the user toggles the &ldquo;Show password&rdquo; checkbox
+     */
+    private class ShowPasswordCheckedChangeListener
+            implements CompoundButton.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(
+                CompoundButton b, boolean checked) {
+            int oldType = importPassword.getInputType();
+            if (checked)
+                oldType &= ~InputType.TYPE_TEXT_VARIATION_PASSWORD;
+            else
+                oldType |= InputType.TYPE_TEXT_VARIATION_PASSWORD;
+            importPassword.setInputType(oldType);
+        }
+    }
+
     /** Called when the user clicks Import to start importing the data */
     class ImportButtonOnClickListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
-            Log.d(TAG, "ImportButtonOK.onClick");
+            Log.d(TAG, "ImportButtonOK.onClick()");
             importProgressMessage.setText("...");
             xableFormElements(false);
             String fullName = importDirectoryName.getText().toString()
@@ -652,6 +700,15 @@ public class ImportActivity extends Activity {
             progressLiveData = workManager.getWorkInfoByIdLiveData(
                     importRequest.getId());
             progressLiveData.observeForever(progressObserver);
+        }
+    }
+
+    /** Called when the user cancels the import */
+    private class CancelClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "ImportButtonCancel.onClick");
+            ImportActivity.this.finish();
         }
     }
 

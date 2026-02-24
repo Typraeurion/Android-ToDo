@@ -40,8 +40,10 @@ import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
+import android.Manifest;
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
 import android.database.SQLException;
 import android.net.Uri;
@@ -56,6 +58,7 @@ import android.widget.*;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 
 /**
  * Displays the details of a To Do item.  Will display the item from the
@@ -1187,17 +1190,84 @@ public class ToDoDetailsActivity extends Activity {
 
         Log.d(TAG, "Notifications are not enabled;"
                 + " requesting permission from the user");
-        // Fix Me: Android does not provide any way to programatically
-        // request notification permission until SDK 33 (Tiramisu)!!
+        // Android does not provide any way to programatically
+        // request notification permission until SDK 33 (Tiramisu)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!shouldShowRequestPermissionRationale(
+                    Manifest.permission.POST_NOTIFICATIONS)) {
+                requestPermissions(new String[] {
+                        Manifest.permission.POST_NOTIFICATIONS
+                }, R.id.AlarmButtonOK);
+                return false;
+            }
+        }
+
+        showNotificationRationale();
+        return false;
+
+    }
+
+    private void showNotificationRationale() {
         new AlertDialog.Builder(this)
                 .setIcon(android.R.drawable.ic_dialog_info)
                 .setTitle(R.string.PermissionRequiredTitle)
                 .setMessage(R.string.PermissionToPostNotificationRationale)
                 .setNeutralButton(R.string.ConfirmationButtonOK, DISMISS_LISTENER)
                 .create().show();
+    }
 
-        return false;
+    /** Called when the user grants or denies permission */
+    @Override
+    public void onRequestPermissionsResult(
+            int code, String[] permissions, int[] results) {
 
+        // This part is all just for debug logging.
+        String[] resultNames = new String[results.length];
+        for (int i = 0; i < results.length; i++) {
+            String name;
+            switch (results[i]) {
+                case PackageManager.PERMISSION_DENIED:
+                    name = "Denied";
+                    break;
+                case PackageManager.PERMISSION_GRANTED:
+                    name = "Granted";
+                    break;
+                default:
+                    name = Integer.toString(results[i]);
+            }
+            resultNames[i] = name;
+        }
+        Log.d(TAG, String.format(".onRequestPermissionsResult(%d, %s, %s)",
+                code, Arrays.toString(permissions),
+                Arrays.toString(resultNames)));
+
+        if (code != R.id.AlarmButtonOK) {
+            Log.e(TAG, "Unexpected code from request permissions; ignoring!");
+            return;
+        }
+
+        if (permissions.length != results.length) {
+            Log.e(TAG, String.format(Locale.US,
+                    "Number of request permissions (%d) Does not"
+                            + " match number of results (%d); ignoring!",
+                    permissions.length, results.length));
+            return;
+        }
+
+        for (int i = 0; i < results.length; i++) {
+            if (Manifest.permission.POST_NOTIFICATIONS.equals(permissions[i])) {
+                if (results[i] == PackageManager.PERMISSION_GRANTED) {
+                    Log.i(TAG, "Notification permission granted");
+                    return;
+                } else if (results[i] == PackageManager.PERMISSION_DENIED) {
+                    Log.i(TAG, "Notification permission denied!");
+                    showNotificationRationale();
+                }
+            } else {
+                Log.w(TAG, String.format(Locale.US,
+                        "Ignoring unknown permission %s", permissions[i]));
+            }
+        }
     }
 
     /** Called when the user clicks the repeat button */

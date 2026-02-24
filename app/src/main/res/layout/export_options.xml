@@ -12,7 +12,7 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content">
 
-        <RadioGroup android:id="@+id/ImportFolderRadioGroup"
+        <RadioGroup android:id="@+id/ExportFolderRadioGroup"
             android:layout_width="match_parent"
             android:layout_height="match_parent" >
 

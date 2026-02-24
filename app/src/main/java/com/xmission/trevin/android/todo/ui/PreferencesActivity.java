@@ -472,8 +472,9 @@ public class PreferencesActivity extends Activity {
         }
 
         if (permissions.length != results.length) {
-            Log.e(LOG_TAG, String.format("Number of request permissions (%d"
-                    + ") does not match number of results (%d); ignoring!",
+            Log.e(LOG_TAG, String.format(Locale.US,
+                    "Number of request permissions (%d) does not"
+                            + " match number of results (%d); ignoring!",
                     permissions.length, results.length));
             return;
         }
