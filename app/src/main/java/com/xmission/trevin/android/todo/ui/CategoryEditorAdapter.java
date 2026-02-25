@@ -22,7 +22,6 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 
 import android.content.Context;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;

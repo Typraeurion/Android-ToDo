@@ -134,7 +134,8 @@ public class MockToDoRepository implements ToDoRepository {
 
     @Override
     public void open(@NonNull Context context) throws SQLException {
-        Log.d(TAG, ".open");
+        Log.d(TAG, String.format(Locale.US, ".open(%s)",
+                context.getClass().getSimpleName()));
         if (unfiledCategoryName == null) {
             unfiledCategoryName = context.getString(R.string.Category_Unfiled);
             categories.put((long) ToDoCategory.UNFILED, unfiledCategoryName);
@@ -156,7 +157,8 @@ public class MockToDoRepository implements ToDoRepository {
                     + " which did not open the repository!");
             return;
         }
-        Log.d(TAG, ".release");
+        Log.d(TAG, String.format(Locale.US, ".release(%s)",
+                context.getClass().getSimpleName()));
         int openCount = openContexts.get(context) - 1;
         if (openCount > 0) {
             openContexts.put(context, openCount);

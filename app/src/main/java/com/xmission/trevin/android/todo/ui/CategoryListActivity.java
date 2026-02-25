@@ -251,12 +251,19 @@ public class CategoryListActivity extends AppCompatActivity {
             }
             // Ensure focus has been removed from any text field
             // so that any recent edits have been saved.
-            // (Potentially addresses issue #2.)
             View focus = CategoryListActivity.this.getCurrentFocus();
             if (focus instanceof EditText)
                 focus.clearFocus();
 
-            executor.submit(new SaveChangesRunner());
+            // Before running the SaveChangesRunner, we need to
+            // ensure the clearFocus call above has been processed.
+            // (This addresses GitHub issue #2 from the NotePad app.)
+            v.post(new Runnable() {
+                @Override
+                public void run() {
+                    executor.submit(new SaveChangesRunner());
+                }
+            });
         }
     }
 

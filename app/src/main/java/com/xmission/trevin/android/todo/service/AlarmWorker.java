@@ -47,7 +47,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.work.ForegroundInfo;
-import androidx.work.ListenableWorker.Result;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import androidx.work.impl.utils.futures.SettableFuture;
@@ -384,7 +383,8 @@ public class AlarmWorker extends Worker {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
             NotificationCompat.Builder builder =
-                    new NotificationCompat.Builder(context)
+                    new NotificationCompat.Builder(context,
+                            isOverdue ? OVERDUE_CHANNEL_ID : ALMOST_DUE_CHANNEL_ID)
                             .setSmallIcon(R.drawable.stat_todo)
                             .setContentTitle(title)
                             .setContentText(descr)
@@ -399,6 +399,8 @@ public class AlarmWorker extends Worker {
                         Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
             notice = builder.build();
         }
+        // FIXME: NotificationCompat should resolve API differences;
+        // merge this section into the above and remove the version check.
         else {
             Notification.Builder builder;
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) { // KitKat through Nougat
@@ -464,13 +466,8 @@ public class AlarmWorker extends Worker {
     @NonNull
     public ListenableFuture<ForegroundInfo> getForegroundInfoAsync() {
         Log.d(TAG, ".getForegroundInfoAsync");
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(context);
-        } else {
-            builder = new Notification.Builder(context, SILENT_CHANNEL_ID);
-        }
-        Notification busyNotification = builder
+        Notification busyNotification = new NotificationCompat
+                .Builder(context, SILENT_CHANNEL_ID)
                 .setSmallIcon(R.drawable.stat_todo)
                 .setContentText(context.getString(R.string.app_name))
                 .setContentText(context.getString(

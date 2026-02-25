@@ -86,12 +86,12 @@ features without using this manual.
 @node Device Compatibility, Permissions, The Basics, The Basics
 @section Device Compatibility
 
-The application is designed for compatibility with Android 12 (Snow
-Cone) but also runs on Android 4.0 (Ice Cream Sandwich) through 14
-(Upside-down Cake) which should cover 98.6% of Android devices on the
-market as of March 2025.  (It has been tested on Ice Cream Sandwich,
-Marshmallow, Oreo, Quince Tart, and Upside-down Cake.)  Support for
-newer Android devices is planned.
+The application is designed for compatibility with Android 14
+(Upside-down Cake) but also runs on Android 4.0 (Ice Cream Sandwich)
+through 14 (@emph{FIX ME}: Upside-down Cake) which should cover at
+least 65.5% of Android devices on the market as of February 2026.  (It
+has been tested on @emph{FIX ME}.)  Support for newer Android devices
+is planned.
 
 @node Permissions, Adding To Do Items, Device Compatibility, The Basics
 @section Permissions
@@ -522,22 +522,26 @@ the application settings.
 
 You can add an extra layer of security to your private records by
 setting a password from the application's main menu.  After setting a
-password, all of your private records will be encrypted and will show up
-as ``[Locked]'' in your To Do list and you will not be able to edit them
-until you enter your password in the application settings.  When you
-exit the application, it forgets your password so that the private
-records become locked again the next time anybody opens your To Do list.
+password, all of your private records will be encrypted and will show
+up as ``[Locked]'' in your To Do list and you will not be able to edit
+them until you unlock them from the menu.  When you choose to lock
+them again or exit the application, it forgets your password so that
+the private records become locked again the next time anybody opens
+your To Do list.
+
+@emph{Note: the option to lock or unlock encrypted records only
+appears wher ``Show private records'' is enabled.}
 
 @image{Locked_record,72mm,72mm}
 
-@b{Important!  If you have not entered your password in the application
-settings and you mark a record as Private, it will @i{not} be
-encrypted.}  If you want to encrypt a new record but have not entered
-your password yet, simply save it, enter your password in the
-application settings, open up your new record and save it again.
+@b{Important!  If you have not unlocked encrypted records and you mark
+a record as Private, it will @i{not} be encrypted.}  If you want to
+encrypt a new record but have not unlocked encrypted records yet,
+simply save it, unlock encrypted records from the application menu,
+open up your new record and save it again.
 
 You can remove your password and un-encrypt your private records by
-choosing ``Set Password'' from the main menu, enter your old password,
+choosing ``Change Password'' from the main menu, enter your old password,
 but leave the new password blank.
 
 @ifnottex
@@ -632,11 +636,9 @@ Set a new password.  Make sure you remember this one!
 @section Exporting To Do data
 
 In order to protect against the loss of data on your Android device,
-you should periodically make a backup copy.  First, if you have set a
-password for your private records make sure you have entered the
-password in the ``Settings'' to unlock them.  Then in the main menu
-select ``Export Data'' to save all of your To Do items to a file on
-your device.
+you should periodically make a backup copy.  In the main menu select
+``Export Data'' to save all of your To Do items to a file on your
+device.
 
 @image{Export-private,72mm,65.1mm}
 
@@ -656,6 +658,8 @@ export file you wish to save, ending in @file{.xml}.
 @image{SAF-Create_Document,72mm,83.5mm}
 
 After pressing ``Save'' you will return to the app's Export screen.
+If you need to change the name of the export file, click the ``Save to
+shared storage'' button again.
 
 @page
 
@@ -667,10 +671,12 @@ in, but be sure the location is accessible.
 @image{Export-shared,72mm,88.5mm}
 
 If you wish to include private records in the exported file, be sure
-the ``Include Private'' box is checked.  You can also export just the
-non-private items by leaving this box unchecked.  When ready, press
-``Export''.  The app will show a progress bar as it writes the data
-out (if it takes long enough) then return to the To Do list.
+the ``Include Private'' box is checked.  You do not need to unlock
+encrypted records to export them; the app will save the encrypted
+data.  You can also export just the non-private items by leaving this
+box unchecked.  When ready, press ``Export''.  The app will show a
+progress bar as it writes the data out (if it takes long enough) then
+return to the To Do list.
 
 @page
 
@@ -695,7 +701,8 @@ file with your saved To Do lists.
 @image{SAF-Open_Document,72mm,54.9mm}
 
 When you select the document you will return to the app's Import
-screen.
+screen.  If you need to change to a different file, click the ``File
+from shared storage'' button again.
 
 @page
 
@@ -764,15 +771,16 @@ it will be practically impossible to recover your private records;
 however you may still restore all of your non-private records by
 un-checking ``Include Private'' on the Import form.
 
-If you have not entered your password in the application settings when
-you attempt to import a backup file, the import form will warn you that
-any private records imported will not be encrypted.  You may either
-cancel the operation to go enter your password and then try again, or go
-ahead and import the data and then re-encrypt the private records
-later.  To encrypt them afterward, either open up and save each private
-record individually, or choose ``Set Password'' from the main menu and
-change the password.  @i{(You can change it to the same password if you
-wish.)}
+If you have not unlocked encrypted records in the application settings
+when you attempt to import a backup file, the import form will warn
+you that any private records imported will not be encrypted.  You may
+either cancel the operation to go unlock encrypted records and then
+try again, or go ahead and import the data and then re-encrypt the
+private records later.  To encrypt them afterward, either open up and
+save each private record individually, or choose ``Change Password''
+from the main menu (or ``Set Password'' if you don't currently have a
+password set) and change the password.  @i{(You can change it to the
+same password if you wish.)}
 
 @node Known Bugs, , Exporting and Importing, Top
 @chapter Known Bugs
