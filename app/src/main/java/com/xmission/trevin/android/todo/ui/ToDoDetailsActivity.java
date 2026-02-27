@@ -875,6 +875,7 @@ public class ToDoDetailsActivity extends Activity {
                 .ofLocalizedDate(FormatStyle.FULL);
         LocalDate d;
         ZoneId zone = prefs.getTimeZone();
+        LocalDate today = LocalDate.now(zone);
         StringBuilder sb;
         switch (id) {
 
@@ -884,17 +885,17 @@ public class ToDoDetailsActivity extends Activity {
 
             case DUEDATE_DIALOG_ID:
                 LocalDate tentativeDueDate = (todo.getDue() == null)
-                        ? LocalDate.now(prefs.getTimeZone()) : todo.getDue();
+                        ? today : todo.getDue();
+                dueDateDialog.setToday(today);
                 dueDateDialog.setDate(tentativeDueDate);
-                dueDateDialog.setTimeZone(prefs.getTimeZone());
+                dueDateDialog.setTimeZone(zone);
                 break;
 
             case HIDEUNTIL_DIALOG_ID:
                 hideCheckBox.setChecked(todo.getHideDaysEarlier() != null);
                 hideEditDays.setText((todo.getHideDaysEarlier() == null)
                         ? "0" : todo.getHideDaysEarlier().toString());
-                d = (todo.getDue() == null)
-                        ? LocalDate.now(zone) : todo.getDue();
+                d = (todo.getDue() == null) ? today : todo.getDue();
                 if (todo.getHideDaysEarlier() != null)
                     d = d.minusDays(todo.getHideDaysEarlier());
                 sb = new StringBuilder(showTime
@@ -940,7 +941,8 @@ public class ToDoDetailsActivity extends Activity {
                             todo.getRepeatInterval()).getEnd();
                 if (tentativeEndDate == null)
                     tentativeEndDate = (todo.getDue() == null)
-                            ? LocalDate.now(prefs.getTimeZone()) : todo.getDue();
+                            ? today : todo.getDue();
+                repeatEndDialog.setToday(today);
                 repeatEndDialog.setDate(tentativeEndDate);
                 repeatEndDialog.setTimeZone(prefs.getTimeZone());
                 break;

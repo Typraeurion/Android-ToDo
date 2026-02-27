@@ -905,6 +905,7 @@ public class RepeatEditor extends FrameLayout
                                 R.string.DatePickerTitleEndingOn),
                         new EndDateOnDateSetListener());
             }
+            endDateDialog.setToday(LocalDate.now(timeZone));
             endDateDialog.setDate(repeatSettings.getEndDate());
             endDateDialog.setTimeZone(timeZone);
             endDateDialog.show();

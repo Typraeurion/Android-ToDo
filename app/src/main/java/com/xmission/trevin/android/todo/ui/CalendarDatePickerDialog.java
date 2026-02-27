@@ -81,9 +81,24 @@ public class CalendarDatePickerDialog extends AlertDialog
     }
 
     /**
-     * Set the date displayed in the date picker dialog.
+     * Set today&rsquo;s date for the date picker.  This determines
+     * which buttons are highlighted when {@link #setDate(LocalDate)}
+     * is called and when the user selects different months
+     * and years.
      *
-     * @param date the date to highlight
+     * @param today the date considered to be today
+     * for the purpose of display.
+     */
+    public void setToday(@NonNull LocalDate today) {
+        datePicker.setToday(today);
+    }
+
+    /**
+     * Set the date displayed in the date picker dialog.
+     * {@link #setToday(LocalDate)} must be called first in
+     * order for the current date to be highlighted correctly.
+     *
+     * @param date the date to jump to in the date picker
      */
     public void setDate(@NonNull LocalDate date) {
         datePicker.setDate(date);

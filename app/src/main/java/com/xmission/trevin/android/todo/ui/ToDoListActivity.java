@@ -900,12 +900,13 @@ public class ToDoListActivity extends AppCompatActivity {
                                     itemId));
                             return;
                         }
+                        final LocalDate today = LocalDate.now(prefs.getTimeZone());
                         final LocalDate due = (item.getDue() == null)
-                                ? LocalDate.now(prefs.getTimeZone())
-                                : item.getDue();
+                                ? today : item.getDue();
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                dueDateDialog.setToday(today);
                                 dueDateDialog.setDate(due);
                             }
                         });

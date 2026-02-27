@@ -42,11 +42,11 @@ public class CalendarDatePicker extends FrameLayout {
 
     private LocalDate selectedDate;
     private int year;
-    private final int todaysYear;
+    private int todaysYear;
     private Month month;
-    private final Month todaysMonth;
+    private Month todaysMonth;
     private int date;
-    private final int todaysDate;
+    private int todaysDate;
 
     /**
      * The offset of the first day of the currently shown month.
@@ -94,7 +94,10 @@ public class CalendarDatePicker extends FrameLayout {
               R.id.DatePickerDay43Button, R.id.DatePickerDay44Button,
               R.id.DatePickerDay45Button, R.id.DatePickerDay46Button,
               R.id.DatePickerDay47Button },
-            { R.id.DatePickerDay51Button, R.id.DatePickerDay52Button }
+            { R.id.DatePickerDay51Button, R.id.DatePickerDay52Button,
+              R.id.DatePickerDay53Button, R.id.DatePickerDay54Button,
+              R.id.DatePickerDay55Button, R.id.DatePickerDay56Button,
+              R.id.DatePickerDay57Button }
     };
 
     /** The edit box for the year */
@@ -161,19 +164,44 @@ public class CalendarDatePicker extends FrameLayout {
             }
         }
 
+        // Initialize defaults for today and the selected date.
+        // These need to be overridden by the caller.
         selectedDate = LocalDate.now();
-        todaysYear = selectedDate.getYear();
-        todaysMonth = selectedDate.getMonth();
-        todaysDate = selectedDate.getDayOfMonth();
-        year = todaysYear;
-        month = todaysMonth;
-        date = todaysDate;
-
-        initDates();
+        setToday(selectedDate);
+        setDate(selectedDate);
     }
 
     /**
-     * Set the date of this calendar date picker
+     * Set today&rsquo;s date in the calendar.  This determines
+     * whether and which month and date are highlighted (shown
+     * in bold) as the user scrolls through the months and years.
+     *
+     * @param today today&rsquo;s date
+     */
+    public void setToday(@NonNull LocalDate today) {
+        todaysYear = today.getYear();
+        // Clear the typeface of the previous month if it was set
+        if (todaysMonth != null)
+            monthButtons[todaysMonth.getValue() - Month.JANUARY.getValue()]
+                    .setTypeface(Typeface.DEFAULT);
+        todaysMonth = today.getMonth();
+        // Mark the current month if we are in the current year
+        monthButtons[todaysMonth.getValue() - Month.JANUARY.getValue()]
+                .setTypeface((year == todaysYear) ? Typeface.DEFAULT_BOLD
+                        : Typeface.DEFAULT);
+        todaysDate = today.getDayOfMonth();
+    }
+
+    /**
+     * Set the selected date of this calendar date picker.
+     * This will configure the date buttons with the appropriate
+     * days for the selected month.  It also highlights the
+     * current month if the selected date is in the current year
+     * and the current date if the selected month is in the
+     * current year, so the current date should be set with
+     * {@link #setToday} before making this call.
+     *
+     * @param selectedDate the date to jump to in the date picker
      */
     public void setDate(@NonNull LocalDate selectedDate) {
         this.selectedDate = selectedDate;
@@ -196,6 +224,8 @@ public class CalendarDatePicker extends FrameLayout {
      */
     void initDates() {
         yearText.setText(Integer.toString(year));
+        yearText.setTypeface((year == todaysYear)
+                ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
 
         RadioGroup monthGroup = (RadioGroup)
                 findViewById(R.id.DatePickerMonthRadioGroup);

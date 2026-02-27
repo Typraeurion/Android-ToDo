@@ -18,21 +18,19 @@ package com.xmission.trevin.android.todo.ui;
 
 import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.*;
 import static com.xmission.trevin.android.todo.ui.CategoryEditorTests.CATEGORY_NAME_COMPARATOR;
 import static com.xmission.trevin.android.todo.ui.CategoryFilterTests.randomCategoryName;
 import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
+import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.hamcrest.CoreMatchers.anything;
-import static org.hamcrest.core.AllOf.allOf;
 import static org.junit.Assert.*;
 
 import android.app.Instrumentation;
 import android.content.Context;
 import android.os.Build;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 
@@ -55,8 +53,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Tests for the {@link CategoryListActivity}
@@ -287,59 +283,6 @@ public class CategoryListActivityTests {
     }
 
     /**
-     * Verify that a given button is present (and visible).
-     *
-     * @param scenario the scenario in which the test is running
-     * @param buttonName the name of the button
-     * @param buttonId the resource ID of the button to check
-     *
-     * @throws AssertionError if the button is missing or not visible
-     */
-    // To Do: Move this to a common test utility class
-    private static void assertButtonShown(
-            ActivityScenario<CategoryListActivity> scenario,
-            String buttonName, int buttonId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId))
-                    .check(matches(allOf(
-                            isDisplayed(),
-                            isEnabled())));
-        } else {
-            scenario.onActivity(activity -> {
-                Button button = activity.findViewById(buttonId);
-                assertNotNull(buttonName + " button is missing", button);
-                assertTrue(buttonName + " button is not visible",
-                        button.isShown());
-                assertTrue(buttonName + " button is disabled",
-                        button.isEnabled());
-            });
-        }
-    }
-
-    /**
-     * Click the designated button.  The test should have already
-     * verified that the button exists and is enabled.
-     *
-     * @param scenario the scenario in which the test is running
-     * @param buttonName the name of the button
-     * @param buttonId the resource ID of the button to click
-     */
-    // To Do: Move this to a common test utility class
-    private static void pressButton(
-            ActivityScenario<CategoryListActivity> scenario,
-            String buttonName, int buttonId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId)).perform(click());
-        } else {
-            scenario.onActivity(activity -> {
-                Button button = activity.findViewById(buttonId);
-                button.performClick();
-            });
-        }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-    }
-
-    /**
      * Press the OK or Cancel button to finish the activity.
      * This may need to wait for a period of time while the activity
      * performs any required background task to save data to the repository.
@@ -359,8 +302,8 @@ public class CategoryListActivityTests {
         final MockDataChangedObserver observer =
                 new MockDataChangedObserver(mockRepo);
         mockRepo.registerDataSetObserver(observer);
-        pressButton(scenario, ok ? "OK" : "Cancel", ok ?
-                R.id.CategoryListButtonOK : R.id.CategoryListButtonCancel);
+        pressButton(scenario, ok ? R.id.CategoryListButtonOK
+                : R.id.CategoryListButtonCancel);
         try {
             observer.await(ok);
             Lifecycle.State state = scenario.getState();
@@ -398,7 +341,7 @@ public class CategoryListActivityTests {
             // Step 3: Verify the "OK" button exists
             assertButtonShown(scenario, "OK", R.id.CategoryListButtonOK);
             // Step 4: Click the "New" button; wait for idle sync
-            pressButton(scenario, "OK", R.id.CategoryListButtonNew);
+            pressButton(scenario, R.id.CategoryListButtonNew);
             // Step 5: Verify the ListView contains one EditText item,
             //         and that the text field is empty
             assertCategoryTextEquals(scenario, -1, "");
@@ -437,7 +380,7 @@ public class CategoryListActivityTests {
             // Step 3: Verify the "Cancel" button exists
             assertButtonShown(scenario, "Cancel", R.id.CategoryListButtonCancel);
             // Step 4: Click the "New" button; wait for idle sync
-            pressButton(scenario, "New", R.id.CategoryListButtonNew);
+            pressButton(scenario, R.id.CategoryListButtonNew);
             // Step 5: Verify the ListView contains one EditText item,
             //         and that the text field is empty
             assertCategoryTextEquals(scenario, -1, "");
