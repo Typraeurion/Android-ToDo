@@ -76,6 +76,7 @@ public class CategorySelectAdapter extends BaseAdapter {
         @Override
         public void onInvalidated() {
             notifyDataSetInvalidated();
+            repository.unregisterDataSetObserver(this);
         }
     }
 
@@ -145,6 +146,8 @@ public class CategorySelectAdapter extends BaseAdapter {
      * @return true if the category list is available, false otherwise
      */
     private synchronized boolean readCategories() {
+        Log.d(LOG_TAG, ".readCategories(): cache is currently "
+                + ((categories == null) ? "empty" : "full"));
         if (categories != null)
             return true;
         if (!isOpen) try {

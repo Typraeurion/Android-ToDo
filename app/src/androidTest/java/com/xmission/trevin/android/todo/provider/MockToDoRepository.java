@@ -37,6 +37,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * In-memory implementation of the To Do repository for use in UI tests.
@@ -150,6 +152,23 @@ public class MockToDoRepository implements ToDoRepository {
         }
     }
 
+    /**
+     * Call the registered observers when the last context closes the
+     * repository.
+     * The calls <b>must</b> be done on the main UI thread.
+     */
+    private Runnable observerInvalidationRunner = new Runnable() {
+        @Override
+        public void run() {
+            for (DataSetObserver observer : registeredObservers) try {
+                observer.onInvalidated();
+            } catch (Exception e) {
+                Log.w(TAG, "Caught exception when invalidating observer "
+                        + observer.getClass().getCanonicalName(), e);
+            }
+        }
+    };
+
     @Override
     public void release(@NonNull Context context) {
         if (!openContexts.containsKey(context)) {
@@ -169,6 +188,22 @@ public class MockToDoRepository implements ToDoRepository {
             openContexts.remove(context);
             if (openContexts.isEmpty()) {
                 Log.d(TAG, "The last context has released the repository");
+                // Finish here if there are no observers
+                if (registeredObservers.isEmpty())
+                    return;
+
+                // Use the context's UI thread if we have any
+                for (Context contextKey : openContexts.keySet()) {
+                    if (contextKey instanceof Activity) {
+                        ((Activity) contextKey).runOnUiThread(
+                                observerInvalidationRunner);
+                        return;
+                    }
+                }
+
+                // Otherwise fall back to the main looper
+                new Handler(Looper.getMainLooper()).post(
+                        observerInvalidationRunner);
             }
         }
     }
@@ -903,7 +938,7 @@ public class MockToDoRepository implements ToDoRepository {
                                boolean includePrivate,
                                boolean includeEncrypted,
                                @NonNull String sortOrder) {
-        Log.d(TAG, String.format(".getItems(%d,%s,%s,%s,%s,%s)",
+        Log.d(TAG, String.format(".getItems(%d,%s,LocalDate[%s],%s,%s,\"%s\")",
                 categoryId, includeCheckedAndHidden,
                 today.format(DateTimeFormatter.ISO_LOCAL_DATE),
                 includePrivate, includeEncrypted, sortOrder));
@@ -933,75 +968,87 @@ public class MockToDoRepository implements ToDoRepository {
             foundItems.add(copy);
         }
         Comparator<ToDoItem> comparator = null;
-        for (String sortItem : sortOrder.split(",")) {
-            sortItem = sortItem.trim();
-            String[] sortParts = sortItem.split(" +");
+        // FIXME: This pattern may skip over invalid syntax!
+        final Pattern sortItemPattern = Pattern.compile(
+                "(?i)\\s*(?<base>[._a-z]+)"
+                        + "(\\((?<args>[^)]*)\\))?"
+                        + "(\\s+(?<dir>[a-z]+))?\\s*(,|$)");
+        Matcher m = sortItemPattern.matcher(sortOrder);
+        while (m.find()) {
+        // for (String sortItem : sortOrder.split(",")) {
+        //    sortItem = sortItem.trim();
+        //    String[] sortParts = sortItem.split(" +");
+            String function = m.group("base");
+            String[] args = m.group("args") == null ? null
+                    : m.group("args").split(",");
+            String column = (args == null) ? function : args[0];
+            String direction = m.group("dir");
             Comparator<ToDoItem> nextComparator;
-            if (sortParts[0].equalsIgnoreCase(
+            if (column.equalsIgnoreCase(
                     ToDoRepositoryImpl.TODO_TABLE_NAME
                             + "." + ToDoSchema.ToDoItemColumns._ID))
                 nextComparator = TODO_ID_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.DESCRIPTION))
                 nextComparator = TODO_DESCRIPTION_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase("lower("
-                    + ToDoSchema.ToDoItemColumns.DESCRIPTION + ")"))
+            else if (function.equalsIgnoreCase("lower") &&
+                    column.equalsIgnoreCase(ToDoSchema
+                            .ToDoItemColumns.DESCRIPTION))
                 nextComparator = TODO_DESCRIPTION_COMPARATOR_IGNORE_CASE;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.CREATE_TIME))
                 nextComparator = TODO_CREATE_TIME_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.MOD_TIME))
                 nextComparator = TODO_MOD_TIME_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.DUE_TIME))
                 nextComparator = TODO_DUE_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.COMPLETED_TIME))
                 nextComparator = TODO_COMPLETED_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.CHECKED))
                 nextComparator = TODO_CHECKED_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.PRIORITY))
                 nextComparator = TODO_PRIORITY_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.PRIVATE))
                 nextComparator = TODO_PRIVATE_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.CATEGORY_ID))
                 nextComparator = TODO_CATEGORY_ID_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.CATEGORY_NAME))
                 nextComparator = TODO_CATEGORY_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase("lower("
-                    + ToDoSchema.ToDoItemColumns.CATEGORY_NAME + ")"))
+            else if (function.equalsIgnoreCase("lower") &&
+                    column.equalsIgnoreCase(ToDoSchema
+                            .ToDoItemColumns.CATEGORY_NAME))
                 nextComparator = TODO_CATEGORY_COMPARATOR_IGNORE_CASE;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.NOTE))
                 nextComparator = TODO_NOTE_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase("lower("
-                    + ToDoSchema.ToDoItemColumns.NOTE + ")"))
+            else if (function.equalsIgnoreCase("lower") &&
+                    column.equalsIgnoreCase(
+                            ToDoSchema.ToDoItemColumns.NOTE))
                 nextComparator = TODO_NOTECOMPARATOR_IGNORE_CASE;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.ALARM_TIME))
                 nextComparator = TODO_ALARM_COMPARATOR;
-            else if (sortParts[0].equalsIgnoreCase(ToDoSchema
+            else if (column.equalsIgnoreCase(ToDoSchema
                     .ToDoItemColumns.NOTIFICATION_TIME))
                 nextComparator = TODO_NOTIFICATION_COMPARATOR;
             // To Do: Add cases for additional comparators as they are implemented
             else
                 throw new SQLException(
-                        "Unsupported sort field: " + sortParts[0]);
-            if (sortParts.length > 1) {
-                if (sortParts[1].equalsIgnoreCase("desc"))
+                        "Unsupported sort field: " + m.group());
+            if (direction != null) {
+                if (direction.equalsIgnoreCase("desc"))
                     nextComparator = Collections.reverseOrder(nextComparator);
-                else if (!sortParts[1].equalsIgnoreCase("asc"))
+                else if (!direction.equalsIgnoreCase("asc"))
                     throw new SQLException(
-                            "Unrecognized sort direction: " + sortParts[1]);
-                if (sortParts.length > 2)
-                    throw new SQLException(
-                            "Invalid ORDER BY clause: " + sortItem);
+                            "Unrecognized sort direction: " + direction);
             }
             if (comparator == null)
                 comparator = nextComparator;

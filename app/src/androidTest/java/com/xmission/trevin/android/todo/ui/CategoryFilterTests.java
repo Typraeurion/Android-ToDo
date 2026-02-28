@@ -19,15 +19,22 @@ package com.xmission.trevin.android.todo.ui;
 import static org.junit.Assert.*;
 
 import android.content.Context;
+import android.widget.Spinner;
+import android.widget.SpinnerAdapter;
+
+import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.MockSharedPreferences;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
+import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.MockToDoRepository;
-import com.xmission.trevin.android.todo.provider.ToDoRepositoryTests.TestObserver;
+import com.xmission.trevin.android.todo.provider.TestObserver;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
@@ -50,6 +57,8 @@ public class CategoryFilterTests {
 
     static Context testContext = null;
 
+    static MockSharedPreferences mockPrefs = null;
+
     static MockToDoRepository repository = null;
 
     static final Random RAND = new Random();
@@ -58,12 +67,16 @@ public class CategoryFilterTests {
     public static void initializeRepository() {
         testContext = InstrumentationRegistry.getInstrumentation()
                 .getTargetContext();
-        repository = (MockToDoRepository) MockToDoRepository.getInstance();
+        mockPrefs = new MockSharedPreferences();
+        ToDoPreferences.setSharedPreferences(mockPrefs);
+        repository = MockToDoRepository.getInstance();
+        ToDoRepositoryImpl.setInstance(repository);
         repository.open(testContext);
     }
 
     @Before
     public void clearData() {
+        mockPrefs.resetMock();
         repository.clear();
     }
 
@@ -128,25 +141,42 @@ public class CategoryFilterTests {
     public void testUserCategories() {
         CategoryFilterAdapter adapter =
                 new CategoryFilterAdapter(testContext, repository);
-
         List<ToDoCategory> testCategories = new ArrayList<>();
-        ToDoCategory expectedCategory = new ToDoCategory();
-        expectedCategory.setId(ToDoCategory.UNFILED);
-        expectedCategory.setName(
-                testContext.getString(R.string.Category_Unfiled));
-        testCategories.add(expectedCategory);
+        ToDoCategory expectedCategory;
+        /*
+         * Since the data set observer runs on a different thread
+         * than repository operations, we have to wait for these
+         * threads to synchronize.  Set up an observer before
+         * any changes.
+         */
+        TestObserver observer = new TestObserver(3);
+        adapter.registerDataSetObserver(observer);
 
-        expectedCategory = repository.insertCategory(
-                randomCategoryName('A', 'T'));
-        testCategories.add(expectedCategory);
+        try {
 
-        expectedCategory =
-                repository.insertCategory(randomCategoryName('V', 'Z'));
-        testCategories.add(expectedCategory);
+            expectedCategory = new ToDoCategory();
+            expectedCategory.setId(ToDoCategory.UNFILED);
+            expectedCategory.setName(
+                    testContext.getString(R.string.Category_Unfiled));
+            testCategories.add(expectedCategory);
 
-        expectedCategory =
-                repository.insertCategory(randomCategoryName('A', 'Z'));
-        testCategories.add(expectedCategory);
+            expectedCategory = repository.insertCategory(
+                    randomCategoryName('A', 'T'));
+            testCategories.add(expectedCategory);
+
+            expectedCategory =
+                    repository.insertCategory(randomCategoryName('V', 'Z'));
+            testCategories.add(expectedCategory);
+
+            expectedCategory =
+                    repository.insertCategory(randomCategoryName('A', 'Z'));
+            testCategories.add(expectedCategory);
+
+            observer.assertChanged();
+
+        } finally {
+            adapter.unregisterDataSetObserver(observer);
+        }
 
         Collections.sort(testCategories, new Comparator<ToDoCategory>() {
             @Override
@@ -188,8 +218,12 @@ public class CategoryFilterTests {
                 new CategoryFilterAdapter(testContext, repository);
         TestObserver observer = new TestObserver();
         adapter.registerDataSetObserver(observer);
-        repository.insertCategory(randomCategoryName('A', 'Z'));
-        observer.assertChanged();
+        try {
+            repository.insertCategory(randomCategoryName('A', 'Z'));
+            observer.assertChanged();
+        } finally {
+            adapter.unregisterDataSetObserver(observer);
+        }
     }
 
     /**
@@ -223,6 +257,70 @@ public class CategoryFilterTests {
         adapter.registerDataSetObserver(observer);
         repository.deleteCategory(userCategory.getId());
         observer.assertChanged();
+    }
+
+    /**
+     * When the To Do list activity is starting up from scratch,
+     * verify that the selected category from the preferences is
+     * retained.  The activity needs to set this after the adapter
+     * has been loaded from the database on a non-UI thread.
+     */
+    @Test
+    public void testPreserveSelectedCategory() {
+        List<ToDoCategory> testCategories = new ArrayList<>();
+        for (int i = RAND.nextInt(3) + 7; i >= 0; --i) {
+            ToDoCategory category = repository.insertCategory(
+                    randomCategoryName('A', 'Z'));
+            testCategories.add(category);
+            ToDoItem item = new ToDoItem();
+            item.setCategoryId(category.getId());
+            item.setDescription(category.getName());
+            repository.insertItem(item);
+        }
+        ToDoCategory targetCategory = testCategories.get(
+                RAND.nextInt(testCategories.size()));
+        ToDoPreferences prefs = ToDoPreferences.getInstance(testContext);
+        prefs.setSelectedCategory(targetCategory.getId());
+        /*
+         * The trick here is that we won't have access to the actual
+         * adapters that the activity creates, so we won't know when
+         * it's finally ready to query.
+         */
+        try (ActivityScenario<ToDoListActivity> scenario =
+                ActivityScenario.launch(ToDoListActivity.class)) {
+            final Spinner[] categorySpinner = new Spinner[1];
+            scenario.onActivity(activity -> {
+                categorySpinner[0] = (Spinner) activity
+                        .findViewById(R.id.ListSpinnerCategory);
+                assertNotNull("The category selection drop-down was not found",
+                        categorySpinner);
+            });
+            SpinnerAdapter adapter = categorySpinner[0].getAdapter();
+            assertNotNull("The category filter adapter has not been set",
+                    adapter);
+            long timeLimit = System.nanoTime() + 5000000000L;
+            while (adapter.getCount() < 3) {
+                // The adapter always has its "All Categories" and
+                // "Edit Categories" items; we need to wait for more...
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                assertFalse("Timed out waiting for the adapter to be populated",
+                        System.nanoTime() > timeLimit);
+                try {
+                    Thread.sleep(128);
+                } catch (InterruptedException ix) {
+                    // Ignore
+                }
+            }
+            /*
+             * Once the adapter has been loaded, the activity then needs to
+             * update the list query which will result in another call to
+             * the repository.  But we don't need to wait for all of this
+             * to make its way back to the main list.
+             */
+            assertEquals("Selected category ID",
+                    targetCategory.getId().longValue(),
+                    categorySpinner[0].getSelectedItemId());
+        }
     }
 
 }

@@ -117,6 +117,7 @@ public class CategoryFilterAdapter extends BaseAdapter {
         public void onInvalidated() {
             categories = null;
             notifyDataSetInvalidated();
+            repository.unregisterDataSetObserver(this);
         }
     }
 
@@ -199,6 +200,8 @@ public class CategoryFilterAdapter extends BaseAdapter {
      * @return true if the category list is available, false otherwise
      */
     private synchronized boolean readCategories() {
+        Log.d(TAG, ".readCategories(): cache is currently "
+                + ((categories == null) ? "empty" : "full"));
         if (categories != null)
             return true;
         if (!isOpen) try {

@@ -188,21 +188,6 @@ public class ToDoListActivity extends AppCompatActivity {
         categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
         listView = (ListView) findViewById(R.id.todo_list);
 
-        /*
-         * If no data was given in the intent (because we were started
-         * as a MAIN activity), then use our default content URI.
-         */
-        Intent intent = getIntent();
-        if (intent.getData() == null) {
-            Log.d(TAG, String.format("No intent data; defaulting to %s",
-                    ToDoItemColumns.CONTENT_URI.toString()));
-            intent.setData(ToDoItemColumns.CONTENT_URI);
-        } else {
-            Log.d(TAG, String.format("intent data = %s: %s",
-                    intent.getAction(), intent.getDataString()));
-            // Fix Me: what are the other actions that could lead here?
-        }
-
         encryptor = StringEncryption.holdGlobalEncryption();
         prefs = ToDoPreferences.getInstance(this);
         prefs.registerOnToDoPreferenceChangeListener(

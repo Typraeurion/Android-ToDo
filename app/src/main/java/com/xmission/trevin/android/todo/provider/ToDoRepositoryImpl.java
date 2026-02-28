@@ -298,6 +298,23 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         }
     }
 
+    /**
+     * Call the registered observers when the last context closes the
+     * repository.
+     * The calls <b>must</b> be done on the main UI thread.
+     */
+    private Runnable observerInvalidationRunner = new Runnable() {
+        @Override
+        public void run() {
+            for (DataSetObserver observer : registeredObservers) try {
+                observer.onInvalidated();
+            } catch (Exception e) {
+                Log.w(TAG, "Caught exception when invalidating observer "
+                        + observer.getClass().getCanonicalName(), e);
+            }
+        }
+    };
+
     @Override
     public void release(@NonNull Context context) {
         if (!openContexts.containsKey(context)) {
@@ -314,11 +331,29 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                     openCount));
         } else {
             openContexts.remove(context);
-            if (openContexts.isEmpty() && (db != null)) {
-                Log.d(TAG, "The last context has released the repository;"
-                        + " closing the database");
-                db.close();
-                db = null;
+            if (openContexts.isEmpty()) {
+                Log.d(TAG, "The last context has released the repository");
+                if (db != null) {
+                    Log.d(TAG, "Closing the database");
+                    db.close();
+                    db = null;
+                }
+                // Finish here if there are no observers
+                if (registeredObservers.isEmpty())
+                    return;
+
+                // Use the context's UI thread if we have any
+                for (Context contextKey : openContexts.keySet()) {
+                    if (contextKey instanceof Activity) {
+                        ((Activity) contextKey).runOnUiThread(
+                                observerInvalidationRunner);
+                        return;
+                    }
+                }
+
+                // Otherwise fall back to the main looper
+                new Handler(Looper.getMainLooper()).post(
+                        observerInvalidationRunner);
             }
         }
     }
@@ -928,7 +963,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                                boolean includePrivate,
                                boolean includeEncrypted,
                                String sortOrder) {
-        Log.d(TAG, String.format(".getItems(%d,%s,%s,%s,%s,\"%s\")",
+        Log.d(TAG, String.format(".getItems(%d,%s,LocalDate[%s],%s,%s,\"%s\")",
                 categoryId, includeCheckedAndHidden,
                 today.format(DateTimeFormatter.ISO_LOCAL_DATE),
                 includePrivate, includeEncrypted, sortOrder));
