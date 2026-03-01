@@ -16,8 +16,6 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.junit.Assert.*;
 
@@ -25,10 +23,8 @@ import android.app.Instrumentation;
 import android.content.Context;
 import android.os.Build;
 
-import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.intent.Intents;
-import androidx.test.espresso.intent.matcher.IntentMatchers;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -36,7 +32,6 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.MockSharedPreferences;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.provider.MockDataChangedObserver;
 import com.xmission.trevin.android.todo.provider.MockToDoRepository;
 import com.xmission.trevin.android.todo.provider.TestObserver;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
@@ -54,9 +49,9 @@ import java.util.*;
  *
  * @author Trevin Beattie
  */
+@LargeTest
+@RunWith(AndroidJUnit4.class)
 public class ToDoListActivityTests {
-
-    static Instrumentation instrument = null;
 
     static Context testContext = null;
 
@@ -68,8 +63,8 @@ public class ToDoListActivityTests {
 
     @BeforeClass
     public static void getTestContext() {
-        instrument = InstrumentationRegistry.getInstrumentation();
-        testContext = instrument.getTargetContext();
+        testContext = InstrumentationRegistry
+                .getInstrumentation().getTargetContext();
         mockPrefs = new MockSharedPreferences();
         ToDoPreferences.setSharedPreferences(mockPrefs);
         mockRepo = MockToDoRepository.getInstance();
@@ -81,12 +76,16 @@ public class ToDoListActivityTests {
         mockRepo.open(testContext);
         mockRepo.clear();
         mockPrefs.resetMock();
-        Intents.init();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.init();
+        }
     }
 
     @After
     public void releaseRepository() {
-        Intents.release();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.release();
+        }
         mockRepo.release(testContext);
     }
 

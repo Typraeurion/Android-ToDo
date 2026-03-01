@@ -18,18 +18,17 @@ package com.xmission.trevin.android.todo.util;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
+import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.isEnabled;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 
+import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
 import static org.hamcrest.core.AllOf.allOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -37,16 +36,25 @@ import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.TimePicker;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.espresso.UiController;
+import androidx.test.espresso.ViewAction;
 import androidx.test.espresso.intent.Intents;
 import androidx.test.espresso.intent.matcher.IntentMatchers;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
+
+import org.hamcrest.Matcher;
 
 import java.util.Collection;
 import java.util.Locale;
@@ -307,6 +315,462 @@ public class ViewActionUtils {
                             "No button found with ID %d", buttonId), button);
                     button.performClick();
                 }
+            });
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
+
+    /**
+     * Return the content of a text view.  The text view must exist
+     * within the activity content.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static <T extends Activity> String getElementText(
+            ActivityScenario<T> scenario,
+            String viewName, int fieldId) {
+        final String[] text = new String[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        text[0] = ((TextView) view).getText().toString();
+                    });
+        } else {
+            scenario.onActivity(activity -> {
+                TextView textField = (TextView) activity.findViewById(fieldId);
+                assertNotNull(String.format(Locale.US,
+                        "%s is missing", viewName), textField);
+                text[0] = textField.getText().toString();
+            });
+        }
+        return text[0];
+    }
+
+    /**
+     * Return the content of a text view in the currently running activity.
+     * The text view must exist within the activity content.
+     *
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static String getElementText(
+            String viewName, int fieldId) {
+        final String[] text = new String[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        text[0] = ((TextView) view).getText().toString();
+                    });
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    TextView textField = (TextView) activity
+                            .findViewById(fieldId);
+                    assertNotNull(String.format(Locale.US,
+                            "%s is missing", viewName), textField);
+                    text[0] = textField.getText().toString();
+                }
+            });
+        }
+        return text[0];
+    }
+
+    /**
+     * Return the content of a text view within a dialog.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the text view.
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static <T extends Activity> String getElementText(
+            ActivityScenario<T> scenario,
+            @NonNull final Dialog dialog,
+            String viewName, int fieldId) {
+        final String[] text = new String[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        text[0] = ((TextView) view).getText().toString();
+                    });
+        } else {
+            scenario.onActivity(activity -> {
+                TextView textField = (TextView) dialog.findViewById(fieldId);
+                assertNotNull(String.format(Locale.US,
+                        "%s is missing", viewName), textField);
+                text[0] = textField.getText().toString();
+            });
+        }
+        return text[0];
+    }
+
+    /**
+     * Return the content of a text view within a dialog of
+     * the currently running activity.
+     *
+     * @param dialog the {@link Dialog} containing the text view.
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static String getElementText(@NonNull final Dialog dialog,
+                                         String viewName, int fieldId) {
+        final String[] text = new String[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        text[0] = ((TextView) view).getText().toString();
+                    });
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    TextView textField = (TextView) dialog
+                            .findViewById(fieldId);
+                    assertNotNull(String.format(Locale.US,
+                            "%s is missing", viewName), textField);
+                    text[0] = textField.getText().toString();
+                }
+            });
+        }
+        return text[0];
+    }
+
+    /**
+     * Change the content of an edit text field.  The field must exist
+     * within the activity content.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param fieldName the name of the edit text field to use
+     * for any assertion error
+     * @param fieldId the resource ID of the edit text field
+     * @param newText the text to set in the edit text field
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static <T extends Activity> void setEditText(
+            ActivityScenario<T> scenario,
+            String fieldName, int fieldId, final String newText) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check(matches(isAssignableFrom(EditText.class)))
+                    .perform(requestFocus())
+                    .perform(replaceText(newText));
+        } else {
+            scenario.onActivity(activity -> {
+                EditText textField = (EditText) activity.findViewById(fieldId);
+                assertNotNull(String.format(Locale.US,
+                        "%s is missing", fieldName), textField);
+                textField.requestFocus();
+                textField.setText(newText);
+            });
+        }
+    }
+
+    /**
+     * Return the content of a text view in the currently running activity.
+     * The text view must exist within the activity content.
+     *
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static void setEditText(String viewName, int fieldId,
+                                    final String newText) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check(matches(isAssignableFrom(EditText.class)))
+                    .perform(requestFocus())
+                    .perform(replaceText(newText));
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    EditText textField = (EditText) activity
+                            .findViewById(fieldId);
+                    assertNotNull(String.format(Locale.US,
+                            "%s is missing", viewName), textField);
+                    textField.requestFocus();
+                    textField.setText(newText);
+                }
+            });
+        }
+    }
+
+    /**
+     * Return the content of a text view within a dialog.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the text view.
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static <T extends Activity> void setEditText(
+            ActivityScenario<T> scenario,
+            @NonNull final Dialog dialog,
+            String viewName, int fieldId, final String newText) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check(matches(isAssignableFrom(EditText.class)))
+                    .perform(requestFocus())
+                    .perform(replaceText(newText));
+        } else {
+            scenario.onActivity(activity -> {
+                EditText textField = (EditText) dialog.findViewById(fieldId);
+                assertNotNull(String.format(Locale.US,
+                        "%s is missing", viewName), textField);
+                textField.requestFocus();
+                textField.setText(newText);
+            });
+        }
+    }
+
+    /**
+     * Change the content of an edit text field within a dialog of
+     * the currently running activity.
+     *
+     * @param dialog the {@link Dialog} containing the text view.
+     * @param viewName the name of the text view to use for any assertion error
+     * @param fieldId the resource ID of the text view
+     * @param newText the text to set in the edit text field
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static void setEditText(
+            @NonNull final Dialog dialog,
+            String viewName, int fieldId, final String newText) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check(matches(isAssignableFrom(EditText.class)))
+                    .perform(requestFocus())
+                    .perform(replaceText(newText));
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    EditText textField = (EditText) dialog
+                            .findViewById(fieldId);
+                    assertNotNull(String.format(Locale.US,
+                            "%s is missing", viewName), textField);
+                    textField.requestFocus();
+                    textField.setText(newText);
+                }
+            });
+        }
+    }
+
+    /**
+     * Return the state of a check box.  The check box must exist
+     * within the activity content.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param viewName the name of the check box to use for any assertion error
+     * @param fieldId the resource ID of the check box
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static <T extends Activity> boolean getCheckboxState(
+            ActivityScenario<T> scenario,
+            String viewName, int fieldId) {
+        final boolean[] state = new boolean[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        state[0] = ((CheckBox) view).isChecked();
+                    });
+        } else {
+            scenario.onActivity(activity -> {
+                CheckBox box = (CheckBox) activity.findViewById(fieldId);
+                assertNotNull(String.format(Locale.US,
+                        "%s is missing", viewName), box);
+                state[0] = box.isChecked();
+            });
+        }
+        return state[0];
+    }
+
+    /**
+     * Return the state of a check box in the currently running activity.
+     * The check box must exist within the activity content.
+     *
+     * @param viewName the name of the check box to use for any assertion error
+     * @param fieldId the resource ID of the check box
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static boolean getCheckboxState(String viewName, int fieldId) {
+        final boolean[] state = new boolean[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        state[0] = ((CheckBox) view).isChecked();
+                    });
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    CheckBox box = (CheckBox) activity
+                            .findViewById(fieldId);
+                    assertNotNull(String.format(Locale.US,
+                            "%s is missing", viewName), box);
+                    state[0] = box.isChecked();
+                }
+            });
+        }
+        return state[0];
+    }
+
+    /**
+     * Return the state of a check box within a dialog.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the check box.
+     * @param viewName the name of the check box to use for any assertion error
+     * @param fieldId the resource ID of the check box
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static <T extends Activity> boolean getCheckboxState(
+            ActivityScenario<T> scenario,
+            @NonNull final Dialog dialog,
+            String viewName, int fieldId) {
+        final boolean[] state = new boolean[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        state[0] = ((CheckBox) view).isChecked();
+                    });
+        } else {
+            scenario.onActivity(activity -> {
+                CheckBox box = (CheckBox) dialog.findViewById(fieldId);
+                assertNotNull(String.format(Locale.US,
+                        "%s is missing", viewName), box);
+                state[0] = box.isChecked();
+            });
+        }
+        return state[0];
+    }
+
+    /**
+     * Return the state of a check box view within a dialog of
+     * the currently running activity.
+     *
+     * @param dialog the {@link Dialog} containing the check box.
+     * @param viewName the name of the check box to use for any assertion error
+     * @param fieldId the resource ID of the check box
+     *
+     * @return the text of the UI element
+     *
+     * @throws AssertionError if the given field is missing
+     */
+    public static boolean getCheckboxState(@NonNull final Dialog dialog,
+                                            String viewName, int fieldId) {
+        final boolean[] state = new boolean[1];
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(fieldId))
+                    .check((view, noViewFoundException) -> {
+                        state[0] = ((CheckBox) view).isChecked();
+                    });
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    CheckBox box = (CheckBox) dialog
+                            .findViewById(fieldId);
+                    assertNotNull(String.format(Locale.US,
+                            "%s is missing", viewName), box);
+                    state[0] = box.isChecked();
+                }
+            });
+        }
+        return state[0];
+    }
+
+    /**
+     * Set the time on a {@link TimePicker} widget.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the time picker
+     * @param pickerId the resource ID of the {@link TimePicker}
+     * @param hour the hour to set (0-23)
+     * @param minute the minute to set (0-59)
+     */
+    public static <T extends Activity> void setTime(
+            ActivityScenario<T> scenario, @NonNull final Dialog dialog,
+            int pickerId, final int hour, final int minute) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withId(pickerId)).perform(new ViewAction() {
+                @Override
+                public Matcher<View> getConstraints() {
+                    return isAssignableFrom(TimePicker.class);
+                }
+
+                @Override
+                public String getDescription() {
+                    return "set time on TimePicker";
+                }
+
+                @Override
+                public void perform(UiController uiController, View view) {
+                    TimePicker tp = (TimePicker) view;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        tp.setHour(hour);
+                        tp.setMinute(minute);
+                    } else {
+                        tp.setCurrentHour(hour);
+                        tp.setCurrentMinute(minute);
+                    }
+                }
+            });
+        } else {
+            scenario.onActivity(activity -> {
+                TimePicker tp = dialog.findViewById(pickerId);
+                assertNotNull("TimePicker is missing", tp);
+                tp.setHour(hour);
+                tp.setMinute(minute);
             });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();

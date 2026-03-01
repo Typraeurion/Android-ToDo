@@ -247,13 +247,12 @@ public class ToDoDetailsActivity extends Activity {
         boolean hasSavedState = (savedData instanceof DetailFormData);
 
         if (hasSavedState) {
-            todoId = ((DetailFormData) savedData).todoId;
+            todoId = ((DetailFormData) savedData).item.getId();
             isNewToDo = (todoId == null);
 
-            if (Log.isLoggable(TAG, Log.DEBUG))
-                Log.d(TAG, String.format(Locale.US,
-                        ".onCreate(%s); savedData=%s",
-                        savedInstanceState, savedData));
+            Log.d(TAG, String.format(Locale.US,
+                    ".onCreate(%s); savedData=%s",
+                    savedInstanceState, savedData));
         } else {
             Intent intent = getIntent();
             todoId = null;
@@ -504,7 +503,6 @@ public class ToDoDetailsActivity extends Activity {
      * @param data the saved configuration data
      */
     private void restoreState(DetailFormData data) {
-        todoId = data.todoId;
         isNewToDo = (todoId == null);
         todo = data.item;
         toDoDescription.setText(todo.getDescription());
@@ -519,26 +517,6 @@ public class ToDoDetailsActivity extends Activity {
         updateAlarmButton();
         updateHideButton();
         updateRepeatButton();
-        if (data.dueDateDialogIsShowing) {
-            showDialog(DUEDATE_DIALOG_ID);
-            // To do: pop up and fill in the due date dialog
-        }
-        if (data.repeatDialogSettings != null) {
-            showDialog(REPEAT_DIALOG_ID);
-            // To do: pop up and fill in the repeat dialog
-        }
-        if (data.endDateDialogIsShowing) {
-            showDialog(ENDDATE_DIALOG_ID);
-            // To do: pop up and fill in the end date dialog
-        }
-        if (data.hideDialogIsShowing) {
-            showDialog(HIDEUNTIL_DIALOG_ID);
-            // To do: pop up and fill in the hide dialog
-        }
-        if (data.alarmDialogIsShowing) {
-            showDialog(ALARM_DIALOG_ID);
-            // To do: pop up and fill in the alarm dialog
-        }
     }
 
     /**
@@ -573,31 +551,23 @@ public class ToDoDetailsActivity extends Activity {
         Log.d(TAG, ".onRetainNonConfigurationInstance");
         // Save the current dialog state
         DetailFormData data = new DetailFormData();
-        data.todoId = todoId;
         data.item = todo;
         todo.setDescription(toDoDescription.getText().toString());
         todo.setPriority(Integer.parseInt(priorityText.getText().toString()));
-        data.dueDateDialogIsShowing =
-                (dueDateDialog != null) && dueDateDialog.isShowing();
         // FIXME: These should all be updated as we go!
         todo.setCategoryId(categoryList.getSelectedItemId());
         data.repeatDialogSettings = repeatSettings;
         if ((repeatDialog != null) && repeatDialog.isShowing())
             data.repeatDialogSettings = repeatDialog.getRepeatSettings();
-        data.endDateDialogIsShowing =
-                (repeatEndDialog != null) && repeatEndDialog.isShowing();
-        data.hideDialogIsShowing =
-                (hideUntilDialog != null) && hideUntilDialog.isShowing();
-        if (data.hideDialogIsShowing) {
-            data.hideEnabled = hideCheckBox.isChecked();
-            data.hideDaysText = hideEditDays.getText().toString();
-            data.showTimeText = showTime.getText().toString();
+        if ((hideUntilDialog != null) && hideUntilDialog.isShowing()) {
+            boolean hideEnabled = hideCheckBox.isChecked();
+            String hideDaysText = hideEditDays.getText().toString();
+            if (hideEnabled)
+                todo.setHideDaysEarlier(Integer.parseInt(hideDaysText));
         }
-        data.alarmDialogIsShowing =
-                (alarmDialog != null) && alarmDialog.isShowing();
         data.alarm = todo.getAlarm();
         data.originalAlarm = originalAlarm;
-        if (data.alarmDialogIsShowing) {
+        if ((alarmDialog != null) && alarmDialog.isShowing()) {
             if (data.alarm == null)
                 data.alarm = new ToDoAlarm();
             data.alarm.setTime(LocalTime.of(alarmTimePicker.getCurrentHour(),

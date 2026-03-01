@@ -15,3 +15,6 @@ Version 1.5.0
   DB 2.0 files, as well as adding support for the old Palm DB 1.0 format.
 * Fixed a bug where the pop-up list of available due dates was not
   updated after one or more days had passed since the app started.
+* Fixed a bug where rotating the screen while in the
+  details window would cause that activity to crash and
+  either return to the list window or become unusable.

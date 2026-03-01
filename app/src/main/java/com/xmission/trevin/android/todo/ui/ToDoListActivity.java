@@ -648,12 +648,10 @@ public class ToDoListActivity extends AppCompatActivity {
                 (selectedSortOrder >= ToDoItemColumns.USER_SORT_ORDERS.length))
             selectedSortOrder = 0;
 
-        if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, String.format(Locale.US, ".updateListFilter:"
-                    + " requerying the data where %s ordered by %s",
-                    generateWhereClause(),
-                    ToDoItemColumns.USER_SORT_ORDERS[selectedSortOrder]));
-        }
+        Log.d(TAG, String.format(Locale.US, ".updateListFilter:"
+                        + " requerying the data where %s ordered by %s",
+                generateWhereClause(),
+                ToDoItemColumns.USER_SORT_ORDERS[selectedSortOrder]));
         getLoaderManager().restartLoader(ToDoItemColumns.CONTENT_TYPE.hashCode(),
                 null, itemLoaderCallbacks);
         itemAdapter.notifyDataSetChanged();

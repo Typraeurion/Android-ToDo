@@ -786,7 +786,7 @@ same password if you wish.)}
 @chapter Known Bugs
 
 The following bugs are known to exist in version 1.5.0 (build date
-2026.02.17) of To Do.  If you encounter any other bugs, please go to
+2026.03.01) of To Do.  If you encounter any other bugs, please go to
 my project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}

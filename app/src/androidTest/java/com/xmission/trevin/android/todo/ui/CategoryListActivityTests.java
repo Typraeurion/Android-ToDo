@@ -63,8 +63,6 @@ import java.util.*;
 @RunWith(AndroidJUnit4.class)
 public class CategoryListActivityTests {
 
-    static Instrumentation instrument = null;
-
     static Context testContext = null;
 
     static final Random RAND = new Random();
@@ -109,8 +107,8 @@ public class CategoryListActivityTests {
 
     @BeforeClass
     public static void getTestContext() {
-        instrument = InstrumentationRegistry.getInstrumentation();
-        testContext = instrument.getTargetContext();
+        testContext = InstrumentationRegistry
+                .getInstrumentation().getTargetContext();
         mockRepo = MockToDoRepository.getInstance();
         ToDoRepositoryImpl.setInstance(mockRepo);
     }
