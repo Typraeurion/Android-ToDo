@@ -17,26 +17,31 @@
 package com.xmission.trevin.android.todo.util;
 
 import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
-import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
-import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
-import static androidx.test.espresso.matcher.ViewMatchers.isEnabled;
-import static androidx.test.espresso.matcher.ViewMatchers.withId;
+import static androidx.test.espresso.intent.matcher.IntentMatchers.*;
+import static androidx.test.espresso.matcher.RootMatchers.isDialog;
+import static androidx.test.espresso.matcher.ViewMatchers.*;
 
 import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
 import static org.hamcrest.core.AllOf.allOf;
 import static org.junit.Assert.*;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Instrumentation;
 import android.content.Intent;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -49,7 +54,6 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.UiController;
 import androidx.test.espresso.ViewAction;
 import androidx.test.espresso.intent.Intents;
-import androidx.test.espresso.intent.matcher.IntentMatchers;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
@@ -58,11 +62,33 @@ import org.hamcrest.Matcher;
 
 import java.util.Collection;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Common action methods for UI tests
  */
 public class ViewActionUtils {
+
+    /**
+     * Prevent the soft keyboard from appearing and hide it if already
+     * shown, since this may obscure buttons during the test.  This needs
+     * to be called at the beginning of the scenario block.
+     *
+     * @param scenario the scenario in which the test is running
+     */
+    public static <T extends Activity> void hideKeyboard(
+            ActivityScenario<T> scenario) {
+        scenario.onActivity(activity -> {
+            activity.getWindow().setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+            InputMethodManager imm = (InputMethodManager)
+                    activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+            View focusView = activity.getCurrentFocus();
+            if (focusView == null)
+                focusView = new View(activity);
+            imm.hideSoftInputFromWindow(focusView.getWindowToken(), 0);
+        });
+    }
 
     /**
      * Get the current activity.  This is meant for tests that have
@@ -93,6 +119,72 @@ public class ViewActionUtils {
     }
 
     /**
+     * Wait for an {@link AlertDialog} to be shown.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param expectedTitle the title of the dialog to look for
+     *
+     * @throws AssertionError if no dialog with the given title is found
+     * within 5 seconds
+     */
+    public static <T extends Activity> void assertAlertDialogShown(
+            @NonNull ActivityScenario<T> scenario,
+            @NonNull String expectedTitle) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withText(expectedTitle))
+                    .inRoot(isDialog())
+                    .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
+        } else {
+            final AtomicReference<TextView> title = new AtomicReference<>();
+            long timeout = System.nanoTime() + 5000000000L;
+            while ((title.get() == null) &&
+                    (System.nanoTime() < timeout)) {
+                scenario.onActivity(activity -> {
+                    TextView found = findViewRecursive(
+                            activity.getWindow().getDecorView().getRootView(),
+                            expectedTitle);
+                    title.set(found);
+                });
+                if (title.get() == null) try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ix) {
+                    // Ignore
+                }
+            }
+            assertNotNull(String.format(Locale.US,
+                    "Dialog \"%s\" was not found", expectedTitle),
+                    title.get());
+        }
+    }
+
+    /**
+     * Find the View within a given root that contains specific text
+     *
+     * @param root the root {@link View}
+     * @param hasText the text to look for
+     *
+     * @return the view if found, or {@code null} if the text was not found
+     */
+    private static TextView findViewRecursive(View root, String hasText) {
+        if (root instanceof TextView) {
+            CharSequence cs = ((TextView) root).getText();
+            if ((cs != null) && hasText.contentEquals(cs))
+                return (TextView) root;
+        }
+
+        if (root instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) root;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                TextView tv = findViewRecursive(vg.getChildAt(i), hasText);
+                if (tv != null)
+                    return tv;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Verify that a given button is present (and visible).
      * The button must exist within the activity content.
      *
@@ -108,7 +200,7 @@ public class ViewActionUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(buttonId))
                     .check(matches(allOf(
-                            isDisplayed(),
+                            withEffectiveVisibility(Visibility.VISIBLE),
                             isEnabled())));
         } else {
             scenario.onActivity(activity -> {
@@ -137,7 +229,7 @@ public class ViewActionUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(buttonId))
                     .check(matches(allOf(
-                            isDisplayed(),
+                            withEffectiveVisibility(Visibility.VISIBLE),
                             isEnabled())));
         } else {
             final Activity activity = getCurrentActivity();
@@ -172,7 +264,7 @@ public class ViewActionUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(buttonId))
                     .check(matches(allOf(
-                            isDisplayed(),
+                            withEffectiveVisibility(Visibility.VISIBLE),
                             isEnabled())));
         } else {
             scenario.onActivity(activity -> {
@@ -202,7 +294,7 @@ public class ViewActionUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(buttonId))
                     .check(matches(allOf(
-                            isDisplayed(),
+                            withEffectiveVisibility(Visibility.VISIBLE),
                             isEnabled())));
         } else {
             final Activity activity = getCurrentActivity();
@@ -318,6 +410,42 @@ public class ViewActionUtils {
             });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
+
+    /**
+     * Click the designated alert dialog button.  The caller should have
+     * already asserted that the dialog is shown via
+     * {@link #assertAlertDialogShown(ActivityScenario, String)}.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param buttonId one of {@link android.R.id#button1} (positive),
+     * {@link android.R.id#button2} (negative), or
+     * {@link android.R.id#button3} (neutral).
+     * @param buttonText the text that should be shown on this button
+     */
+    public static <T extends Activity> void pressAlertDialogButton(
+            ActivityScenario<T> scenario, int buttonId, String buttonText) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            onView(withText(buttonText))
+                    .inRoot(isDialog())
+                    .perform(click());
+        } else {
+            scenario.onActivity(activity -> {
+                activity.findViewById(buttonId).performClick();
+            });
+        }
+    }
+
+    /**
+     * Press the system &ldquo;Back&rdquo; button.
+     */
+    public static void pressBackButton() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            pressBack();
+        } else {
+            InstrumentationRegistry.getInstrumentation()
+                    .sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+        }
     }
 
     /**
@@ -742,7 +870,8 @@ public class ViewActionUtils {
             ActivityScenario<T> scenario, @NonNull final Dialog dialog,
             int pickerId, final int hour, final int minute) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(pickerId)).perform(new ViewAction() {
+            onView(withId(pickerId))
+                    .perform(new ViewAction() {
                 @Override
                 public Matcher<View> getConstraints() {
                     return isAssignableFrom(TimePicker.class);
@@ -790,58 +919,191 @@ public class ViewActionUtils {
      */
     public static void assertActivityLaunched(
             Class<? extends Activity> expectedActivityClass) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.intended(hasComponent(expectedActivityClass.getName()));
-        } else {
-            Activity currentActivity = getCurrentActivity();
-            assertNotNull("No activity is running", currentActivity);
-            assertEquals("Running activity", expectedActivityClass,
-                    currentActivity.getClass());
-        }
-    }
-
-    /**
-     * Verify that the current activity&rsquo;s {@link Intent} has extra
-     * data with the given key.
-     *
-     * @param key the extra key that should be in the {@link Intent}
-     */
-    public static void assertIntentHasExtra(String key) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.intended(IntentMatchers.hasExtraWithKey(key));
-        } else {
-            Activity currentActivity = getCurrentActivity();
-            assertNotNull("No activity is running", currentActivity);
-            Intent intent = currentActivity.getIntent();
-            assertTrue(String.format(Locale.US,
-                    "Intent has no extra with key %s", key),
-                    intent.hasExtra(key));
-        }
-    }
-
-    /**
-     * Verify that the current activity&rsquo;s {@link Intent} does
-     * <i>not</i> have extra data with the given key.
-     *
-     * @param key the extra key that should be in the {@link Intent}
-     */
-    public static void assertIntentDoesNotHaveExtra(String key) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.intended(IntentMatchers.doesNotHaveExtraWithKey(key));
-        } else {
-            Activity currentActivity = getCurrentActivity();
-            assertNotNull("No activity is running", currentActivity);
-            Intent intent = currentActivity.getIntent();
-            if (intent.hasExtra(key)) {
-                Bundle extras = intent.getExtras();
-                Object value = extras.get(key);
-                String type = (value == null) ? "null"
-                        : value.getClass().getSimpleName();
-                fail(String.format(Locale.US,
-                        "Intent has %s extra with key % and value:%s",
-                        type, key, value));
+        long timeLimit = System.nanoTime() + 5000000000L;
+        AssertionError caughtError = null;
+        while (System.nanoTime() < timeLimit) try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+                Intents.intended(hasComponent(expectedActivityClass.getName()));
+            } else {
+                Activity currentActivity = getCurrentActivity();
+                assertNotNull("No activity is running", currentActivity);
+                assertEquals("Running activity", expectedActivityClass,
+                        currentActivity.getClass());
+            }
+            return;
+        } catch (AssertionError ae) {
+            caughtError = ae;
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ie) {
+                // Ignore
             }
         }
+        assertNotNull(String.format(Locale.US,
+                "Failed to check for %s within 5 seconds",
+                expectedActivityClass.getSimpleName()), caughtError);
+        throw caughtError;
+    }
+
+    /**
+     * Verify that the activity&rsquo;s {@link Intent} has extra
+     * data with the given key.
+     *
+     * @param expectedActivityClass the class of the activity that should
+     * have been launched.
+     * @param key the extra key that should be in the {@link Intent}
+     */
+    public static void assertIntentHasExtra(
+            Class<? extends Activity> expectedActivityClass, String key) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.intended(allOf(
+                    hasComponent(expectedActivityClass.getName()),
+                    hasExtraWithKey(key)));
+        } else {
+            Activity currentActivity = getCurrentActivity();
+            assertNotNull("No activity is running", currentActivity);
+            assertHasExtra(currentActivity.getIntent(), key);
+        }
+    }
+
+    /**
+     * Verify that the given {@link Intent} has extra data with the
+     * given key.
+     *
+     * @param intent the {@link Intent} to check
+     * @param key the extra key that should be in the {@link Intent}
+     */
+    public static void assertHasExtra(Intent intent, String key) {
+        assertTrue(String.format(Locale.US,
+                        "Intent has no extra with key %s", key),
+                intent.hasExtra(key));
+    }
+
+    /**
+     * Verify that the activity&rsquo;s {@link Intent} does
+     * <i>not</i> have extra data with the given key.
+     *
+     * @param expectedActivityClass the class of the activity that should
+     * have been launched.
+     * @param key the extra key that should be in the {@link Intent}
+     */
+    public static void assertIntentDoesNotHaveExtra(
+            Class<? extends Activity> expectedActivityClass, String key) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.intended(allOf(
+                    hasComponent(expectedActivityClass.getName()),
+                    doesNotHaveExtraWithKey(key)));
+        } else {
+            Activity currentActivity = getCurrentActivity();
+            assertNotNull("No activity is running", currentActivity);
+            assertDoesNotHaveExtra(currentActivity.getIntent(), key);
+        }
+    }
+
+    /**
+     * Verify that the given {@link Intent} does <i>not</i> have extra
+     * data with the given key.
+     *
+     * @param intent the {@link Intent} to check
+     * @param key the extra key that should be in the {@link Intent}
+     */
+    public static void assertDoesNotHaveExtra(Intent intent, String key) {
+        if (intent.hasExtra(key)) {
+            Bundle extras = intent.getExtras();
+            Object value = extras.get(key);
+            String type = (value == null) ? "null"
+                    : value.getClass().getSimpleName();
+            fail(String.format(Locale.US,
+                    "Intent has %s extra with key % and value:%s",
+                    type, key, value));
+        }
+    }
+
+    /**
+     * Verify that the activity&rsquo;s {@link Intent} has an extra
+     * long data with the given key and value.
+     *
+     * @param expectedActivityClass the class of the activity that should
+     * have been launched.
+     * @param key the extra key that should be in the {@link Intent}
+     * @param expectedValue the value that this extra should have
+     */
+    public static void assertIntentHasLongExtra(
+            Class<? extends Activity> expectedActivityClass,
+            String key, long expectedValue) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.intended(allOf(
+                    hasComponent(expectedActivityClass.getName()),
+                    hasExtra(key, expectedValue)));
+        } else {
+            Activity currentActivity = getCurrentActivity();
+            assertNotNull("No activity is running", currentActivity);
+            assertHasLongExtra(currentActivity.getIntent(),
+                    key, expectedValue);
+        }
+    }
+
+    /**
+     * Verify that the given {@link Intent} has an extra long data with
+     * the given key and value.
+     *
+     * @param intent the {@link Intent} to check
+     * @param key the extra key that should be in the {@link Intent}
+     * @param expectedValue the value that this extra should have
+     */
+    public static void assertHasLongExtra(
+            Intent intent, String key, long expectedValue) {
+        assertTrue(String.format(Locale.US,
+                        "Intent has no extra with key %s", key),
+                intent.hasExtra(key));
+        Long actualValue = intent.getLongExtra(key, Long.MIN_VALUE);
+        if (actualValue == Long.MIN_VALUE)
+            actualValue = null;
+        assertEquals(String.format(Locale.US,
+                        "Intent extra %s value", key),
+                Long.valueOf(expectedValue), actualValue);
+    }
+
+    /**
+     * Verify that the activity&rsquo;s {@link Intent} has an extra
+     * string data with the given key and value.
+     *
+     * @param expectedActivityClass the class of the activity that should
+     * have been launched.
+     * @param key the extra key that should be in the {@link Intent}
+     * @param expectedValue the value that this extra should have
+     */
+    public static void assertIntentHasStringExtra(
+            Class<? extends Activity> expectedActivityClass,
+            String key, String expectedValue) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.intended(allOf(
+                    hasComponent(expectedActivityClass.getName()),
+                    hasExtra(key, expectedValue)));
+        } else {
+            Activity currentActivity = getCurrentActivity();
+            assertNotNull("No activity is running", currentActivity);
+            assertHasStringExtra(currentActivity.getIntent(),
+                    key, expectedValue);
+        }
+    }
+
+    /**
+     * Verify that the given {@link Intent} has an extra string data with
+     * the given key and value.
+     *
+     * @param intent the {@link Intent} to check
+     * @param key the extra key that should be in the {@link Intent}
+     * @param expectedValue the value that this extra should have
+     */
+    public static void assertHasStringExtra(
+            Intent intent, String key, String expectedValue) {
+        assertTrue(String.format(Locale.US,
+                        "Intent has no extra with key %s", key),
+                intent.hasExtra(key));
+        assertEquals(String.format(Locale.US,
+                        "Intent extra %s value", key),
+                expectedValue, intent.getStringExtra(key));
     }
 
 }

@@ -31,6 +31,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.MockSharedPreferences;
+import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.MockToDoRepository;
 import com.xmission.trevin.android.todo.provider.TestObserver;
@@ -107,9 +108,11 @@ public class ToDoListActivityTests {
             // Step 3: Verify the ToDoDetailsActivity is launched,
             assertActivityLaunched(ToDoDetailsActivity.class);
             //     ... that it was provided a category ID,
-            assertIntentHasExtra(ToDoListActivity.EXTRA_CATEGORY_ID);
+            assertIntentHasLongExtra(ToDoDetailsActivity.class,
+                    ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
             //     ... and that it was NOT given an item ID.
-            assertIntentDoesNotHaveExtra(ToDoListActivity.EXTRA_ITEM_ID);
+            assertIntentDoesNotHaveExtra(ToDoDetailsActivity.class,
+                    ToDoListActivity.EXTRA_ITEM_ID);
             // Step 4: Verify the "Cancel" button exists in the details activity
             assertButtonShown("Cancel", R.id.DetailButtonCancel);
             // Step 5: Click the "Cancel" button; wait for the activity to finish

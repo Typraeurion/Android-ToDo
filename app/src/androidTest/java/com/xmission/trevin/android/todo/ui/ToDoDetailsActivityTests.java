@@ -17,18 +17,14 @@
 package com.xmission.trevin.android.todo.ui;
 
 import static androidx.test.espresso.Espresso.onData;
-import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
-import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
-import static androidx.test.espresso.matcher.ViewMatchers.withId;
-import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static com.xmission.trevin.android.todo.ui.CategoryFilterTests.randomCategoryName;
-import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomSentence;
+import static com.xmission.trevin.android.todo.util.RandomToDoUtils.*;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.hamcrest.CoreMatchers.anything;
 import static org.junit.Assert.*;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Instrumentation;
@@ -37,26 +33,20 @@ import android.content.Intent;
 import android.os.Build;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Spinner;
 
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.espresso.intent.Intents;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.xmission.trevin.android.todo.R;
-import com.xmission.trevin.android.todo.data.MockSharedPreferences;
-import com.xmission.trevin.android.todo.data.ToDoAlarm;
-import com.xmission.trevin.android.todo.data.ToDoCategory;
-import com.xmission.trevin.android.todo.data.ToDoItem;
-import com.xmission.trevin.android.todo.data.ToDoPreferences;
-import com.xmission.trevin.android.todo.data.repeat.RepeatInterval;
-import com.xmission.trevin.android.todo.data.repeat.RepeatMonthlyOnDate;
-import com.xmission.trevin.android.todo.data.repeat.RepeatSemiMonthlyOnDates;
-import com.xmission.trevin.android.todo.data.repeat.RepeatWeekly;
-import com.xmission.trevin.android.todo.data.repeat.RepeatYearlyOnDate;
+import com.xmission.trevin.android.todo.data.*;
+import com.xmission.trevin.android.todo.data.repeat.*;
 import com.xmission.trevin.android.todo.provider.MockToDoRepository;
 import com.xmission.trevin.android.todo.provider.TestObserver;
 import com.xmission.trevin.android.todo.provider.ToDoCursor;
@@ -69,11 +59,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneOffset;
-import java.util.Random;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.*;
 
+/**
+ * Tests for the {@link ToDoDetailsActivity}
+ *
+ * @author Trevin Beattie
+ */
 @LargeTest
 @RunWith(AndroidJUnit4.class)
 public class ToDoDetailsActivityTests {
@@ -106,10 +101,16 @@ public class ToDoDetailsActivityTests {
                 .TPREF_FIXED_TIME_ZONE, ZoneOffset.UTC.getId());
         mockRepo.open(testContext);
         mockRepo.clear();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.init();
+        }
     }
 
     @After
     public void releaseRepository() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            Intents.release();
+        }
         mockRepo.release(testContext);
     }
 
@@ -151,7 +152,8 @@ public class ToDoDetailsActivityTests {
     /**
      * Verify that when the details form is shown for a new item,
      * the category selection drop-down is set to the category
-     * passed in the intent.
+     * passed in the intent and the rest of the fields are set
+     * to their default values.
      */
     @Test
     public void testNewItemDefaultCategory() {
@@ -164,12 +166,36 @@ public class ToDoDetailsActivityTests {
                 expectedCategory.getId());
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
             Spinner categorySelect = getCategorySpinner(scenario);
+            assertEquals("Initial description is not empty", "",
+                    getElementText(scenario, "Description",
+                            R.id.DetailEditTextDescription));
+            assertEquals("Initial priority", "1",
+                    getElementText(scenario, "Priority",
+                            R.id.DetailEditTextPriority));
             long actualCategoryId = categorySelect.getSelectedItemId();
             ToDoCategory actualCategory =
                     mockRepo.getCategoryById(actualCategoryId);
             assertEquals("Selected category",
                     expectedCategory, actualCategory);
+            final String notSet = testContext.getString(R.string.DetailNotset);
+            assertEquals("Due date", notSet,
+                    getElementText(scenario, "Due date",
+                            R.id.DetailButtonDueDate));
+            assertEquals("Hide until", notSet,
+                    getElementText(scenario, "Hide until",
+                            R.id.DetailButtonHideUntil));
+            assertEquals("Alarm", notSet,
+                    getElementText(scenario, "Alarm",
+                            R.id.DetailButtonAlarm));
+            assertEquals("Repeat", notSet,
+                    getElementText(scenario, "Repeat",
+                            R.id.DetailButtonRepeat));
+            assertFalse("Private", getCheckboxState(scenario,
+                    "Private", R.id.DetailCheckBoxPrivate));
         }
     }
 
@@ -213,26 +239,18 @@ public class ToDoDetailsActivityTests {
         TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
-            // Step 1: Check the default field values
-            assertEquals("Initial description is not empty", "",
-                    getElementText(scenario, "Description",
-                            R.id.DetailEditTextDescription));
-            assertEquals("Initial priority", "1",
-                    getElementText(scenario, "Priority",
-                            R.id.DetailEditTextPriority));
+            hideKeyboard(scenario);
+            // Step 1: Check the default category first;
+            // this call will wait for its data to be ready.
             Spinner categorySelect = getCategorySpinner(scenario);
             assertEquals("Selected category ID", ToDoCategory.UNFILED,
                     categorySelect.getSelectedItemId());
-            assertEquals("Due date",
-                    testContext.getString(R.string.DetailNotset),
-                    getElementText(scenario, "Due date",
-                            R.id.DetailButtonDueDate));
-            assertFalse("Private", getCheckboxState(scenario,
-                    "Private", R.id.DetailCheckBoxPrivate));
 
             // Step 2: Fill in our custom details
             setEditText(scenario, "Description",
                     R.id.DetailEditTextDescription, expectedDescription);
+            // The "OK" button should be enabled now that the description is set
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
             setEditText(scenario, "Priority",
                     R.id.DetailEditTextPriority,
                     Integer.toString(expectedPriority));
@@ -355,6 +373,558 @@ public class ToDoDetailsActivityTests {
         assertEquals("Saved item alarm", expectedAlarm, newItem.getAlarm());
         assertEquals("Saved item repeat", expectedRepeat,
                 newItem.getRepeatInterval());
+    }
+
+    /**
+     * Verify that when the details form is shown for an existing item,
+     * it’s populated with that item&rsquo;s data from the repository.
+     */
+    @Test
+    public void testEditItem() {
+        for (int i = RAND.nextInt(3) + 3; i >= 0; --i)
+            mockRepo.insertCategory(randomCategoryName('A', 'Z'));
+        ToDoCategory expectedCategory = mockRepo.insertCategory(
+                randomCategoryName('A', 'Z'));
+        ToDoItem newItem = randomToDo();
+        newItem.setCategoryId(expectedCategory.getId());
+        newItem.setCategoryName(expectedCategory.getName());
+        if (newItem.getDue() == null)
+            newItem.setDue(LocalDate.now().plusDays(RAND.nextInt(366)));
+        if (newItem.getHideDaysEarlier() == null)
+            newItem.setHideDaysEarlier(RAND.nextInt(31));
+        newItem.setAlarm(randomAlarm());
+        RepeatDaily repeat = new RepeatDaily();
+        repeat.setIncrement(RAND.nextInt(20) + 1);
+        repeat.setEnd(newItem.getDue().plusDays(repeat.getIncrement() *
+                (RAND.nextInt(12) + 1)));
+        newItem.setRepeatInterval(repeat);
+        newItem = mockRepo.insertItem(newItem);
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
+                expectedCategory.getId());
+        intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertEquals("Description", newItem.getDescription(),
+                    getElementText(scenario, "Description",
+                            R.id.DetailEditTextDescription));
+            assertEquals("Priority", Integer.toString(newItem.getPriority()),
+                    getElementText(scenario, "Priority",
+                            R.id.DetailEditTextPriority));
+            long actualCategoryId = categorySelect.getSelectedItemId();
+            ToDoCategory actualCategory =
+                    mockRepo.getCategoryById(actualCategoryId);
+            assertEquals("Selected category",
+                    expectedCategory, actualCategory);
+            // The date text should be localized
+            String expectedButtonText = newItem.getDue().format(
+                    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM));
+            assertEquals("Due date", expectedButtonText,
+                    getElementText(scenario, "Due date",
+                            R.id.DetailButtonDueDate));
+            // The "hide until" text should be pluralized
+            expectedButtonText = testContext.getResources().getQuantityString(
+                    R.plurals.DetailTextDaysEarlier,
+                    newItem.getHideDaysEarlier(),
+                    newItem.getHideDaysEarlier());
+            assertEquals("Hide until", expectedButtonText,
+                    getElementText(scenario, "Hide until",
+                            R.id.DetailButtonHideUntil));
+            // The "Alarm" text should indicate the "days earlier" field
+            expectedButtonText = testContext.getResources().getQuantityString(
+                    R.plurals.DetailTextDaysEarlier,
+                    newItem.getAlarm().getAlarmDaysEarlier(),
+                    newItem.getAlarm().getAlarmDaysEarlier());
+            assertEquals("Alarm", expectedButtonText,
+                    getElementText(scenario, "Alarm",
+                            R.id.DetailButtonAlarm));
+            // The "Repeat" text has multiple possibilities
+            // depending on the repeat type, which is one
+            // reason we set up a specific repeat interval.
+            expectedButtonText = testContext.getString(
+                    R.string.RepeatDailyUntilWhen, repeat.getEnd().format(
+                            DateTimeFormatter.ofLocalizedDate(
+                                    FormatStyle.SHORT)));
+            assertEquals("Repeat", expectedButtonText,
+                    getElementText(scenario, "Repeat",
+                            R.id.DetailButtonRepeat));
+            assertEquals("Private", newItem.isPrivate(),
+                    getCheckboxState(scenario, "Private",
+                            R.id.DetailCheckBoxPrivate));
+        }
+    }
+
+    /**
+     * Verify the details form retains its state for an existing item in the
+     * middle of being edited when the activity is restarted due to a
+     * configuration change (e.g. screen rotation, keyboard (a/de)tachment).
+     * When the item is saved, everything entered in the form before rotation
+     * should be saved.
+     */
+    @Test
+    public void testRestoreFormEditItem() {
+        List<ToDoCategory> testCategories = new ArrayList<>();
+        for (int i = RAND.nextInt(3) + 3; i >= 0; --i) {
+            ToDoCategory category = mockRepo.insertCategory(
+                    randomCategoryName('A', 'Z'));
+            testCategories.add(category);
+        }
+        ToDoItem newItem = randomToDo();
+        ToDoCategory category = testCategories.get(
+                RAND.nextInt(testCategories.size()));
+        newItem.setCategoryId(category.getId());
+        newItem.setCategoryName(category.getName());
+        if (newItem.getDue() == null)
+            newItem.setDue(LocalDate.now().plusDays(RAND.nextInt(366)));
+        if (newItem.getHideDaysEarlier() == null)
+            newItem.setHideDaysEarlier(RAND.nextInt(31));
+        newItem.setAlarm(randomAlarm());
+        RepeatDaily repeat = new RepeatDaily();
+        repeat.setIncrement(RAND.nextInt(20) + 1);
+        repeat.setEnd(newItem.getDue().plusDays(repeat.getIncrement() *
+                (RAND.nextInt(12) + 1)));
+        newItem.setRepeatInterval(repeat);
+        newItem = mockRepo.insertItem(newItem);
+
+        final String expectedDescription = randomSentence();
+        int expectedPriority;
+        do {
+            expectedPriority = RAND.nextInt(9) + 2;
+        } while (expectedPriority == newItem.getPriority());
+        ToDoCategory expectedCategoryCandidate;
+        do {
+            expectedCategoryCandidate = testCategories.get(
+                    RAND.nextInt(testCategories.size()));
+        } while (expectedCategoryCandidate == category);
+        final ToDoCategory expectedCategory = expectedCategoryCandidate;
+        // We're going to clear all of the other fields by clearing the due date.
+        final boolean expectPrivate = !newItem.isPrivate();
+
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
+                category.getId());
+        intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+        TestObserver saveObserver = new TestObserver();
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Step 1: Check the initial category first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertEquals("Selected category ID (before changes)", category,
+                    mockRepo.getCategoryById(categorySelect.getSelectedItemId()));
+
+            // Step 2: Edit the details
+            setEditText(scenario, "Description",
+                    R.id.DetailEditTextDescription, expectedDescription);
+            setEditText(scenario, "Priority",
+                    R.id.DetailEditTextPriority,
+                    Integer.toString(expectedPriority));
+            final CategorySelectAdapter categoryAdapter = (CategorySelectAdapter)
+                    categorySelect.getAdapter();
+            scenario.onActivity(activity -> {
+                categorySelect.setSelection(categoryAdapter
+                        .getCategoryPosition(expectedCategory.getId()));
+            });
+            pressButton(R.id.DetailButtonDueDate);
+            // Press the "No Date" item; this should be the one
+            // immediately following the formatted dates for the next week.
+            int noDatePosition = testContext.getResources()
+                    .getStringArray(R.array.DueDateFormatList).length;
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+                onData(anything()).atPosition(noDatePosition).perform(click());
+            } else {
+                scenario.onActivity(activity -> {
+                    AlertDialog dialog = (AlertDialog) activity.dueDateListDialog;
+                    ListView listView = dialog.getListView();
+                    ListAdapter listAdapter = listView.getAdapter();
+                    View itemView = listAdapter.getView(noDatePosition,
+                            null, listView);
+                    listView.performItemClick(itemView, noDatePosition,
+                            listAdapter.getItemId(noDatePosition));
+                });
+            }
+            pressButton(R.id.DetailCheckBoxPrivate);
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+
+            // Step 3: Restart the activity
+            scenario.recreate();
+
+            // Step 4: Save the item; we're going to wait for this change.
+            mockRepo.registerDataSetObserver(saveObserver);
+            pressButton(scenario, R.id.DetailButtonOK);
+        }
+
+        try {
+            // Step 5: Verify the saved item
+            saveObserver.assertChanged(
+                    "Timed out waiting for the item to be saved");
+        } finally {
+            mockRepo.unregisterDataSetObserver(saveObserver);
+        }
+
+        ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
+        assertNotNull("The To Do item was deleted!", updatedItem);
+        assertEquals("Updated item description",
+                expectedDescription, updatedItem.getDescription());
+        assertEquals("Updated item priority",
+                expectedPriority, updatedItem.getPriority());
+        assertEquals("Updated item category", expectedCategory,
+                mockRepo.getCategoryById(updatedItem.getCategoryId()));
+        assertEquals("Updated item private",
+                expectPrivate, updatedItem.isPrivate());
+        assertNull("Updated item due date", updatedItem.getDue());
+        assertNull("Updated item hide", updatedItem.getHideDaysEarlier());
+        assertNull("Updated item alarm", updatedItem.getAlarm());
+        assertNull("Updated item repeat", updatedItem.getRepeatInterval());
+    }
+
+    /**
+     * Test adding a note to a new item.  The note isn&rsquo;t visible
+     * in the details activity until we save the item.
+     */
+    @Test
+    public void testNewItemNote() {
+        final String expectedNote = randomParagraph();
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
+
+        TestObserver saveObserver = new TestObserver();
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            String description = randomSentence();
+            setEditText(scenario, "Description",
+                    R.id.DetailEditTextDescription, description);
+            // The "OK" button should be enabled now that the description is set
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+            pressButton(scenario, R.id.DetailButtonNote);
+            assertActivityLaunched(ToDoNoteActivity.class);
+            assertIntentDoesNotHaveExtra(ToDoNoteActivity.class,
+                    ToDoListActivity.EXTRA_ITEM_ID);
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
+            assertButtonShown("OK", R.id.NoteButtonOK);
+            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+
+            // Save everything;
+            mockRepo.registerDataSetObserver(saveObserver);
+            pressButton(R.id.NoteButtonOK);
+            try {
+                saveObserver.assertNotChanged(
+                        "Note was saved before the item was created!");
+            } catch (AssertionError ae) {
+                // Clean up before rethrowing the error
+                mockRepo.unregisterDataSetObserver(saveObserver);
+                throw ae;
+            }
+            // we're going to wait for this change.
+            pressButton(scenario, R.id.DetailButtonOK);
+        }
+
+        try {
+            // Step 5: Verify the saved item
+            saveObserver.assertChanged(
+                    "Timed out waiting for the item to be saved");
+        } finally {
+            mockRepo.unregisterDataSetObserver(saveObserver);
+        }
+        // The trick here is we don't know the new item ID yet.
+        // It should be the last ID in the repository though.
+        ToDoItem newItem = null;
+        ToDoCursor cursor = mockRepo.getItems(
+                ToDoPreferences.ALL_CATEGORIES, true, LocalDate.now(),
+                true, true, ToDoRepositoryImpl.TODO_TABLE_NAME
+                        + "." + ToDoItemColumns._ID + " desc");
+        if (cursor.moveToNext())
+            newItem = cursor.getItem();
+        cursor.close();
+        assertNotNull("No item was saved", newItem);
+        assertEquals("Saved item note", expectedNote, newItem.getNote());
+    }
+
+    /**
+     * Test adding a note to a new item when the note activity is
+     * restarted in the middle of writing the note.
+     */
+    @Test
+    public void testRestoreNewItemNote() {
+        final String expectedNote = randomParagraph();
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
+
+        TestObserver saveObserver = new TestObserver();
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            String description = randomSentence();
+            setEditText(scenario, "Description",
+                    R.id.DetailEditTextDescription, description);
+            // The "OK" button should be enabled now that the description is set
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+            pressButton(scenario, R.id.DetailButtonNote);
+            assertActivityLaunched(ToDoNoteActivity.class);
+            assertIntentDoesNotHaveExtra(ToDoNoteActivity.class,
+                    ToDoListActivity.EXTRA_ITEM_ID);
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
+            assertButtonShown("OK", R.id.NoteButtonOK);
+            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+
+            // Restart the current activity at this point
+            // (not the launch activity)
+            final Activity noteActivity = getCurrentActivity();
+            instrument.runOnMainSync(() -> noteActivity.recreate());
+
+            // Now finish the note and the item;
+            mockRepo.registerDataSetObserver(saveObserver);
+            pressButton(R.id.NoteButtonOK);
+            try {
+                saveObserver.assertNotChanged(
+                        "Note was saved before the item was created!");
+            } catch (AssertionError ae) {
+                // Clean up before rethrowing the error
+                mockRepo.unregisterDataSetObserver(saveObserver);
+                throw ae;
+            }
+            // we're going to wait for this change.
+            pressButton(scenario, R.id.DetailButtonOK);
+        }
+
+        try {
+            // Step 5: Verify the saved item
+            saveObserver.assertChanged(
+                    "Timed out waiting for the item to be saved");
+        } finally {
+            mockRepo.unregisterDataSetObserver(saveObserver);
+        }
+        // The trick here is we don't know the new item ID yet.
+        // It should be the last ID in the repository though.
+        ToDoItem newItem = null;
+        ToDoCursor cursor = mockRepo.getItems(
+                ToDoPreferences.ALL_CATEGORIES, true, LocalDate.now(),
+                true, true, ToDoRepositoryImpl.TODO_TABLE_NAME
+                        + "." + ToDoItemColumns._ID + " desc");
+        if (cursor.moveToNext())
+            newItem = cursor.getItem();
+        cursor.close();
+        assertNotNull("No item was saved", newItem);
+        assertEquals("Saved item note", expectedNote, newItem.getNote());
+    }
+
+    /**
+     * Test adding a note to an item being edited.  The note <i>must not</i>
+     * be saved to the repository until the details activity has saved the
+     * whole item.
+     */
+    @Test
+    public void testEditItemNote() {
+        ToDoItem newItem = randomToDo();
+        final String oldNote = randomParagraph();
+        newItem.setNote(oldNote);
+        newItem = mockRepo.insertItem(newItem);
+        final String expectedNote = randomParagraph();
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
+                newItem.getCategoryId());
+        intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+
+        TestObserver saveObserver = new TestObserver();
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+            pressButton(scenario, R.id.DetailButtonNote);
+            assertActivityLaunched(ToDoNoteActivity.class);
+            assertIntentHasLongExtra(ToDoNoteActivity.class,
+                    ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION,
+                    newItem.getDescription());
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
+            assertButtonShown("OK", R.id.NoteButtonOK);
+            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+
+            // Save everything;
+            mockRepo.registerDataSetObserver(saveObserver);
+            pressButton(R.id.NoteButtonOK);
+            try {
+                saveObserver.assertNotChanged(
+                        "Note was saved before the item!");
+            } catch (AssertionError ae) {
+                // Clean up before rethrowing the error
+                mockRepo.unregisterDataSetObserver(saveObserver);
+                throw ae;
+            }
+            // we're going to wait for this change.
+            pressButton(scenario, R.id.DetailButtonOK);
+        }
+
+        try {
+            // Step 5: Verify the saved item
+            saveObserver.assertChanged(
+                    "Timed out waiting for the item to be saved");
+        } finally {
+            mockRepo.unregisterDataSetObserver(saveObserver);
+        }
+        ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
+        assertNotNull("The To Do item was deleted!", updatedItem);
+        assertEquals("Updated item note", expectedNote, updatedItem.getNote());
+    }
+
+    /**
+     * Test adding a note to an item being edited when the note activity is
+     * restarted in the middle of writing the note.  The note <i>must not</i>
+     * be saved to the repository until the details activity has saved the
+     * whole item.
+     */
+    @Test
+    public void testRestoreEditItemNote() {
+        ToDoItem newItem = randomToDo();
+        final String oldNote = randomParagraph();
+        newItem.setNote(oldNote);
+        newItem = mockRepo.insertItem(newItem);
+        final String expectedNote = randomParagraph();
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
+                newItem.getCategoryId());
+        intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+
+        TestObserver saveObserver = new TestObserver();
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+            pressButton(scenario, R.id.DetailButtonNote);
+            assertActivityLaunched(ToDoNoteActivity.class);
+            assertIntentHasLongExtra(ToDoNoteActivity.class,
+                    ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION,
+                    newItem.getDescription());
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
+            assertButtonShown("OK", R.id.NoteButtonOK);
+            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+
+            // Restart the current activity at this point
+            // (not the launch activity)
+            final Activity noteActivity = getCurrentActivity();
+            instrument.runOnMainSync(() -> noteActivity.recreate());
+
+            // Now finish the note and the item;
+            mockRepo.registerDataSetObserver(saveObserver);
+            pressButton(R.id.NoteButtonOK);
+            try {
+                saveObserver.assertNotChanged(
+                        "Note was saved before the item!");
+            } catch (AssertionError ae) {
+                // Clean up before rethrowing the error
+                mockRepo.unregisterDataSetObserver(saveObserver);
+                throw ae;
+            }
+            // we're going to wait for this change.
+            pressButton(scenario, R.id.DetailButtonOK);
+        }
+
+        try {
+            // Step 5: Verify the saved item
+            saveObserver.assertChanged(
+                    "Timed out waiting for the item to be saved");
+        } finally {
+            mockRepo.unregisterDataSetObserver(saveObserver);
+        }
+        ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
+        assertNotNull("The To Do item was deleted!", updatedItem);
+        assertEquals("Updated item note", expectedNote, updatedItem.getNote());
+    }
+
+    /**
+     * Test deleting a note from an item being edited.  When the user
+     * clicks the &ldquo;Delete&rdquo; button, we expect a confirmation
+     * dialog to show.  The note <i>must not</i> be removed in the
+     * repository until the details activity has saved the whole item.
+     */
+    @Test
+    public void testDeleteItemNote() {
+        ToDoItem newItem = randomToDo();
+        final String oldNote = randomParagraph();
+        newItem.setNote(oldNote);
+        newItem = mockRepo.insertItem(newItem);
+        Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
+        intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
+                newItem.getCategoryId());
+        intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+
+        TestObserver saveObserver = new TestObserver();
+        try (ActivityScenario<ToDoDetailsActivity> scenario =
+                ActivityScenario.launch(intent)) {
+            hideKeyboard(scenario);
+            // Get the category spinner first;
+            // this call will wait for its data to be ready.
+            Spinner categorySelect = getCategorySpinner(scenario);
+            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+            pressButton(scenario, R.id.DetailButtonNote);
+            assertActivityLaunched(ToDoNoteActivity.class);
+            assertIntentHasLongExtra(ToDoNoteActivity.class,
+                    ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION,
+                    newItem.getDescription());
+            assertIntentHasStringExtra(ToDoNoteActivity.class,
+                    ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
+            assertButtonShown("Delete", R.id.NoteButtonDelete);
+
+            mockRepo.registerDataSetObserver(saveObserver);
+            pressButton(R.id.NoteButtonDelete);
+            assertAlertDialogShown(scenario, testContext
+                    .getString(R.string.ConfirmationTextDeleteNote));
+            pressAlertDialogButton(scenario, android.R.id.button1,
+                    testContext.getString(R.string.ConfirmationButtonOK));
+            try {
+                saveObserver.assertNotChanged(
+                        "Note was deleted before the item was saved!");
+            } catch (AssertionError ae) {
+                // Clean up before rethrowing the error
+                mockRepo.unregisterDataSetObserver(saveObserver);
+                throw ae;
+            }
+            // we're going to wait for this change.
+            pressButton(scenario, R.id.DetailButtonOK);
+        }
+
+        try {
+            // Step 5: Verify the saved item
+            saveObserver.assertChanged(
+                    "Timed out waiting for the item to be saved");
+        } finally {
+            mockRepo.unregisterDataSetObserver(saveObserver);
+        }
+        ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
+        assertNotNull("The To Do item was deleted!", updatedItem);
+        assertNull("Updated item note", updatedItem.getNote());
     }
 
 }

@@ -332,6 +332,7 @@ public class CategoryListActivityTests {
         String expectedCategory = randomCategoryName('A', 'Z');
         try (ActivityScenario<CategoryListActivity> scenario =
                         ActivityScenario.launch(CategoryListActivity.class)) {
+            hideKeyboard(scenario);
             // Step 1: Verify the category ListView is empty
             assertCategoryListSize(scenario, 0);
             // Step 2: Verify the "New" button exists
@@ -371,6 +372,7 @@ public class CategoryListActivityTests {
         String unexpectedCategory = randomCategoryName('A', 'Z');
         try (ActivityScenario<CategoryListActivity> scenario =
                         ActivityScenario.launch(CategoryListActivity.class)) {
+            hideKeyboard(scenario);
             // Step 1: Verify the category ListView is empty
             assertCategoryListSize(scenario, 0);
             // Step 2: Verify the "New" button exists
@@ -414,6 +416,7 @@ public class CategoryListActivityTests {
         }
         try (ActivityScenario<CategoryListActivity> scenario =
                         ActivityScenario.launch(CategoryListActivity.class)) {
+            hideKeyboard(scenario);
             // Step 1: Verify the category ListView has the right number of entries
             assertCategoryListSize(scenario, targetCount);
             // Step 2: Verify the "OK" button exists
@@ -453,6 +456,7 @@ public class CategoryListActivityTests {
                 R.string.Category_Unfiled));
         try (ActivityScenario<CategoryListActivity> scenario =
                         ActivityScenario.launch(CategoryListActivity.class)) {
+            hideKeyboard(scenario);
             // Step 1: Verify the category ListView has a single entry
             assertCategoryListSize(scenario, 1);
             // Step 2: Verify the entry is for the victim category

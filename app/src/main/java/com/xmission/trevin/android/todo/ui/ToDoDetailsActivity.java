@@ -535,7 +535,7 @@ public class ToDoDetailsActivity extends Activity {
             return;
         // Retrieve the note and update our local copy
         String note = data.getStringExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE);
-        if (note.length() == 0)
+        if ((note != null) && note.length() == 0)
             note = null;
         todo.setNote(note);
     }
@@ -1271,8 +1271,6 @@ public class ToDoDetailsActivity extends Activity {
 
                 case 8:	// No date
                     todo.setDue(null);
-                    if (repeatSettings != null)
-                        repeatSettings.setDueDate(null);
                     updateDueDateButton();
                     break;
 
@@ -1423,9 +1421,12 @@ public class ToDoDetailsActivity extends Activity {
             } else {
 
                 // Final item cleanup
-                if (todo.getDue() == null)
+                if (todo.getDue() == null) {
+                    todo.setHideDaysEarlier(null);
+                    todo.setAlarm(null);
                     todo.setRepeatInterval(null);
-                if (todo.getAlarm() != null) {
+                }
+                else if (todo.getAlarm() != null) {
                     // If the alarm time has changed,
                     // clear any prior notification time.
                     if ((originalAlarm == null) ||
