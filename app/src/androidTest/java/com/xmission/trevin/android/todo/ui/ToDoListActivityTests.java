@@ -16,15 +16,12 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
+import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
-import static org.junit.Assert.*;
 
-import android.app.Instrumentation;
 import android.content.Context;
-import android.os.Build;
 
 import androidx.test.core.app.ActivityScenario;
-import androidx.test.espresso.intent.Intents;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -77,16 +74,12 @@ public class ToDoListActivityTests {
         mockRepo.open(testContext);
         mockRepo.clear();
         mockPrefs.resetMock();
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.init();
-        }
+        initializeIntents();
     }
 
     @After
     public void releaseRepository() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.release();
-        }
+        releaseIntents();
         mockRepo.release(testContext);
     }
 
@@ -97,10 +90,9 @@ public class ToDoListActivityTests {
      */
     @Test
     public void testNewThenCancel() {
-        TestObserver repoObserver = new TestObserver();
-        mockRepo.registerDataSetObserver(repoObserver);
         try (ActivityScenario<ToDoListActivity> scenario =
-                        ActivityScenario.launch(ToDoListActivity.class)) {
+                     ActivityScenario.launch(ToDoListActivity.class);
+                TestObserver repoObserver = new TestObserver(mockRepo)) {
             // Step 1: Verify the "New" button exists
             assertButtonShown(scenario, "New", R.id.ListButtonNew);
             // Step 2: Click the "New" button; wait for idle sync
@@ -118,10 +110,10 @@ public class ToDoListActivityTests {
             // Step 5: Click the "Cancel" button; wait for the activity to finish
             pressButton(R.id.DetailButtonCancel);
             // Finished with the UI at this point
+            // Step 6: Verify that nothing was added to the repository
+            repoObserver.assertNotChanged(
+                    "Changes were made to the repository when no item was saved!");
         }
-        // Step 6: Verify that nothing was added to the repository
-        repoObserver.assertNotChanged(
-                "Changes were made to the repository when no item was saved!");
     }
 
 }

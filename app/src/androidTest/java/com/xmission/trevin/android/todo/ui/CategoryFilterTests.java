@@ -149,10 +149,7 @@ public class CategoryFilterTests {
          * threads to synchronize.  Set up an observer before
          * any changes.
          */
-        TestObserver observer = new TestObserver(3);
-        adapter.registerDataSetObserver(observer);
-
-        try {
+        try (TestObserver observer = new TestObserver(adapter, 3)) {
 
             expectedCategory = new ToDoCategory();
             expectedCategory.setId(ToDoCategory.UNFILED);
@@ -174,8 +171,6 @@ public class CategoryFilterTests {
 
             observer.assertChanged();
 
-        } finally {
-            adapter.unregisterDataSetObserver(observer);
         }
 
         Collections.sort(testCategories, new Comparator<ToDoCategory>() {
@@ -216,13 +211,9 @@ public class CategoryFilterTests {
     public void testObserveInsertCategory() {
         CategoryFilterAdapter adapter =
                 new CategoryFilterAdapter(testContext, repository);
-        TestObserver observer = new TestObserver();
-        adapter.registerDataSetObserver(observer);
-        try {
+        try (TestObserver observer = new TestObserver(adapter)) {
             repository.insertCategory(randomCategoryName('A', 'Z'));
             observer.assertChanged();
-        } finally {
-            adapter.unregisterDataSetObserver(observer);
         }
     }
 
@@ -236,11 +227,11 @@ public class CategoryFilterTests {
                 new CategoryFilterAdapter(testContext, repository);
         ToDoCategory userCategory = repository.insertCategory(
                 randomCategoryName('A', 'Z'));
-        TestObserver observer = new TestObserver();
-        adapter.registerDataSetObserver(observer);
-        repository.updateCategory(userCategory.getId(),
-                randomCategoryName('A', 'Z'));
-        observer.assertChanged();
+        try (TestObserver observer = new TestObserver(adapter)) {
+            repository.updateCategory(userCategory.getId(),
+                    randomCategoryName('A', 'Z'));
+            observer.assertChanged();
+        }
     }
 
     /**
@@ -253,10 +244,10 @@ public class CategoryFilterTests {
                 new CategoryFilterAdapter(testContext, repository);
         ToDoCategory userCategory = repository.insertCategory(
                 randomCategoryName('A', 'Z'));
-        TestObserver observer = new TestObserver();
-        adapter.registerDataSetObserver(observer);
-        repository.deleteCategory(userCategory.getId());
-        observer.assertChanged();
+        try (TestObserver observer = new TestObserver(adapter)) {
+            repository.deleteCategory(userCategory.getId());
+            observer.assertChanged();
+        }
     }
 
     /**

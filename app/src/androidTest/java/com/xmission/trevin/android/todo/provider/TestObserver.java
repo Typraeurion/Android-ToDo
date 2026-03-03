@@ -20,9 +20,11 @@ import static org.junit.Assert.*;
 
 import android.database.DataSetObserver;
 import android.util.Log;
+import android.widget.Adapter;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import java.io.Closeable;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,33 +37,79 @@ import java.util.concurrent.TimeUnit;
  * count of 1, on the presumption that the observer will be
  * called just once before the test case checks its status.
  */
-public class TestObserver extends DataSetObserver {
+public class TestObserver extends DataSetObserver
+        implements AutoCloseable, Closeable {
 
     private static final String LOG_TAG = "TestObserver";
 
+    private Adapter attachedAdapter = null;
+    private ToDoRepository attachedRepository = null;
     private CountDownLatch latch;
     private boolean changed = false;
     private boolean invalidated = false;
 
     /**
-     * Construct a new observer with an initial count of 1.
-     * Use this when the test is only doing a single change
-     * to the data set.
+     * Construct a new observer with an initial count of 1,
+     * attached to a given {@link Adapter}.  Use this in a
+     * try-with-resources block when the test is only doing
+     * a single change to the data set.  The observer will
+     * remove itself from the adapter when closed.
+     *
+     * @param adapter the {@link Adapter} to observe
      */
-    public TestObserver() {
+    public TestObserver(Adapter adapter) {
+        attachedAdapter = adapter;
         latch = new CountDownLatch(1);
+        adapter.registerDataSetObserver(this);
     }
 
     /**
-     * Construct a new observer with a specified latch count.
-     * Use this when the test is doing multiple changes
-     * to the data set.
+     * Construct a new observer with a specified latch count,
+     * attached to a given {@link Adapter}.  Use this in a
+     * try-with-resources block when the test is doing multiple
+     * changes to the data set.  The observer will
+     * remove itself from the adapter when closed.
      *
+     * @param adapter the {@link Adapter} to observe
      * @param initialCount the number of times this observer is expected
      * to be called.
      */
-    public TestObserver(int initialCount) {
+    public TestObserver(Adapter adapter, int initialCount) {
+        attachedAdapter = adapter;
         latch = new CountDownLatch(initialCount);
+        adapter.registerDataSetObserver(this);
+    }
+
+    /**
+     * Construct a new observer with an initial count of 1,
+     * attached to a given {@link ToDoRepository}.  Use this in a
+     * try-with-resources block when the test is only doing
+     * a single change to the data set.  The observer will
+     * remove itself from the adapter when closed.
+     *
+     * @param repository the {@link ToDoRepository} to observe
+     */
+    public TestObserver(ToDoRepository repository) {
+        attachedRepository = repository;
+        latch = new CountDownLatch(1);
+        repository.registerDataSetObserver(this);
+    }
+
+    /**
+     * Construct a new observer with a specified latch count,
+     * attached to a given {@link ToDoRepository}.  Use this in a
+     * try-with-resources block when the test is doing multiple
+     * changes to the data set.  The observer will
+     * remove itself from the adapter when closed.
+     *
+     * @param repository the {@link ToDoRepository} to observe
+     * @param initialCount the number of times this observer is expected
+     * to be called.
+     */
+    public TestObserver(ToDoRepository repository, int initialCount) {
+        attachedRepository = repository;
+        latch = new CountDownLatch(initialCount);
+        repository.registerDataSetObserver(this);
     }
 
     /** Observes a changed in the data set this is attached to */
@@ -231,6 +279,22 @@ public class TestObserver extends DataSetObserver {
     public void assertNotInvalidated(String message) {
         waitToClear();
         assertFalse(message, invalidated);
+    }
+
+    /**
+     * Close this adapter, which detaches it from any attached
+     * {@link Adapter} or {@link ToDoRepository}.
+     */
+    public void close() {
+        waitToClear();
+        if (attachedAdapter != null) {
+            attachedAdapter.unregisterDataSetObserver(this);
+            attachedAdapter = null;
+        }
+        if (attachedRepository != null) {
+            attachedRepository.unregisterDataSetObserver(this);
+            attachedRepository = null;
+        }
     }
 
 }

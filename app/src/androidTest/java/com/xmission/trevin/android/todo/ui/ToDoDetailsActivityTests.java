@@ -19,6 +19,7 @@ package com.xmission.trevin.android.todo.ui;
 import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.action.ViewActions.click;
 import static com.xmission.trevin.android.todo.ui.CategoryFilterTests.randomCategoryName;
+import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.*;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.hamcrest.CoreMatchers.anything;
@@ -33,13 +34,11 @@ import android.content.Intent;
 import android.os.Build;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Spinner;
 
 import androidx.test.core.app.ActivityScenario;
-import androidx.test.espresso.intent.Intents;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -101,16 +100,12 @@ public class ToDoDetailsActivityTests {
                 .TPREF_FIXED_TIME_ZONE, ZoneOffset.UTC.getId());
         mockRepo.open(testContext);
         mockRepo.clear();
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.init();
-        }
+        initializeIntents();
     }
 
     @After
     public void releaseRepository() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            Intents.release();
-        }
+        releaseIntents();
         mockRepo.release(testContext);
     }
 
@@ -136,13 +131,9 @@ public class ToDoDetailsActivityTests {
         //         we have to wait for a data update...
         //         and then for the activity to change the selection.
         if (adapter[0].isEmpty()) {
-            TestObserver observer = new TestObserver();
-            try {
-                adapter[0].registerDataSetObserver(observer);
+            try (TestObserver observer = new TestObserver(adapter[0])) {
                 observer.assertChanged("Timed out waiting for the category"
                         + " selection drop-down to be populated");
-            } finally {
-                adapter[0].unregisterDataSetObserver(observer);
             }
         }
         instrument.waitForIdleSync();
@@ -236,7 +227,6 @@ public class ToDoDetailsActivityTests {
                     + repeatTypeOffset);
         }
 
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -332,18 +322,15 @@ public class ToDoDetailsActivityTests {
             // Step 3: Restart the activity
             scenario.recreate();
 
-            // Step 4: Save the item; we're going to wait for this change.
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(scenario, R.id.DetailButtonOK);
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                // Step 4: Save the item; we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
+            }
         }
 
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
-        }
         // The trick here is we don't know the new item ID yet.
         // It should be the last ID in the repository though.
         ToDoItem newItem = null;
@@ -508,7 +495,6 @@ public class ToDoDetailsActivityTests {
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
                 category.getId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -554,17 +540,13 @@ public class ToDoDetailsActivityTests {
             // Step 3: Restart the activity
             scenario.recreate();
 
-            // Step 4: Save the item; we're going to wait for this change.
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(scenario, R.id.DetailButtonOK);
-        }
-
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                // Step 4: Save the item; we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
+            }
         }
 
         ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
@@ -593,7 +575,6 @@ public class ToDoDetailsActivityTests {
         Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
 
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -615,28 +596,19 @@ public class ToDoDetailsActivityTests {
             assertButtonShown("OK", R.id.NoteButtonOK);
             setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
 
-            // Save everything;
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(R.id.NoteButtonOK);
-            try {
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                // Save everything;
+                pressButton(R.id.NoteButtonOK);
                 saveObserver.assertNotChanged(
                         "Note was saved before the item was created!");
-            } catch (AssertionError ae) {
-                // Clean up before rethrowing the error
-                mockRepo.unregisterDataSetObserver(saveObserver);
-                throw ae;
+                // we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
             }
-            // we're going to wait for this change.
-            pressButton(scenario, R.id.DetailButtonOK);
         }
 
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
-        }
         // The trick here is we don't know the new item ID yet.
         // It should be the last ID in the repository though.
         ToDoItem newItem = null;
@@ -661,7 +633,6 @@ public class ToDoDetailsActivityTests {
         Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
 
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -689,27 +660,18 @@ public class ToDoDetailsActivityTests {
             instrument.runOnMainSync(() -> noteActivity.recreate());
 
             // Now finish the note and the item;
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(R.id.NoteButtonOK);
-            try {
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                pressButton(R.id.NoteButtonOK);
                 saveObserver.assertNotChanged(
                         "Note was saved before the item was created!");
-            } catch (AssertionError ae) {
-                // Clean up before rethrowing the error
-                mockRepo.unregisterDataSetObserver(saveObserver);
-                throw ae;
+                // we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
             }
-            // we're going to wait for this change.
-            pressButton(scenario, R.id.DetailButtonOK);
         }
 
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
-        }
         // The trick here is we don't know the new item ID yet.
         // It should be the last ID in the repository though.
         ToDoItem newItem = null;
@@ -741,7 +703,6 @@ public class ToDoDetailsActivityTests {
                 newItem.getCategoryId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
 
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -763,26 +724,16 @@ public class ToDoDetailsActivityTests {
             setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
 
             // Save everything;
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(R.id.NoteButtonOK);
-            try {
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                pressButton(R.id.NoteButtonOK);
                 saveObserver.assertNotChanged(
                         "Note was saved before the item!");
-            } catch (AssertionError ae) {
-                // Clean up before rethrowing the error
-                mockRepo.unregisterDataSetObserver(saveObserver);
-                throw ae;
+                // we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
             }
-            // we're going to wait for this change.
-            pressButton(scenario, R.id.DetailButtonOK);
-        }
-
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
         }
         ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
         assertNotNull("The To Do item was deleted!", updatedItem);
@@ -807,7 +758,6 @@ public class ToDoDetailsActivityTests {
                 newItem.getCategoryId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
 
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -834,26 +784,16 @@ public class ToDoDetailsActivityTests {
             instrument.runOnMainSync(() -> noteActivity.recreate());
 
             // Now finish the note and the item;
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(R.id.NoteButtonOK);
-            try {
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                pressButton(R.id.NoteButtonOK);
                 saveObserver.assertNotChanged(
                         "Note was saved before the item!");
-            } catch (AssertionError ae) {
-                // Clean up before rethrowing the error
-                mockRepo.unregisterDataSetObserver(saveObserver);
-                throw ae;
+                // we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
             }
-            // we're going to wait for this change.
-            pressButton(scenario, R.id.DetailButtonOK);
-        }
-
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
         }
         ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
         assertNotNull("The To Do item was deleted!", updatedItem);
@@ -877,7 +817,6 @@ public class ToDoDetailsActivityTests {
                 newItem.getCategoryId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
 
-        TestObserver saveObserver = new TestObserver();
         try (ActivityScenario<ToDoDetailsActivity> scenario =
                 ActivityScenario.launch(intent)) {
             hideKeyboard(scenario);
@@ -897,30 +836,20 @@ public class ToDoDetailsActivityTests {
                     ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
             assertButtonShown("Delete", R.id.NoteButtonDelete);
 
-            mockRepo.registerDataSetObserver(saveObserver);
-            pressButton(R.id.NoteButtonDelete);
-            assertAlertDialogShown(scenario, testContext
-                    .getString(R.string.ConfirmationTextDeleteNote));
-            pressAlertDialogButton(scenario, android.R.id.button1,
-                    testContext.getString(R.string.ConfirmationButtonOK));
-            try {
+            try (TestObserver saveObserver = new TestObserver(mockRepo)) {
+                pressButton(R.id.NoteButtonDelete);
+                assertAlertDialogShown(scenario, testContext
+                        .getString(R.string.ConfirmationTextDeleteNote));
+                pressAlertDialogButton(scenario, android.R.id.button1,
+                        testContext.getString(R.string.ConfirmationButtonOK));
                 saveObserver.assertNotChanged(
                         "Note was deleted before the item was saved!");
-            } catch (AssertionError ae) {
-                // Clean up before rethrowing the error
-                mockRepo.unregisterDataSetObserver(saveObserver);
-                throw ae;
+                // we're going to wait for this change.
+                pressButton(scenario, R.id.DetailButtonOK);
+                // Step 5: Verify the saved item
+                saveObserver.assertChanged(
+                        "Timed out waiting for the item to be saved");
             }
-            // we're going to wait for this change.
-            pressButton(scenario, R.id.DetailButtonOK);
-        }
-
-        try {
-            // Step 5: Verify the saved item
-            saveObserver.assertChanged(
-                    "Timed out waiting for the item to be saved");
-        } finally {
-            mockRepo.unregisterDataSetObserver(saveObserver);
         }
         ToDoItem updatedItem = mockRepo.getItemById(newItem.getId());
         assertNotNull("The To Do item was deleted!", updatedItem);

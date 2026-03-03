@@ -22,9 +22,9 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
+import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 import com.xmission.trevin.android.todo.util.EncryptionException;
 import com.xmission.trevin.android.todo.util.StringEncryption;
-import com.xmission.trevin.android.todo.provider.ToDoSchema.*;
 
 import android.app.*;
 import android.content.*;
@@ -204,7 +204,7 @@ public class ToDoNoteActivity extends Activity {
         public void run() {
             repository.open(ToDoNoteActivity.this);
             ToDoItem todo = null;
-            if (!isDetailHandoff)
+            if (loadNote)
                 todo = repository.getItemById(todoId);
             runOnUiThread(new FinalizeUIRunner(todo));
         }

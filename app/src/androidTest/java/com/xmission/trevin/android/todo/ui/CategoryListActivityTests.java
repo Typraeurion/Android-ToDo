@@ -24,11 +24,11 @@ import static androidx.test.espresso.matcher.ViewMatchers.*;
 import static com.xmission.trevin.android.todo.ui.CategoryEditorTests.CATEGORY_NAME_COMPARATOR;
 import static com.xmission.trevin.android.todo.ui.CategoryFilterTests.randomCategoryName;
 import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
+import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.hamcrest.CoreMatchers.anything;
 import static org.junit.Assert.*;
 
-import android.app.Instrumentation;
 import android.content.Context;
 import android.os.Build;
 import android.widget.EditText;

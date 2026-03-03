@@ -138,9 +138,7 @@ public class ToDoRepositoryTests {
         String firstExpectedName = RandomStringUtils.randomAlphabetic(targetLen);
         targetLen = RAND.nextInt(20) + 12;
         String secondExpectedName = RandomStringUtils.randomAlphabetic(targetLen);
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             ToDoCategory newCategory = repo.insertCategory(firstExpectedName);
             assertNotNull("No ToDoCategory returned from insert",
                     newCategory);
@@ -175,9 +173,6 @@ public class ToDoRepositoryTests {
                 observer.assertChanged(
                         "Registered observer was not called after delete");
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -188,9 +183,7 @@ public class ToDoRepositoryTests {
      */
     @Test
     public void testCategoryObjectCRUD() {
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             // First we'll need to find an unused row ID
             ToDoCategory originalCategory = new ToDoCategory();
             originalCategory.setId(99);
@@ -251,9 +244,6 @@ public class ToDoRepositoryTests {
                 observer.assertChanged(
                         "Registered observer was not called after delete");
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -324,9 +314,7 @@ public class ToDoRepositoryTests {
     public void testDeleteAllCategories() {
         List<ToDoCategory> testCategories = new ArrayList<>();
         int target = RAND.nextInt(3) + 3;
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             while (testCategories.size() < target) {
                 int targetLen = RAND.nextInt(20) + 12;
                 String name = RandomStringUtils.randomAlphabetic(targetLen);
@@ -364,9 +352,6 @@ public class ToDoRepositoryTests {
                 repo.deleteCategory(testCategory.getId());
             }
             throw e;
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -388,9 +373,7 @@ public class ToDoRepositoryTests {
         String name = RandomStringUtils.randomAlphabetic(targetLen);
         byte[] firstValue = new byte[10 + RAND.nextInt(20)];
         byte[] secondValue = new byte[10 + RAND.nextInt(20)];
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             ToDoMetadata newMetadata = repo.upsertMetadata(name, firstValue);
             assertNotNull("No ToDoMetadata returned from insert",
                     newMetadata);
@@ -444,9 +427,6 @@ public class ToDoRepositoryTests {
                         repo.getMetadataByName(name));
                 observer.assertChanged("Observer not called after delete");
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -528,9 +508,7 @@ public class ToDoRepositoryTests {
     public void testDeleteAllMetadata() {
         int target = RAND.nextInt(3) + 3;
         Set<String> testNames = new TreeSet<>();
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             while (testNames.size() < target) {
                 int targetLen = RAND.nextInt(20) + 12;
                 String name = RandomStringUtils.randomAlphabetic(targetLen);
@@ -558,8 +536,6 @@ public class ToDoRepositoryTests {
             assertEquals("Remaining metadata after deleteAllMetadata",
                     Collections.emptyList(), allMetadata);
         } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
             for (String name : testNames) {
                 repo.deleteMetadata(name);
             }
@@ -589,10 +565,7 @@ public class ToDoRepositoryTests {
         int targetLen = RAND.nextInt(20) + 8;
         expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
 
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             ToDoItem returnToDo = repo.insertItem(expectedToDo);
             assertNotNull("No item returned from insert", returnToDo);
             assertNotNull("No ID returned with inserted item",
@@ -631,9 +604,6 @@ public class ToDoRepositoryTests {
                         repo.getItemById(itemId));
                 observer.assertChanged("Observer not called after delete");
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -678,10 +648,7 @@ public class ToDoRepositoryTests {
         expectedToDo.setRepeatInterval(repeat);
         expectedToDo.setHideDaysEarlier(RAND.nextInt(31) + 7);
 
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             ToDoItem returnToDo = repo.insertItem(expectedToDo);
             assertNotNull("No item returned from insert", returnToDo);
             assertNotNull("No ID returned with inserted item",
@@ -744,9 +711,6 @@ public class ToDoRepositoryTests {
                         repo.getItemById(itemId));
                 observer.assertChanged("Observer not called after delete");
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -768,10 +732,7 @@ public class ToDoRepositoryTests {
         int targetLen = RAND.nextInt(20) + 8;
         expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
 
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             ToDoItem returnToDo = repo.insertItem(expectedToDo);
             assertNotNull("No item returned from insert", returnToDo);
             assertEquals("ID of inserted To Do item",
@@ -794,9 +755,6 @@ public class ToDoRepositoryTests {
                         repo.getItemById(expectedId));
                 observer.assertChanged("Observer not called after delete");
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
@@ -946,10 +904,7 @@ public class ToDoRepositoryTests {
         alarm.setAlarmDaysEarlier(RAND.nextInt(31) + 1);
         expectedToDo.setAlarm(alarm);
 
-        TestObserver observer = new TestObserver();
-        repo.registerDataSetObserver(observer);
-
-        try {
+        try (TestObserver observer = new TestObserver(repo)) {
             ToDoItem returnToDo = repo.insertItem(expectedToDo);
             assertNotNull("No item returned from insert", returnToDo);
             assertNotNull("No ID returned with inserted item",
@@ -982,9 +937,6 @@ public class ToDoRepositoryTests {
                 observer.reset();
                 repo.deleteItem(itemId);
             }
-        } finally {
-            observer.waitToClear();
-            repo.unregisterDataSetObserver(observer);
         }
     }
 
