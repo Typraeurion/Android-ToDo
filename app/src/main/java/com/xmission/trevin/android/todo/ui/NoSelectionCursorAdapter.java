@@ -33,28 +33,26 @@ public class NoSelectionCursorAdapter extends SimpleCursorAdapter {
 
     public static final String TAG = "NoSelectionCursorAdapter";
 
-    private String noText = "None";
+    private final String noText;
 
     /** Keeps track of the views we create ourself. */
     private final WeakHashMap<View,Integer> ourViews =
-	new WeakHashMap<>();
+            new WeakHashMap<>();
 
-    private LayoutInflater inflater;
+    private final LayoutInflater inflater;
 
     /** View type for the No selection item */
     private static final int NO_VIEW_TYPE = 1;
-    /** View type for the category items */
-    private static final int DATA_VIEW_TYPE = 0;
 
     public NoSelectionCursorAdapter(Context context, Cursor c,
-	    String displayColumn, String noText) {
-	super(context, android.R.layout.simple_spinner_item,
-		c, new String[] { displayColumn },
-        	new int[] { android.R.id.text1 });
-	this.noText = noText;
-	inflater = (LayoutInflater)
-		context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-	setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                                    String displayColumn, String noText) {
+        super(context, android.R.layout.simple_spinner_item,
+                c, new String[] { displayColumn },
+                new int[] { android.R.id.text1 });
+        this.noText = noText;
+        inflater = (LayoutInflater)
+                context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     }
 
     /**
@@ -65,7 +63,7 @@ public class NoSelectionCursorAdapter extends SimpleCursorAdapter {
      */
     @Override
     public int getCount() {
-	return super.getCount() + 1;
+        return super.getCount() + 1;
     }
 
     /**
@@ -76,9 +74,9 @@ public class NoSelectionCursorAdapter extends SimpleCursorAdapter {
      */
     @Override
     public Object getItem(int position) {
-	if (position == 0)
-	    return null;
-	return super.getItem(position - 1);
+        if (position == 0)
+            return null;
+        return super.getItem(position - 1);
     }
 
     /**
@@ -90,115 +88,89 @@ public class NoSelectionCursorAdapter extends SimpleCursorAdapter {
      */
     @Override
     public long getItemId(int position) {
-	if (position == 0)
-	    return -1;
-	return super.getItemId(position - 1);
+        if (position == 0)
+            return -1;
+        return super.getItemId(position - 1);
     }
-
-    /*
-     * @return the type of {@link View} that will be created by
-     * {@link #getView(int, View, ViewGroup)} for the specified item.
-     * We have two types: one for "None", which is not bound to
-     * the category list; and one for each item bound to the category list.
-     * <p>
-     * As of API 19 (Lollipop), Spinner only supports a single view type (0).
-     * </p>
-     *
-     * @see android.widget.BaseAdapter#getItemViewType(int)
-     */
-    /*
-    @Override
-    public int getItemViewType(int position) {
-	if (position == 0)
-	    // The first item is not bound to any data
-	    return NO_VIEW_TYPE;
-	else
-	    // All other items have the same type
-	    return DATA_VIEW_TYPE;
-    }
-    */
-
-    /*
-     * @return the number of types of {@link View}s that will be created by
-     * {@link #getView(int, View, ViewGroup)}.
-     * <p>
-     * As of API 19 (Lollipop), Spinner *requires* a view type count of 1!
-     * </p>
-     *
-     * @see android.widget.BaseAdapter#getViewTypeCount()
-     */
-    /*
-    @Override
-    public int getViewTypeCount() {
-        return 2;
-    }
-    */
 
     /**
-     * Get a {@link View) that displays the data in the spinner
+     * Get a {@link View} that displays the data in the spinner
      * when the specified position in the data set is selected.
+     *
+     * @param position the position in the data set whose view to return
+     * @param convertView the old view to reuse, if possible
+     * @param parent the parent that this view will eventually be attached to
+     *
+     * @return a View corresponding to the data at the specified position.
      *
      * @see android.widget.Adapter#getView(int, View, ViewGroup)
      */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-	if (position > 0) {
-	    if (ourViews.containsKey(convertView))
-		// Not convertible!
-		convertView = null;
-	    return super.getView(position - 1, convertView, parent);
-	}
-	if (!ourViews.containsKey(convertView))
-	    // Not convertible!
-	    convertView = null;
+        if (position > 0) {
+            if (ourViews.containsKey(convertView))
+                // Not convertible!
+                convertView = null;
+            return super.getView(position - 1, convertView, parent);
+        }
+        if (!ourViews.containsKey(convertView))
+            // Not convertible!
+            convertView = null;
 
-	View v;
-	if (convertView == null) {
-	    v = inflater.inflate(android.R.layout.simple_spinner_item,
-		    parent, false);
-	    ourViews.put(v, NO_VIEW_TYPE);
-	} else {
-	    v = convertView;
-	}
+        View v;
+        if (convertView == null) {
+            v = inflater.inflate(android.R.layout.simple_spinner_item,
+                    parent, false);
+            ourViews.put(v, NO_VIEW_TYPE);
+        } else {
+            v = convertView;
+        }
 
-	// Bind the View
-	TextView textView = (TextView) v;
-	textView.setText(noText);
+        // Bind the View
+        TextView textView = (TextView) v;
+        textView.setText(noText);
 
-	return v;
+        return v;
     }
 
     /**
-     * Get a {@link View) that displays the data
+     * Get a {@link View} that displays the data
      * for the specified position in the data set.
+     *
+     * @param position the position in the data set whose view to return
+     * @param convertView the old view to reuse, if possible
+     * @param parent the parent that this view will eventually be attached to
+     *
+     * @return a View corresponding to the data at the specified position.
      *
      * @see android.widget.Adapter#getView(int, View, ViewGroup)
      */
     @Override
-    public View getDropDownView(int position, View convertView, ViewGroup parent) {
-	if (position > 0) {
-	    if (ourViews.containsKey(convertView))
-		// Not convertible!
-		convertView = null;
-	    return super.getDropDownView(position - 1, convertView, parent);
-	}
-	if (!ourViews.containsKey(convertView))
-	    // Not convertible!
-	    convertView = null;
+    public View getDropDownView(int position,
+                                View convertView, ViewGroup parent) {
+        if (position > 0) {
+            if (ourViews.containsKey(convertView))
+                // Not convertible!
+                convertView = null;
+            return super.getDropDownView(position - 1, convertView, parent);
+        }
+        if (!ourViews.containsKey(convertView))
+            // Not convertible!
+            convertView = null;
 
-	View v;
-	if (convertView == null) {
-	    v = inflater.inflate(
-		    android.R.layout.simple_spinner_dropdown_item, parent, false);
-	    ourViews.put(v, NO_VIEW_TYPE);
-	} else {
-	    v = convertView;
-	}
+        View v;
+        if (convertView == null) {
+            v = inflater.inflate(
+                    android.R.layout.simple_spinner_dropdown_item, parent, false);
+            ourViews.put(v, NO_VIEW_TYPE);
+        } else {
+            v = convertView;
+        }
 
-	// Bind the View
-	TextView textView = (TextView) v;
-	textView.setText(noText);
+        // Bind the View
+        TextView textView = (TextView) v;
+        textView.setText(noText);
 
-	return v;
+        return v;
     }
 }

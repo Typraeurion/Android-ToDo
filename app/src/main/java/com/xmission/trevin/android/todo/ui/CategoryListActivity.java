@@ -96,12 +96,12 @@ public class CategoryListActivity extends AppCompatActivity {
 
                 // Populate the category list
                 categoryList = repository.getCategories();
-                Iterator<ToDoCategory> caiter = categoryList.iterator();
-                while (caiter.hasNext()) {
-                    ToDoCategory category = caiter.next();
+                Iterator<ToDoCategory> caIter = categoryList.iterator();
+                while (caIter.hasNext()) {
+                    ToDoCategory category = caIter.next();
                     if (category.getId() == UNFILED) {
                         // Exclude the "Unfiled" category from edits
-                        caiter.remove();
+                        caIter.remove();
                         continue;
                     }
                     originalNames.put(category.getId(), category.getName());
@@ -151,14 +151,13 @@ public class CategoryListActivity extends AppCompatActivity {
         }
 
         // Add callbacks
-        Button newButton = (Button) findViewById(R.id.CategoryListButtonNew);
+        Button newButton = findViewById(R.id.CategoryListButtonNew);
         newButton.setOnClickListener(new NewCategoryListener());
 
-        Button okButton = (Button) findViewById(R.id.CategoryListButtonOK);
+        Button okButton = findViewById(R.id.CategoryListButtonOK);
         okButton.setOnClickListener(new SaveChangesListener());
 
-        Button cancelButton = (Button)
-                findViewById(R.id.CategoryListButtonCancel);
+        Button cancelButton = findViewById(R.id.CategoryListButtonCancel);
         cancelButton.setOnClickListener(new CancelListener());
     }
 

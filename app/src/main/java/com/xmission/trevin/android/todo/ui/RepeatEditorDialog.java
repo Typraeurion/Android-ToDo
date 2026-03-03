@@ -69,8 +69,7 @@ public class RepeatEditorDialog extends AlertDialog implements OnClickListener {
                 context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = inflater.inflate(R.layout.repeat_dialog, null);
         setView(view);
-        repeatEditor = (RepeatEditor)
-                view.findViewById(R.id.RepeatEditor);
+        repeatEditor = view.findViewById(R.id.RepeatEditor);
         Log.d(LOG_TAG, "created");
     }
 

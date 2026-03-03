@@ -185,8 +185,8 @@ public class ToDoListActivity extends AppCompatActivity {
 
         // Inflate our view so we can find our lists
         setContentView(R.layout.todo_list);
-        categoryList = (Spinner) findViewById(R.id.ListSpinnerCategory);
-        listView = (ListView) findViewById(R.id.todo_list);
+        categoryList = findViewById(R.id.ListSpinnerCategory);
+        listView = findViewById(R.id.todo_list);
 
         encryptor = StringEncryption.holdGlobalEncryption();
         prefs = ToDoPreferences.getInstance(this);
@@ -280,7 +280,7 @@ public class ToDoListActivity extends AppCompatActivity {
         });
 
         // Set a callback for the New button
-        Button newButton = (Button) findViewById(R.id.ListButtonNew);
+        Button newButton = findViewById(R.id.ListButtonNew);
         newButton.setOnClickListener(new NewButtonListener());
 
         // Set a callback for the category filter
@@ -805,7 +805,7 @@ public class ToDoListActivity extends AppCompatActivity {
                 builder.setTitle(R.string.MenuUnlock);
                 View unlockLayout =
                         ((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
-                                .inflate(R.layout.unlock, (ScrollView)
+                                .inflate(R.layout.unlock,
                                         findViewById(R.id.UnlockLayoutRoot));
                 builder.setView(unlockLayout);
                 final DialogInterface.OnClickListener listener1 =
@@ -814,9 +814,9 @@ public class ToDoListActivity extends AppCompatActivity {
                 builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener1);
                 unlockDialog = builder.create();
                 CheckBox showPasswordCheckBox1 =
-                        (CheckBox) unlockLayout.findViewById(R.id.CheckBoxShowPassword);
+                        unlockLayout.findViewById(R.id.CheckBoxShowPassword);
                 unlockPasswordEditText =
-                        (EditText) unlockLayout.findViewById(R.id.EditTextPassword);
+                        unlockLayout.findViewById(R.id.EditTextPassword);
                 showPasswordCheckBox1.setOnCheckedChangeListener(unlockShowPasswordListener);
                 return unlockDialog;
 
@@ -827,7 +827,7 @@ public class ToDoListActivity extends AppCompatActivity {
                         : R.string.MenuPasswordSet);
                 View passwordLayout =
                         ((LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE))
-                                .inflate(R.layout.password, (ScrollView)
+                                .inflate(R.layout.password,
                                         findViewById(R.id.PasswordLayoutRoot));
                 builder.setView(passwordLayout);
                 DialogInterface.OnClickListener listener2 =
@@ -835,13 +835,13 @@ public class ToDoListActivity extends AppCompatActivity {
                 builder.setPositiveButton(R.string.ConfirmationButtonOK, listener2);
                 builder.setNegativeButton(R.string.ConfirmationButtonCancel, listener2);
                 passwordChangeDialog = builder.create();
-                CheckBox showPasswordCheckBox2 = (CheckBox)
+                CheckBox showPasswordCheckBox2 =
                         passwordLayout.findViewById(R.id.CheckBoxShowPassword);
-                passwordChangeEditText[0] = (EditText)
+                passwordChangeEditText[0] =
                         passwordLayout.findViewById(R.id.EditTextOldPassword);
-                passwordChangeEditText[1] = (EditText)
+                passwordChangeEditText[1] =
                         passwordLayout.findViewById(R.id.EditTextNewPassword);
-                passwordChangeEditText[2] = (EditText)
+                passwordChangeEditText[2] =
                         passwordLayout.findViewById(R.id.EditTextConfirmPassword);
                 passwordChangeDialog.setOnShowListener(new PasswordDialogShowListener());
                 showPasswordCheckBox2.setOnCheckedChangeListener(changeShowPasswordListener);
@@ -899,8 +899,7 @@ public class ToDoListActivity extends AppCompatActivity {
 
         case UNLOCK_DIALOG_ID:
             CheckBox showPasswordCheckBox1 =
-                (CheckBox) unlockDialog.findViewById(
-                        R.id.CheckBoxShowPassword);
+                    unlockDialog.findViewById(R.id.CheckBoxShowPassword);
             showPasswordCheckBox1.setChecked(false);
             unlockShowPasswordListener.onCheckedChanged(
                     showPasswordCheckBox1, false);
@@ -914,11 +913,11 @@ public class ToDoListActivity extends AppCompatActivity {
             case PASSWORD_DIALOG_ID:
                 passwordChangeDialog.setTitle(hasPassword
                         ? R.string.MenuPasswordChange : R.string.MenuPasswordSet);
-                TableRow tr = (TableRow) passwordChangeDialog.findViewById(
+                TableRow tr = passwordChangeDialog.findViewById(
                         R.id.TableRowOldPassword);
                 tr.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
                 CheckBox showPasswordCheckBox2 =
-                        (CheckBox) passwordChangeDialog.findViewById(
+                        passwordChangeDialog.findViewById(
                                 R.id.CheckBoxShowPassword);
                 showPasswordCheckBox2.setChecked(false);
                 changeShowPasswordListener.onCheckedChanged(showPasswordCheckBox2,
@@ -962,7 +961,7 @@ public class ToDoListActivity extends AppCompatActivity {
                         : R.string.MenuPasswordSet);
             }
             if (passwordChangeDialog != null) {
-                TableRow tr = (TableRow) passwordChangeDialog.findViewById(
+                TableRow tr = passwordChangeDialog.findViewById(
                         R.id.TableRowOldPassword);
                 tr.setVisibility(hasPassword ? View.VISIBLE : View.GONE);
             }
@@ -1021,7 +1020,7 @@ public class ToDoListActivity extends AppCompatActivity {
         @Override
         public void onShow(DialogInterface dialog) {
             Log.d(TAG, "PasswordDialogShowListener.onShow()");
-            TableRow tr = (TableRow) passwordChangeDialog.findViewById(
+            TableRow tr = passwordChangeDialog.findViewById(
                     R.id.TableRowOldPassword);
             if (tr.getVisibility() == View.VISIBLE)
                 passwordChangeEditText[0].requestFocus();
@@ -1181,20 +1180,19 @@ public class ToDoListActivity extends AppCompatActivity {
                     if (!Arrays.equals(newPassword, confirmedPassword)) {
                         Arrays.fill(confirmedPassword, (char) 0);
                         Arrays.fill(newPassword, (char) 0);
-                        AlertDialog.Builder builder =
-                                new AlertDialog.Builder(ToDoListActivity.this);
-                        builder.setIcon(android.R.drawable.ic_dialog_alert);
-                        builder.setMessage(R.string.ErrorPasswordMismatch);
-                        builder.setNeutralButton(R.string.ConfirmationButtonOK,
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog,
-                                                        int which) {
-                                        dialog.dismiss();
-                                        passwordChangeDialog.show();
-                                    }
-                                });
-                        builder.show();
+                        new AlertDialog.Builder(ToDoListActivity.this)
+                                .setIcon(android.R.drawable.ic_dialog_alert)
+                                .setMessage(R.string.ErrorPasswordMismatch)
+                                .setNeutralButton(R.string.ConfirmationButtonOK,
+                                        new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog,
+                                                                int which) {
+                                                dialog.dismiss();
+                                                passwordChangeDialog.show();
+                                            }
+                                        })
+                                .show();
                         return;
                     }
                     Arrays.fill(confirmedPassword, (char) 0);

@@ -423,6 +423,9 @@ public class ToDoPreferences
      */
     private ToDoPreferences(@NonNull SharedPreferences otherPrefs,
                             @Nullable Handler handler) {
+        Log.d(TAG, String.format(Locale.US,
+                "Creating ToDoPreferences with underlying %s",
+                otherPrefs.getClass().getSimpleName()));
         prefs = otherPrefs;
         listeners = new HashMap<>();
         listeners.put(TPREF_SORT_ORDER, new LinkedList<>());
@@ -455,6 +458,9 @@ public class ToDoPreferences
      * been set in a previous call.
      */
     public static void setSharedPreferences(SharedPreferences prefs) {
+        Log.d(TAG, String.format(Locale.US,
+                ".setSharedPreferences(%s)",
+                prefs.getClass().getSimpleName()));
         if (instance != null) {
             if (instance.prefs == prefs)
                 // We'll allow setting the same preferences object again.
@@ -467,12 +473,23 @@ public class ToDoPreferences
     }
 
     /**
-     * @param context the context for which shared preferences is needed
+     * @param context the context for which shared preferences is needed.
+     * This may be null <i>only</i> for stand-alone tests that don&rsquo;t
+     * run on an Android device.
      * @return a shared instance of ToDoPreferences
      */
-    public static ToDoPreferences getInstance(Context context) {
-        if (instance == null)
-            instance = new ToDoPreferences(context);
+    public static ToDoPreferences getInstance(@Nullable Context context) {
+        Log.d(TAG, String.format(Locale.US,
+                "Getting ToDoPreferences instance for %s",
+                (context == null) ? null
+                        : context.getClass().getSimpleName()));
+        if (instance == null) {
+            if (context != null)
+                instance = new ToDoPreferences(context);
+            else
+                throw new IllegalStateException("ToDoPreferences was" +
+                        " not initialized for use without a context");
+        }
         return instance;
     }
 

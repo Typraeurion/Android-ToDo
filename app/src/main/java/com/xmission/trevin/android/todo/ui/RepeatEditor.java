@@ -117,25 +117,23 @@ public class RepeatEditor extends FrameLayout
                 context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         inflater.inflate(R.layout.repeat, this, true);
 
-        noRepeatText = (TextView) findViewById(R.id.RepeatTextNone);
-        yesRepeatLayout = (ViewGroup) findViewById(R.id.RepeatLayout);
-        intervalGroup =
-                (RadioGroup) findViewById(R.id.RepeatRadioGroupInterval);
-        resetGroup = (RadioGroup) findViewById(R.id.RepeatRadioGroupReset);
-        alternateGroup =
-                (RadioGroup) findViewById(R.id.RepeatRadioGroupAlternateDirection);
-        dayOrDateGroup = (RadioGroup) findViewById(R.id.RepeatRadioGroupDayte);
-        incrementEditText = (EditText) findViewById(R.id.RepeatEditTextEvery);
-        endDateButton = (Button) findViewById(R.id.RepeatButtonEndDate);
+        noRepeatText = findViewById(R.id.RepeatTextNone);
+        yesRepeatLayout = findViewById(R.id.RepeatLayout);
+        intervalGroup = findViewById(R.id.RepeatRadioGroupInterval);
+        resetGroup =  findViewById(R.id.RepeatRadioGroupReset);
+        alternateGroup = findViewById(R.id.RepeatRadioGroupAlternateDirection);
+        dayOrDateGroup = findViewById(R.id.RepeatRadioGroupDayte);
+        incrementEditText = findViewById(R.id.RepeatEditTextEvery);
+        endDateButton = findViewById(R.id.RepeatButtonEndDate);
         for (int i = 0; i < DAYS_IN_WEEK; i++)
-            weekdayToggle[i] = (ToggleButton) findViewById(WEEKDAY_TOGGLE_IDs[i]);
-        weekdayRow = (TableRow) findViewById(R.id.RepeatRowWeekdays);
-        alternateRow = (TableRow) findViewById(R.id.RepeatRowAlternateDirection);
-        nearestToggle = (ToggleButton) findViewById(R.id.RepeatToggleNearest);
-        dayteRow = (TableRow) findViewById(R.id.RepeatRowDayDate);
-        periodText = (TextView) findViewById(R.id.RepeatTextPeriod);
-        weekdayLabelText = (TextView) findViewById(R.id.RepeatTextRepeatOn);
-        descriptionText = (TextView) findViewById(R.id.RepeatTextDescription);
+            weekdayToggle[i] = findViewById(WEEKDAY_TOGGLE_IDs[i]);
+        weekdayRow = findViewById(R.id.RepeatRowWeekdays);
+        alternateRow = findViewById(R.id.RepeatRowAlternateDirection);
+        nearestToggle = findViewById(R.id.RepeatToggleNearest);
+        dayteRow = findViewById(R.id.RepeatRowDayDate);
+        periodText = findViewById(R.id.RepeatTextPeriod);
+        weekdayLabelText = findViewById(R.id.RepeatTextRepeatOn);
+        descriptionText = findViewById(R.id.RepeatTextDescription);
 
         noRepeatText.setVisibility(INVISIBLE);	// May change later
         yesRepeatLayout.setVisibility(VISIBLE);
@@ -354,26 +352,21 @@ public class RepeatEditor extends FrameLayout
             case NONE:
                 break;
 
-            default:
-                if (weekdayRow.getVisibility() != VISIBLE)
-                    weekdayRow.setVisibility(VISIBLE);
-                break;
-
             case SEMI_MONTHLY_ON_DAYS:
             case MONTHLY_ON_DAY:
             case YEARLY_ON_DAY:
                 if (weekdayRow.getVisibility() != GONE)
                     weekdayRow.setVisibility(GONE);
                 break;
+
+            default:
+                if (weekdayRow.getVisibility() != VISIBLE)
+                    weekdayRow.setVisibility(VISIBLE);
+                break;
         }
 
         switch (type) {
             case NONE:
-                break;
-
-            default:
-                if (alternateRow.getVisibility() != VISIBLE)
-                    alternateRow.setVisibility(VISIBLE);
                 break;
 
             case WEEKLY:
@@ -382,6 +375,11 @@ public class RepeatEditor extends FrameLayout
             case YEARLY_ON_DAY:
                 if (alternateRow.getVisibility() != GONE)
                     alternateRow.setVisibility(GONE);
+                break;
+
+            default:
+                if (alternateRow.getVisibility() != VISIBLE)
+                    alternateRow.setVisibility(VISIBLE);
                 break;
         }
 
@@ -434,8 +432,8 @@ public class RepeatEditor extends FrameLayout
             endDateButton.setText(R.string.RepeatButtonNoEndDate);
         } else {
             LocalDate today = LocalDate.now();
-            long daysFromNow = ChronoUnit.DAYS.between(LocalDate.now(), d);
-            DateTimeFormatter format = null;
+            long daysFromNow = ChronoUnit.DAYS.between(today, d);
+            DateTimeFormatter format;
             // If the end date is within -1 to 2 weeks,
             // format it as "Friday, Jan 31".
             if ((daysFromNow > -7) && (daysFromNow < 14))
@@ -628,42 +626,6 @@ public class RepeatEditor extends FrameLayout
             case YEARLY_ON_DAY:
                 break;
 
-            default:
-                days = repeatSettings.getWeekDays();
-                switch (days.size()) {
-                    case 1:
-                        sb.append(getResources().getString(
-                                R.string.RepeatDescriptionOnDay,
-                                getWeekdayName(days.first())));
-                        break;
-
-                    case 2:
-                        sb.append(getResources().getString(
-                                R.string.RepeatDescriptionOn2DaysAllowed,
-                                getWeekdayName(days.first()),
-                                getWeekdayName(days.last())));
-                        break;
-
-                    case 3:
-                    case 4:
-                    case 5:
-                    case 6:
-                        StringBuffer sb2 = new StringBuffer();
-                        for (WeekDays d : days) {
-                            if (d == days.last())
-                                break;
-                            sb2.append(getWeekdayName(d));
-                            sb2.append(", ");
-                        }
-                        sb2.deleteCharAt(sb2.length() - 1);
-                        sb.append(getResources().getString(
-                                R.string.RepeatDescriptionOn2DaysAllowed,
-                                sb2.toString(),
-                                getWeekdayName(days.last())));
-                        break;
-                }
-                break;
-
             case WEEKLY:
                 days = repeatSettings.getWeekDays();
                 switch (days.size()) {
@@ -695,6 +657,42 @@ public class RepeatEditor extends FrameLayout
                         sb2.deleteCharAt(sb2.length() - 1);
                         sb.append(getResources().getString(
                                 R.string.RepeatDescriptionOn2Days,
+                                sb2.toString(),
+                                getWeekdayName(days.last())));
+                        break;
+                }
+                break;
+
+            default:
+                days = repeatSettings.getWeekDays();
+                switch (days.size()) {
+                    case 1:
+                        sb.append(getResources().getString(
+                                R.string.RepeatDescriptionOnDay,
+                                getWeekdayName(days.first())));
+                        break;
+
+                    case 2:
+                        sb.append(getResources().getString(
+                                R.string.RepeatDescriptionOn2DaysAllowed,
+                                getWeekdayName(days.first()),
+                                getWeekdayName(days.last())));
+                        break;
+
+                    case 3:
+                    case 4:
+                    case 5:
+                    case 6:
+                        StringBuffer sb2 = new StringBuffer();
+                        for (WeekDays d : days) {
+                            if (d == days.last())
+                                break;
+                            sb2.append(getWeekdayName(d));
+                            sb2.append(", ");
+                        }
+                        sb2.deleteCharAt(sb2.length() - 1);
+                        sb.append(getResources().getString(
+                                R.string.RepeatDescriptionOn2DaysAllowed,
                                 sb2.toString(),
                                 getWeekdayName(days.last())));
                         break;
@@ -907,8 +905,7 @@ public class RepeatEditor extends FrameLayout
             }
             LocalDate today = LocalDate.now(timeZone);
             endDateDialog.setToday(today);
-            endDateDialog.setDate((repeatSettings.getEndDate() == null)
-                    ? today : repeatSettings.getEndDate());
+            endDateDialog.setDate((d == null) ? today : d);
             endDateDialog.setTimeZone(timeZone);
             endDateDialog.show();
         }
@@ -948,12 +945,9 @@ public class RepeatEditor extends FrameLayout
                             repeatSettings.getRepeatType()));
                     return;
 
-                case WEEKLY:
-                    repeatSettings.setWeekdayMember(weekday, state);
-                    break;
-
                 case DAILY:
                 case DAY_AFTER:
+                case WEEKLY:
                 case WEEK_AFTER:
                 case SEMI_MONTHLY_ON_DATES:
                 case MONTHLY_ON_DATE:
@@ -1113,28 +1107,34 @@ public class RepeatEditor extends FrameLayout
     }
 
     @Override
-    public void onWeekdayDirectionChanged(RepeatSettings settings, WeekdayDirection newDirection) {
+    public void onWeekdayDirectionChanged(
+            RepeatSettings settings, WeekdayDirection newDirection) {
         // This change doesn't impact anything else
     }
 
-    public void onDayOfWeekChanged(RepeatSettings settings, int index, WeekDays newDay) {
+    public void onDayOfWeekChanged(
+            RepeatSettings settings, int index, @NonNull WeekDays newDay) {
         updateRepeatDescription();
     }
 
-    public void onWeekChanged(RepeatSettings settings, int index, int newWeek) {
+    public void onWeekChanged(
+            RepeatSettings settings, int index, int newWeek) {
         updateRepeatDescription();
     }
 
-    public void onDateChanged(RepeatSettings settings, int index, int newDate) {
+    public void onDateChanged(
+            RepeatSettings settings, int index, int newDate) {
         updateRepeatDescription();
     }
 
-    public void onMonthChanged(RepeatSettings settings, Months newMonth) {
+    public void onMonthChanged(
+            RepeatSettings settings, @NonNull Months newMonth) {
         updateRepeatDescription();
     }
 
     @Override
-    public void onEndDateChanged(RepeatSettings settings, @Nullable LocalDate newEndDate) {
+    public void onEndDateChanged(
+            RepeatSettings settings, @Nullable LocalDate newEndDate) {
         updateEndDateButton();
     }
 

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -150,28 +151,18 @@ public class ExportActivity extends Activity {
         // Inflate our view so we can find our fields
         setContentView(R.layout.export_options);
 
-        exportRadioGroup = (RadioGroup) findViewById(
-                R.id.ExportFolderRadioGroup);
-        exportRadioPrivate = (RadioButton) findViewById(
-                R.id.ExportFolderRadioButtonPrivate);
-        exportRadioShared = (RadioButton) findViewById(
-                R.id.ExportFolderRadioButtonShared);
-        exportDirectoryRow = (TableRow) findViewById(
-                R.id.ExportTableRowFileDirectory);
-        exportDirectoryName = (EditText) findViewById(
-                R.id.ExportEditTextDirectory);
-        exportFileName = (EditText) findViewById(
-                R.id.ExportEditTextFile);
-        exportPrivateCheckBox = (CheckBox) findViewById(
+        exportRadioGroup =findViewById(R.id.ExportFolderRadioGroup);
+        exportRadioPrivate = findViewById(R.id.ExportFolderRadioButtonPrivate);
+        exportRadioShared = findViewById(R.id.ExportFolderRadioButtonShared);
+        exportDirectoryRow = findViewById(R.id.ExportTableRowFileDirectory);
+        exportDirectoryName = findViewById(R.id.ExportEditTextDirectory);
+        exportFileName = findViewById(R.id.ExportEditTextFile);
+        exportPrivateCheckBox = findViewById(
                 R.id.ExportCheckBoxIncludePrivate);
-        exportButton = (Button) findViewById(
-                R.id.ExportButtonOK);
-        cancelButton = (Button) findViewById(
-                R.id.ExportButtonCancel);
-        exportProgressBar = (ProgressBar) findViewById(
-                R.id.ExportProgressBar);
-        exportProgressMessage = (TextView) findViewById(
-                R.id.ExportTextProgressMessage);
+        exportButton = findViewById(R.id.ExportButtonOK);
+        cancelButton = findViewById(R.id.ExportButtonCancel);
+        exportProgressBar = findViewById(R.id.ExportProgressBar);
+        exportProgressMessage = findViewById(R.id.ExportTextProgressMessage);
 
         encryptor = StringEncryption.holdGlobalEncryption();
         prefs = ToDoPreferences.getInstance(this);
@@ -244,22 +235,24 @@ public class ExportActivity extends Activity {
         // Check for a password in the database.  If there isn't one,
         // show a warning if the "Include Private" option is checked.
         final ToDoRepository repository = ToDoRepositoryImpl.getInstance();
-        Executors.newSingleThreadExecutor().submit(new Runnable() {
-            @Override
-            public void run() {
-                repository.open(ExportActivity.this);
-                hasPassword = encryptor.hasPassword(repository);
-                repository.release(ExportActivity.this);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        findViewById(R.id.TableRowPasswordNotSetWarning)
-                                .setVisibility((prefs.exportPrivate() && !hasPassword)
-                                        ? View.VISIBLE : View.GONE);
-                    }
-                });
-            }
-        });
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    repository.open(ExportActivity.this);
+                    hasPassword = encryptor.hasPassword(repository);
+                    repository.release(ExportActivity.this);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            findViewById(R.id.TableRowPasswordNotSetWarning)
+                                    .setVisibility((prefs.exportPrivate() && !hasPassword)
+                                            ? View.VISIBLE : View.GONE);
+                        }
+                    });
+                }
+            });
+        }
 
         // At least until we know how big the input file is...
         exportProgressBar.setIndeterminate(true);
@@ -421,8 +414,7 @@ public class ExportActivity extends Activity {
             implements View.OnClickListener {
         @Override
         public void onClick(View view) {
-            Log.d(TAG, String.format(Locale.US,
-                    "SharedStorageCheckedChangeListener.onClick()"));
+            Log.d(TAG, "SharedStorageCheckedChangeListener.onClick()");
             // Default to local shared storage
             String directoryName = FileUtils.getSharedStorageDirectory();
             // Although SAF is supposedly supported on KitKat,
@@ -530,15 +522,6 @@ public class ExportActivity extends Activity {
                 if (!exportFile.getParentFile().exists()) {
                     try {
                         FileUtils.ensureParentDirectoryExists(exportFile);
-                        /*
-                        if (!exportFile.getParentFile().mkdirs()) {
-                            xableFormElements(true);
-                            showAlertDialog(R.string.ErrorExportFailed,
-                                getString(R.string.ErrorExportCantMkdirs,
-                                        exportFile.getParent()));
-                            return;
-                        }
-                        */
                     } catch (SecurityException sx) {
                         Log.e(TAG, "Failed to create directory for export file", sx);
                         xableFormElements(true);
@@ -667,7 +650,7 @@ public class ExportActivity extends Activity {
 
             if (workInfo.getState().isFinished()) {
                 Log.d("ExportProgressObserver", String.format(Locale.US,
-                        "Export %s", workInfo.getState().toString()));
+                        "Export %s", workInfo.getState()));
                 xableFormElements(true);
                 progressLiveData.removeObserver(progressObserver);
                 progressObserver = null;

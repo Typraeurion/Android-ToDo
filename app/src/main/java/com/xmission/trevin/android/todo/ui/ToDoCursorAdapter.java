@@ -76,13 +76,6 @@ public class ToDoCursorAdapter extends BaseAdapter {
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
 
-    /**
-     * Keep track of which rows are assigned to which views.
-     * Binding occurs over and over again for the same rows,
-     * so we want to avoid any unnecessary work.
-     */
-    //private final Map<View,Long> bindingMap = new HashMap<>();
-
     /** The item whose due date is currently selected */
     long selectedItemId = -1;
 
@@ -92,7 +85,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
      * @param activity the Android Activity in which this adapter is running
      * @param cursor the cursor that provides the To Do items for this
      * adapter.  May be {@code null} if the data will be loaded by a
-     * {@link LoaderManager}, in which caseit must be set by calling
+     * {@link LoaderManager}, in which case it must be set by calling
      * {@link #swapCursor}.
      * @param repository the To Do repository, needed for updating an
      * item&rsquo;s checked state and potentially changing the due date
@@ -252,23 +245,15 @@ public class ToDoCursorAdapter extends BaseAdapter {
         removeListeners(itemView);
 
         // These are the widgets that need customizing per item:
-        CheckBox checkBox = (CheckBox)
-                itemView.findViewById(R.id.ToDoItemChecked);
-        TextView priorityText = (TextView)
-                itemView.findViewById(R.id.ToDoTextPriority);
-        TextView editDescription = (TextView)
-                itemView.findViewById(R.id.ToDoEditDescription);
-        ImageView noteImage = (ImageView)
-                itemView.findViewById(R.id.ToDoNoteImage);
-        ImageView alarmImage = (ImageView)
-                itemView.findViewById(R.id.ToDoAlarmImage);
-        ImageView repeatImage = (ImageView)
-                itemView.findViewById(R.id.ToDoRepeatImage);
-        TextView dueDateText = (TextView)
-                itemView.findViewById(R.id.ToDoTextDueDate);
-        TextView overdueText = (TextView)
-                itemView.findViewById(R.id.ToDoTextOverdue);
-        TextView categText = (TextView) itemView.findViewById(R.id.ToDoTextCateg);
+        CheckBox checkBox = itemView.findViewById(R.id.ToDoItemChecked);
+        TextView priorityText =itemView.findViewById(R.id.ToDoTextPriority);
+        TextView editDescription = itemView.findViewById(R.id.ToDoEditDescription);
+        ImageView noteImage = itemView.findViewById(R.id.ToDoNoteImage);
+        ImageView alarmImage = itemView.findViewById(R.id.ToDoAlarmImage);
+        ImageView repeatImage = itemView.findViewById(R.id.ToDoRepeatImage);
+        TextView dueDateText = itemView.findViewById(R.id.ToDoTextDueDate);
+        TextView overdueText = itemView.findViewById(R.id.ToDoTextOverdue);
+        TextView categoryText = itemView.findViewById(R.id.ToDoTextCateg);
 
         /*
          * Get the item data and set the widgets accordingly.
@@ -313,8 +298,8 @@ public class ToDoCursorAdapter extends BaseAdapter {
         }
         dueDateText.setVisibility(prefs.showDueDate()
                 ? View.VISIBLE : View.GONE);
-        categText.setText(todo.getCategoryName());
-        categText.setVisibility(prefs.showCategory()
+        categoryText.setText(todo.getCategoryName());
+        categoryText.setVisibility(prefs.showCategory()
                 ? View.VISIBLE : View.GONE);
 
         // Set callbacks for the widgets
@@ -328,8 +313,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
      * This must be done after binding.
      */
     void installListeners(View view, long itemId) {
-        CheckBox checkBox = (CheckBox)
-                view.findViewById(R.id.ToDoItemChecked);
+        CheckBox checkBox = view.findViewById(R.id.ToDoItemChecked);
         checkBox.setOnCheckedChangeListener(
                 new OnCheckedChangeListener(itemId));
 
@@ -337,26 +321,21 @@ public class ToDoCursorAdapter extends BaseAdapter {
         OnDetailsClickListener detailsClickListener =
                 new OnDetailsClickListener(itemId);
         view.setOnLongClickListener(detailsClickListener);
-        TextView editDescription = (TextView)
-                view.findViewById(R.id.ToDoEditDescription);
+        TextView editDescription = view.findViewById(R.id.ToDoEditDescription);
         editDescription.setOnLongClickListener(detailsClickListener);
 
         // Set a regular click listener to bring up the note dialog
-        ImageView noteImage = (ImageView)
-                view.findViewById(R.id.ToDoNoteImage);
+        ImageView noteImage = view.findViewById(R.id.ToDoNoteImage);
         noteImage.setOnClickListener(new OnNoteClickListener(itemId));
 
         // Set click listeners for the alarm and repeat fields
-        ImageView alarmImage = (ImageView)
-                view.findViewById(R.id.ToDoAlarmImage);
+        ImageView alarmImage = view.findViewById(R.id.ToDoAlarmImage);
         alarmImage.setOnClickListener(detailsClickListener);
-        ImageView repeatImage = (ImageView)
-                view.findViewById(R.id.ToDoRepeatImage);
+        ImageView repeatImage = view.findViewById(R.id.ToDoRepeatImage);
         repeatImage.setOnClickListener(detailsClickListener);
 
         // Set a click listener for changing the due date
-        TextView dueDateText = (TextView)
-                view.findViewById(R.id.ToDoTextDueDate);
+        TextView dueDateText = view.findViewById(R.id.ToDoTextDueDate);
         dueDateText.setOnClickListener(new OnDueDateClickListener(itemId));
 
         // To do: set a click listener for the category field
@@ -368,23 +347,17 @@ public class ToDoCursorAdapter extends BaseAdapter {
      * while we're binding the view.
      */
     void removeListeners(View view) {
-        CheckBox checkBox = (CheckBox)
-                view.findViewById(R.id.ToDoItemChecked);
+        CheckBox checkBox = view.findViewById(R.id.ToDoItemChecked);
         checkBox.setOnCheckedChangeListener(null);
-        TextView editDescription = (TextView)
-                view.findViewById(R.id.ToDoEditDescription);
+        TextView editDescription = view.findViewById(R.id.ToDoEditDescription);
         editDescription.setOnFocusChangeListener(null);
-        ImageView noteImage = (ImageView)
-                view.findViewById(R.id.ToDoNoteImage);
+        ImageView noteImage = view.findViewById(R.id.ToDoNoteImage);
         noteImage.setOnClickListener(null);
-        ImageView alarmImage = (ImageView)
-                view.findViewById(R.id.ToDoAlarmImage);
+        ImageView alarmImage = view.findViewById(R.id.ToDoAlarmImage);
         alarmImage.setOnClickListener(null);
-        ImageView repeatImage = (ImageView)
-                view.findViewById(R.id.ToDoRepeatImage);
+        ImageView repeatImage = view.findViewById(R.id.ToDoRepeatImage);
         repeatImage.setOnClickListener(null);
-        TextView dueDateText = (TextView)
-                view.findViewById(R.id.ToDoTextDueDate);
+        TextView dueDateText = view.findViewById(R.id.ToDoTextDueDate);
         dueDateText.setOnClickListener(null);
     }
 
@@ -463,7 +436,7 @@ public class ToDoCursorAdapter extends BaseAdapter {
             todo.setModTimeNow();
             repo.updateItem(todo);
         }
-    };
+    }
 
     /** Listener for click events on the note icon */
     static class OnNoteClickListener implements View.OnClickListener {

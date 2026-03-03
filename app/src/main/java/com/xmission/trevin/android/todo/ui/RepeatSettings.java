@@ -53,7 +53,7 @@ public class RepeatSettings implements Serializable {
      * {@link WeekdayDirection} indicates the next available date.
      */
     @NonNull
-    private SortedSet<WeekDays> weekDays = new TreeSet<>(WeekDays.ALL);
+    private final SortedSet<WeekDays> weekDays = new TreeSet<>(WeekDays.ALL);
 
     @NonNull
     private WeekdayDirection weekdayDirection = WeekdayDirection.NEXT;
@@ -444,7 +444,8 @@ public class RepeatSettings implements Serializable {
                 return;
             weekDays.remove(day);
             if (weekDays.isEmpty()) {
-                WeekDays targetDay = WeekDays.fromJavaDay(dueDate.getDayOfWeek());
+                WeekDays targetDay = (dueDate == null) ? day
+                        : WeekDays.fromJavaDay(dueDate.getDayOfWeek());
                 weekDays.add(targetDay);
                 if (targetDay != day) {
                     for (OnRepeatChangeListener listener : listeners) {

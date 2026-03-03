@@ -22,7 +22,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ExpandableListAdapter;
 import android.widget.TextView;
 
@@ -33,9 +32,6 @@ import com.xmission.trevin.android.todo.R;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.format.TextStyle;
-import java.time.zone.ZoneOffsetTransition;
-import java.time.zone.ZoneOffsetTransitionRule;
-import java.time.zone.ZoneRules;
 import java.util.*;
 import java.time.ZoneId;
 
@@ -245,10 +241,9 @@ public class TimeZoneSelectAdapter implements ExpandableListAdapter {
 
     /**
      * Target specific zones to drop; these are known duplicates,
-     * but we have no way of programatically detecting them.
+     * but we have no way of programmatically detecting them.
      */
-    public static final Set<String> DUPLICATE_ZONES
-            = Collections.unmodifiableSet(Set.of(
+    public static final Set<String> DUPLICATE_ZONES = Set.of(
             "Africa/Accra", "Africa/Addis_Ababa", "Africa/Asmara",
             "Africa/Asmera", "Africa/Bamako", "Africa/Banjui",
             "Africa/Banjul", "Africa/Blantyre", "Africa/Brazzaville",
@@ -305,7 +300,7 @@ public class TimeZoneSelectAdapter implements ExpandableListAdapter {
             "Pacific/Pohnpei", "Pacific/Ponape", "Pacific/Saipan",
             "Pacific/Samoa", "Pacific/Truk", "Pacific/Wake",
             "Pacific/Wallis", "Pacific/Yap"
-    ));
+    );
 
     private void fillRegionZones() {
         for (String zoneName : TimeZone.getAvailableIDs()) {
@@ -437,8 +432,8 @@ public class TimeZoneSelectAdapter implements ExpandableListAdapter {
         TextView t2 = null;
         if (convertView != null) {
             cvDesc = convertView.getClass().getSimpleName();
-            t1 = (TextView) convertView.findViewById(android.R.id.text1);
-            t2 = (TextView) convertView.findViewById(android.R.id.text2);
+            t1 = convertView.findViewById(android.R.id.text1);
+            t2 = convertView.findViewById(android.R.id.text2);
             if (t1 != null) {
                 if (t2 != null) {
                     cvDesc = String.format(Locale.US, "%s@%s[\"%s\",\"%s\"]",
@@ -466,8 +461,8 @@ public class TimeZoneSelectAdapter implements ExpandableListAdapter {
             returnView = inflater.inflate(
                     android.R.layout.simple_expandable_list_item_2,
                     parent, false);
-            t1 = (TextView) returnView.findViewById(android.R.id.text1);
-            t2 = (TextView) returnView.findViewById(android.R.id.text2);
+            t1 = returnView.findViewById(android.R.id.text1);
+            t2 = returnView.findViewById(android.R.id.text2);
         }
         if ((t1 == null) || (t2 == null)) {
             Log.e(TAG, "Failed to find two text views in expandable list item");

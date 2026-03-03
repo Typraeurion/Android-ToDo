@@ -18,3 +18,5 @@ Version 1.5.0
 * Fixed a bug where rotating the screen while in the
   details window would cause that activity to crash and
   either return to the list window or become unusable.
+* Fixed an issue where rotating the screen while editing
+  an item's note would cause all changes to be lost.

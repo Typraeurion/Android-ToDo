@@ -16,10 +16,14 @@
  */
 package com.xmission.trevin.android.todo.util;
 
+import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.doesNotHaveExtraWithKey;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasExtraWithKey;
+import static androidx.test.espresso.matcher.ViewMatchers.hasFocus;
+import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static org.hamcrest.core.AllOf.allOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -31,12 +35,15 @@ import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 
 import androidx.annotation.Nullable;
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.espresso.NoMatchingViewException;
 import androidx.test.espresso.intent.Intents;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
@@ -283,16 +290,44 @@ public class LaunchUtils {
      */
     public static <T extends Activity> void hideKeyboard(
             ActivityScenario<T> scenario) {
-        scenario.onActivity(activity -> {
-            activity.getWindow().setSoftInputMode(
-                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-            InputMethodManager imm = (InputMethodManager)
-                    activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
-            View focusView = activity.getCurrentFocus();
-            if (focusView == null)
-                focusView = new View(activity);
-            imm.hideSoftInputFromWindow(focusView.getWindowToken(), 0);
-        });
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            scenario.onActivity(activity -> {
+                activity.getWindow().setSoftInputMode(
+                        WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+            });
+            try {
+                onView(allOf(isAssignableFrom(EditText.class), hasFocus()))
+                        .perform(closeSoftKeyboard());
+            } catch (NoMatchingViewException nx) {
+                Log.w("LaunchUtils", "No EditText view has focus");
+                // Ignore if no view has an EditText with focus
+            }
+        } else {
+            scenario.onActivity(LaunchUtils::hideKeyboard);
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
+
+    /**
+     * Prevent the soft keyboard from appearing and hide it if already
+     * shown, since this may obscure buttons during the test.  This form
+     * uses the given {@link Activity}, so it <i>must</i> be called
+     * on the {@link Activity}&rsquo;s thread.  Additionally, it is the
+     * caller&rsquo;s responsibility to call
+     * {@link Instrumentation#waitForIdleSync()} to wait for the soft
+     * keyboard to hide away.
+     *
+     * @param activity the activity on which to hide the keyboard
+     */
+    public static void hideKeyboard(Activity activity) {
+        activity.getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        InputMethodManager imm = (InputMethodManager)
+                activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+        View focusView = activity.getCurrentFocus();
+        if (focusView == null)
+            focusView = new View(activity);
+        imm.hideSoftInputFromWindow(focusView.getWindowToken(), 0);
     }
 
     /**
@@ -321,6 +356,28 @@ public class LaunchUtils {
                     }
                 });
         return currentActivity[0];
+    }
+
+    /**
+     * Wait to ensure the current activity has focus.  Some tests may
+     * require this after a call to {@code recreate()} because this runs
+     * slower on older Android versions.
+     */
+    public static void waitForFocus() {
+        long timeLimit = System.nanoTime() + 5000000000L;
+        while (System.nanoTime() < timeLimit) {
+            Activity activity = getCurrentActivity();
+            if (activity != null) {
+                if (activity.hasWindowFocus())
+                    return;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ix) {
+                // Ignore...
+            }
+        }
+        Log.w("LaunchUtils", "Timed out waiting for activity to gain focus");
     }
 
 }

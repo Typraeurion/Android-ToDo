@@ -57,8 +57,6 @@ import android.view.*;
 import android.widget.*;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 
 /**
  * Displays the details of a To Do item.  Will display the item from the
@@ -238,7 +236,7 @@ public class ToDoDetailsActivity extends Activity {
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        Object savedData = null;
+        Object savedData;
         if (savedInstanceState != null) {
             savedData = savedInstanceState.getSerializable("detailFormData");
         } else {
@@ -284,16 +282,16 @@ public class ToDoDetailsActivity extends Activity {
         // Inflate our view so we can find our fields
         setContentView(R.layout.details);
 
-        toDoDescription = (EditText) findViewById(R.id.DetailEditTextDescription);
-        priorityText = (EditText) findViewById(R.id.DetailEditTextPriority);
-        categoryList = (Spinner) findViewById(R.id.DetailSpinnerCategory);
-        TextView completedDateText = (TextView)
+        toDoDescription = findViewById(R.id.DetailEditTextDescription);
+        priorityText = findViewById(R.id.DetailEditTextPriority);
+        categoryList = findViewById(R.id.DetailSpinnerCategory);
+        TextView completedDateText =
                 findViewById(R.id.DetailTextCompletedDate);
-        dueDateButton = (Button) findViewById(R.id.DetailButtonDueDate);
-        alarmText = (Button) findViewById(R.id.DetailButtonAlarm);
-        repeatButton = (Button) findViewById(R.id.DetailButtonRepeat);
-        hideText = (Button) findViewById(R.id.DetailButtonHideUntil);
-        privateCheckBox = (CheckBox) findViewById(R.id.DetailCheckBoxPrivate);
+        dueDateButton = findViewById(R.id.DetailButtonDueDate);
+        alarmText = findViewById(R.id.DetailButtonAlarm);
+        repeatButton =  findViewById(R.id.DetailButtonRepeat);
+        hideText = findViewById(R.id.DetailButtonHideUntil);
+        privateCheckBox = findViewById(R.id.DetailCheckBoxPrivate);
 
         categoryAdapter = new CategorySelectAdapter(this, repository);
         categoryList.setAdapter(categoryAdapter);
@@ -345,12 +343,12 @@ public class ToDoDetailsActivity extends Activity {
         repeatButton.setOnClickListener(new RepeatButtonOnClickListener());
 
         // Disable the Done and Delete buttons until the repository is ready
-        okButton = (Button) findViewById(R.id.DetailButtonOK);
+        okButton = findViewById(R.id.DetailButtonOK);
         okButton.setEnabled(false);
-        deleteButton = (Button) findViewById(R.id.DetailButtonDelete);
+        deleteButton = findViewById(R.id.DetailButtonDelete);
         deleteButton.setEnabled(false);
 
-        ImageButton noteButton = (ImageButton) findViewById(R.id.DetailButtonNote);
+        ImageButton noteButton = findViewById(R.id.DetailButtonNote);
         noteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -396,11 +394,10 @@ public class ToDoDetailsActivity extends Activity {
 
     /**
      * Called (on the UI thread) after we&rsquo;ve established a
-     * connection to the databaase and read the To Do item (if any)
+     * connection to the database and read the To Do item (if any)
      * to populate the UI and enable buttons.
      */
     private class FinalizeUIRunner implements Runnable {
-        @Nullable
         final boolean refresh;
         /**
          * @param refreshToDo whether to update the UI elements from the
@@ -445,7 +442,7 @@ public class ToDoDetailsActivity extends Activity {
                 categoryList.setSelection(categoryAdapter
                         .getCategoryPosition(todo.getCategoryId()));
 
-                TextView completedDateText = (TextView)
+                TextView completedDateText =
                         findViewById(R.id.DetailTextCompletedDate);
                 View lastCompletedTableRow =
                         findViewById(R.id.LastCompletedTableRow);
@@ -475,7 +472,7 @@ public class ToDoDetailsActivity extends Activity {
             okButton.setOnClickListener(new OKButtonOnClickListener());
             okButton.setEnabled(!TextUtils.isEmpty(todo.getDescription()));
 
-            Button button = (Button) findViewById(R.id.DetailButtonCancel);
+            Button button = findViewById(R.id.DetailButtonCancel);
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -769,20 +766,19 @@ public class ToDoDetailsActivity extends Activity {
                 hideUntilDialog = new Dialog(this);
                 hideUntilDialog.setContentView(R.layout.hide_time);
                 hideUntilDialog.setTitle(R.string.HideTitle);
-                hideCheckBox = (CheckBox)
+                hideCheckBox =
                         hideUntilDialog.findViewById(R.id.HideCheckBox);
-                hideEditDays = (EditText)
+                hideEditDays =
                         hideUntilDialog.findViewById(R.id.HideEditDaysEarlier);
-                showTime = (TextView)
-                        hideUntilDialog.findViewById(R.id.HideTextTime);
-                hideOKButton = (Button)
+                showTime = hideUntilDialog.findViewById(R.id.HideTextTime);
+                hideOKButton =
                         hideUntilDialog.findViewById(R.id.HideButtonOK);
                 hideCheckBox.setOnCheckedChangeListener(
                         new HideCheckBoxOnChangeListener());
                 hideEditDays.addTextChangedListener(
                         new HideDaysEarlierTextWatcher());
                 hideOKButton.setOnClickListener(new HideOKOnClickListener());
-                Button hideCancelButton = (Button)
+                Button hideCancelButton =
                         hideUntilDialog.findViewById(R.id.HideButtonCancel);
                 hideCancelButton.setOnClickListener(
                         new HideCancelOnClickListener());
@@ -792,22 +788,19 @@ public class ToDoDetailsActivity extends Activity {
                 alarmDialog = new Dialog(this);
                 alarmDialog.setContentView(R.layout.alarm_time);
                 alarmDialog.setTitle(R.string.AlarmTitle);
-                alarmCheckBox = (CheckBox)
-                        alarmDialog.findViewById(R.id.AlarmCheckBox);
-                alarmEditDays = (EditText)
+                alarmCheckBox = alarmDialog.findViewById(R.id.AlarmCheckBox);
+                alarmEditDays =
                         alarmDialog.findViewById(R.id.AlarmEditDaysEarlier);
-                alarmTimePicker = (TimePicker)
+                alarmTimePicker =
                         alarmDialog.findViewById(R.id.AlarmTimePicker);
-                alarmNextTime = (TextView)
-                        alarmDialog.findViewById(R.id.AlarmTextTime);
-                alarmOKButton = (Button)
-                        alarmDialog.findViewById(R.id.AlarmButtonOK);
+                alarmNextTime = alarmDialog.findViewById(R.id.AlarmTextTime);
+                alarmOKButton = alarmDialog.findViewById(R.id.AlarmButtonOK);
                 alarmCheckBox.setOnCheckedChangeListener(
                         new AlarmCheckBoxOnChangeListener());
                 alarmEditDays.addTextChangedListener(
                         new AlarmDaysEarlierTextWatcher());
                 alarmOKButton.setOnClickListener(new AlarmOKClickListener());
-                Button alarmCancelButton = (Button)
+                Button alarmCancelButton =
                         alarmDialog.findViewById(R.id.AlarmButtonCancel);
                 alarmCancelButton.setOnClickListener(
                         new AlarmCancelOnClickListener());
@@ -1162,7 +1155,7 @@ public class ToDoDetailsActivity extends Activity {
 
         Log.d(TAG, "Notifications are not enabled;"
                 + " requesting permission from the user");
-        // Android does not provide any way to programatically
+        // Android does not provide any way to programmatically
         // request notification permission until SDK 33 (Tiramisu)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!shouldShowRequestPermissionRationale(

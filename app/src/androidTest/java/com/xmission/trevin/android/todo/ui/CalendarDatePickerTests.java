@@ -16,29 +16,29 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
-import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.action.ViewActions.click;
-import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.matcher.ViewMatchers.*;
+import static com.xmission.trevin.android.todo.util.LaunchUtils.hideKeyboard;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.junit.Assert.*;
 
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TableRow;
 import android.widget.TextView;
-
+import androidx.core.view.ViewCompat;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.data.MockSharedPreferences;
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.data.repeat.WeekDays;
+import com.xmission.trevin.android.todo.provider.MockToDoRepository;
+import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,16 +59,27 @@ import java.util.*;
 @RunWith(AndroidJUnit4.class)
 public class CalendarDatePickerTests {
 
+    public static final Random RAND = new Random();
+
     static Instrumentation instrument = null;
 
     static Context testContext = null;
-
-    public static final Random RAND = new Random();
 
     @BeforeClass
     public static void getTestContext() {
         instrument = InstrumentationRegistry.getInstrumentation();
         testContext = instrument.getTargetContext();
+        /*
+         * Although we don't use the preferences or repository directly
+         * in this test, they are obtained indirectly when we launch
+         * ToDoNoteActivity where we display the widget.  Using the
+         * mock services here prevents errors in other activity tests
+         * which rely on the mocks.
+         */
+        MockSharedPreferences mockPrefs = MockSharedPreferences.getInstance();
+        ToDoPreferences.setSharedPreferences(mockPrefs);
+        MockToDoRepository mockRepo = MockToDoRepository.getInstance();
+        ToDoRepositoryImpl.setInstance(mockRepo);
     }
 
     /**
@@ -114,6 +125,7 @@ public class CalendarDatePickerTests {
             LocalDate showDate, LocalDate today) {
         final TestDateSetWidgetListener listener =
                 new TestDateSetWidgetListener();
+        hideKeyboard(scenario);
         scenario.onActivity(activity -> {
             listener.widget = new CalendarDatePicker(activity);
             listener.widget.setToday(today);
@@ -141,6 +153,7 @@ public class CalendarDatePickerTests {
             LocalDate date, ZoneId zone) {
         final TestDateSetDialogListener listener =
                 new TestDateSetDialogListener();
+        hideKeyboard(scenario);
         scenario.onActivity(activity -> {
             listener.dialog = new CalendarDatePickerDialog(
                     activity, "Test", listener);
@@ -160,11 +173,9 @@ public class CalendarDatePickerTests {
         long timeLimit = System.nanoTime() + 5000000000L;
         View decor = listener.dialog.getWindow().getDecorView();
         while (true) {
-            boolean attached =
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-                            ? decor.isAttachedToWindow()
-                            : (decor.getWindowToken() != null);
-            if (attached && decor.isLaidOut() && decor.hasWindowFocus())
+            boolean attached = ViewCompat.isAttachedToWindow(decor);
+            boolean laidOut = ViewCompat.isLaidOut(decor);
+            if (attached && laidOut && decor.hasWindowFocus())
                 break; // ready
 
             assertTrue("Dialog did not gain focus within 5 seconds",

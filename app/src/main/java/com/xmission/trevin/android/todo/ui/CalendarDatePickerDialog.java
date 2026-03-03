@@ -75,8 +75,7 @@ public class CalendarDatePickerDialog extends AlertDialog
                 context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View view = inflater.inflate(R.layout.date_picker_dialog, null);
         setView(view);
-        datePicker = (CalendarDatePicker)
-                view.findViewById(R.id.CalendarDatePicker);
+        datePicker = view.findViewById(R.id.CalendarDatePicker);
         datePicker.setOnDateSetListener(this);
     }
 

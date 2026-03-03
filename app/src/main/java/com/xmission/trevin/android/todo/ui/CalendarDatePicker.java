@@ -139,25 +139,25 @@ public class CalendarDatePicker extends FrameLayout {
                 context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         inflater.inflate(R.layout.date_picker, this, true);
 
-        yearText = (TextView) findViewById(R.id.DatePickerTextYear);
+        yearText = findViewById(R.id.DatePickerTextYear);
 
-        Button button = (Button) findViewById(R.id.DatePickerPriorYearButton);
+        Button button = findViewById(R.id.DatePickerPriorYearButton);
         button.setOnClickListener(new YearOnClickListener(-1));
 
-        button = (Button) findViewById(R.id.DatePickerNextYearButton);
+        button = findViewById(R.id.DatePickerNextYearButton);
         button.setOnClickListener(new YearOnClickListener(1));
 
         for (int month = 0; month < monthButtonIDs.length; month++) {
-            monthButtons[month] = (RadioButton) findViewById(monthButtonIDs[month]);
+            monthButtons[month] = findViewById(monthButtonIDs[month]);
             monthButtons[month].setOnClickListener(
                     new MonthOnClickListener(month));
         }
 
         for (int week = 0; week < dateButtonIDs.length; week++) {
-            weekRows[week] = (TableRow) findViewById(weekButtonIDs[week]);
+            weekRows[week] = findViewById(weekButtonIDs[week]);
             dateButtons[week] = new Button[dateButtonIDs[week].length];
             for (int day = 0; day < dateButtonIDs[week].length; day++) {
-                dateButtons[week][day] = (Button)
+                dateButtons[week][day] =
                         findViewById(dateButtonIDs[week][day]);
                 dateButtons[week][day].setOnClickListener(
                         new DateOnClickListener(week, day));
@@ -227,8 +227,7 @@ public class CalendarDatePicker extends FrameLayout {
         yearText.setTypeface((year == todaysYear)
                 ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
 
-        RadioGroup monthGroup = (RadioGroup)
-                findViewById(R.id.DatePickerMonthRadioGroup);
+        RadioGroup monthGroup = findViewById(R.id.DatePickerMonthRadioGroup);
         monthGroup.check(monthButtonIDs[month.getValue()
                 - Month.JANUARY.getValue()]);
         // Mark the current month if we are in the current year
@@ -263,7 +262,6 @@ public class CalendarDatePicker extends FrameLayout {
                     dateButtons[week][day].setSelected((date == this.date) ||
                             ((date == maxDate) && (this.date > maxDate)));
                 }
-                date++;
             }
             /*
              * Remove the last row if the month is only 5 rows long.

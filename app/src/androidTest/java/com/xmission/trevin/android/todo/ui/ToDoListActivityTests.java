@@ -63,7 +63,7 @@ public class ToDoListActivityTests {
     public static void getTestContext() {
         testContext = InstrumentationRegistry
                 .getInstrumentation().getTargetContext();
-        mockPrefs = new MockSharedPreferences();
+        mockPrefs = MockSharedPreferences.getInstance();
         ToDoPreferences.setSharedPreferences(mockPrefs);
         mockRepo = MockToDoRepository.getInstance();
         ToDoRepositoryImpl.setInstance(mockRepo);
@@ -105,6 +105,8 @@ public class ToDoListActivityTests {
             //     ... and that it was NOT given an item ID.
             assertIntentDoesNotHaveExtra(ToDoDetailsActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID);
+            waitForFocus();
+            hideKeyboard(scenario);
             // Step 4: Verify the "Cancel" button exists in the details activity
             assertButtonShown("Cancel", R.id.DetailButtonCancel);
             // Step 5: Click the "Cancel" button; wait for the activity to finish

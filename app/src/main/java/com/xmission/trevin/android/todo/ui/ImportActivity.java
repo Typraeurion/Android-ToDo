@@ -185,40 +185,25 @@ public class ImportActivity extends Activity {
         // Inflate our view so we can find our fields
         setContentView(R.layout.import_options);
 
-        importRadioGroup = (RadioGroup) findViewById(
-                R.id.ImportFolderRadioGroup);
-        importRadioPrivate = (RadioButton) findViewById(
-                R.id.ImportFolderRadioButtonPrivate);
-        importRadioShared = (RadioButton) findViewById(
-                R.id.ImportFolderRadioButtonShared);
-        importDirectoryRow = (TableRow) findViewById(
-                R.id.ImportTableRowFileDirectory);
-        importDirectoryName = (EditText) findViewById(
-                R.id.ImportEditTextDirectory);
-        importFileName = (EditText) findViewById(
-                R.id.ImportEditTextFile);
-        importTypeList = (Spinner) findViewById(
-                R.id.ImportSpinnerImportType);
-        importPrivateCheckBox = (CheckBox) findViewById(
+        importRadioGroup = findViewById(R.id.ImportFolderRadioGroup);
+        importRadioPrivate = findViewById(R.id.ImportFolderRadioButtonPrivate);
+        importRadioShared = findViewById(R.id.ImportFolderRadioButtonShared);
+        importDirectoryRow = findViewById(R.id.ImportTableRowFileDirectory);
+        importDirectoryName = findViewById(R.id.ImportEditTextDirectory);
+        importFileName = findViewById(R.id.ImportEditTextFile);
+        importTypeList = findViewById(R.id.ImportSpinnerImportType);
+        importPrivateCheckBox = findViewById(
                 R.id.ImportCheckBoxIncludePrivate);
-        passwordFieldRows[0] = (TableRow) findViewById(
+        passwordFieldRows[0] = findViewById(
                 R.id.TableRowPasswordNotSetWarning);
-        importPassword = (EditText) findViewById(
-                R.id.ImportEditTextPassword);
-        passwordFieldRows[1] = (TableRow) findViewById(
-                R.id.TableRowPassword);
-        showPasswordCheckBox = (CheckBox) findViewById(
-                R.id.ImportCheckBoxShowPassword);
-        passwordFieldRows[2] = (TableRow) findViewById(
-                R.id.TableRowShowPassword);
-        importButton = (Button) findViewById(
-                R.id.ImportButtonOK);
-        cancelButton = (Button) findViewById(
-                R.id.ImportButtonCancel);
-        importProgressBar = (ProgressBar) findViewById(
-                R.id.ImportProgressBar);
-        importProgressMessage = (TextView) findViewById(
-                R.id.ImportTextProgressMessage);
+        importPassword = findViewById(R.id.ImportEditTextPassword);
+        passwordFieldRows[1] = findViewById(R.id.TableRowPassword);
+        showPasswordCheckBox = findViewById(R.id.ImportCheckBoxShowPassword);
+        passwordFieldRows[2] = findViewById(R.id.TableRowShowPassword);
+        importButton = findViewById(R.id.ImportButtonOK);
+        cancelButton = findViewById(R.id.ImportButtonCancel);
+        importProgressBar = findViewById(R.id.ImportProgressBar);
+        importProgressMessage = findViewById(R.id.ImportTextProgressMessage);
 
         ArrayAdapter<CharSequence> importTypeAdapter =
             ArrayAdapter.createFromResource(this, R.array.ImportTypeList,
@@ -484,8 +469,7 @@ public class ImportActivity extends Activity {
             implements View.OnClickListener {
         @Override
         public void onClick(View view) {
-            Log.d(TAG, String.format(Locale.US,
-                    "SharedStorageCheckedChangeListener.onClick()"));
+            Log.d(TAG, "SharedStorageCheckedChangeListener.onClick()");
             // Default to local shared storage
             String directoryName = FileUtils.getSharedStorageDirectory();
             // Although SAF is supposedly supported on KitKat,
@@ -795,7 +779,7 @@ public class ImportActivity extends Activity {
 
             if (workInfo.getState().isFinished()) {
                 Log.d("ImportProgressObserver", String.format(Locale.US,
-                        "Import %s", workInfo.getState().toString()));
+                        "Import %s", workInfo.getState()));
                 xableFormElements(true);
                 progressLiveData.removeObserver(progressObserver);
                 progressObserver = null;

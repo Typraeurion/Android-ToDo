@@ -90,9 +90,8 @@ public class MockToDoRepository implements ToDoRepository {
 
     /** @return the singleton instance of the To Do repository */
     public static MockToDoRepository getInstance() {
-        if (instance == null) {
+        if (instance == null)
             instance = new MockToDoRepository();
-        }
         return instance;
     }
 
@@ -970,19 +969,24 @@ public class MockToDoRepository implements ToDoRepository {
         Comparator<ToDoItem> comparator = null;
         // FIXME: This pattern may skip over invalid syntax!
         final Pattern sortItemPattern = Pattern.compile(
-                "(?i)\\s*(?<base>[._a-z]+)"
-                        + "(\\((?<args>[^)]*)\\))?"
-                        + "(\\s+(?<dir>[a-z]+))?\\s*(,|$)");
+                "(?i)\\s*([._a-z]+)"
+                        + "(\\(([^)]*)\\))?"
+                        + "(\\s+([a-z]+))?\\s*(,|$)");
+        // Android didn't support named capture groups until API 26,
+        // so we have to use numbered groups instead.
+        final int MGROUP_BASE = 1;
+        final int MGROUP_ARGS = 3;
+        final int MGROUP_DIR = 5;
         Matcher m = sortItemPattern.matcher(sortOrder);
         while (m.find()) {
         // for (String sortItem : sortOrder.split(",")) {
         //    sortItem = sortItem.trim();
         //    String[] sortParts = sortItem.split(" +");
-            String function = m.group("base");
-            String[] args = m.group("args") == null ? null
-                    : m.group("args").split(",");
+            String function = m.group(MGROUP_BASE);
+            String[] args = m.group(MGROUP_ARGS) == null ? null
+                    : m.group(MGROUP_ARGS).split(",");
             String column = (args == null) ? function : args[0];
-            String direction = m.group("dir");
+            String direction = m.group(MGROUP_DIR);
             Comparator<ToDoItem> nextComparator;
             if (column.equalsIgnoreCase(
                     ToDoRepositoryImpl.TODO_TABLE_NAME

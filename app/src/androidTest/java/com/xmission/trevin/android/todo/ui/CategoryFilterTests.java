@@ -67,7 +67,7 @@ public class CategoryFilterTests {
     public static void initializeRepository() {
         testContext = InstrumentationRegistry.getInstrumentation()
                 .getTargetContext();
-        mockPrefs = new MockSharedPreferences();
+        mockPrefs = MockSharedPreferences.getInstance();
         ToDoPreferences.setSharedPreferences(mockPrefs);
         repository = MockToDoRepository.getInstance();
         ToDoRepositoryImpl.setInstance(repository);

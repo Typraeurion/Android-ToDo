@@ -84,7 +84,7 @@ public class ToDoDetailsActivityTests {
     @BeforeClass
     public static void getTestContext() {
         testContext = instrument.getTargetContext();
-        sharedPrefs = new MockSharedPreferences();
+        sharedPrefs = MockSharedPreferences.getInstance();
         ToDoPreferences.setSharedPreferences(sharedPrefs);
         mockRepo = MockToDoRepository.getInstance();
         ToDoRepositoryImpl.setInstance(mockRepo);
@@ -321,6 +321,8 @@ public class ToDoDetailsActivityTests {
 
             // Step 3: Restart the activity
             scenario.recreate();
+            waitForFocus();
+            hideKeyboard(scenario);
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 // Step 4: Save the item; we're going to wait for this change.
@@ -539,6 +541,8 @@ public class ToDoDetailsActivityTests {
 
             // Step 3: Restart the activity
             scenario.recreate();
+            waitForFocus();
+            hideKeyboard(scenario);
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 // Step 4: Save the item; we're going to wait for this change.
@@ -593,6 +597,7 @@ public class ToDoDetailsActivityTests {
                     ToDoListActivity.EXTRA_ITEM_ID);
             assertIntentHasStringExtra(ToDoNoteActivity.class,
                     ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
+            waitForFocus();
             assertButtonShown("OK", R.id.NoteButtonOK);
             setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
 
@@ -602,6 +607,7 @@ public class ToDoDetailsActivityTests {
                 saveObserver.assertNotChanged(
                         "Note was saved before the item was created!");
                 // we're going to wait for this change.
+                waitForFocus();
                 pressButton(scenario, R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
@@ -651,6 +657,7 @@ public class ToDoDetailsActivityTests {
                     ToDoListActivity.EXTRA_ITEM_ID);
             assertIntentHasStringExtra(ToDoNoteActivity.class,
                     ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
+            waitForFocus();
             assertButtonShown("OK", R.id.NoteButtonOK);
             setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
 
@@ -658,6 +665,10 @@ public class ToDoDetailsActivityTests {
             // (not the launch activity)
             final Activity noteActivity = getCurrentActivity();
             instrument.runOnMainSync(() -> noteActivity.recreate());
+            instrument.waitForIdleSync();
+            waitForFocus();
+            instrument.runOnMainSync(() -> hideKeyboard(noteActivity));
+            instrument.waitForIdleSync();
 
             // Now finish the note and the item;
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
@@ -665,6 +676,7 @@ public class ToDoDetailsActivityTests {
                 saveObserver.assertNotChanged(
                         "Note was saved before the item was created!");
                 // we're going to wait for this change.
+                waitForFocus();
                 pressButton(scenario, R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
@@ -720,6 +732,10 @@ public class ToDoDetailsActivityTests {
                     newItem.getDescription());
             assertIntentHasStringExtra(ToDoNoteActivity.class,
                     ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
+            waitForFocus();
+            final Activity noteActivity = getCurrentActivity();
+            instrument.runOnMainSync(() -> hideKeyboard(noteActivity));
+            instrument.waitForIdleSync();
             assertButtonShown("OK", R.id.NoteButtonOK);
             setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
 
@@ -728,6 +744,8 @@ public class ToDoDetailsActivityTests {
                 pressButton(R.id.NoteButtonOK);
                 saveObserver.assertNotChanged(
                         "Note was saved before the item!");
+                waitForFocus();
+                hideKeyboard(scenario);
                 // we're going to wait for this change.
                 pressButton(scenario, R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
@@ -782,12 +800,14 @@ public class ToDoDetailsActivityTests {
             // (not the launch activity)
             final Activity noteActivity = getCurrentActivity();
             instrument.runOnMainSync(() -> noteActivity.recreate());
+            waitForFocus();
 
             // Now finish the note and the item;
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 pressButton(R.id.NoteButtonOK);
                 saveObserver.assertNotChanged(
                         "Note was saved before the item!");
+                waitForFocus();
                 // we're going to wait for this change.
                 pressButton(scenario, R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
@@ -845,6 +865,7 @@ public class ToDoDetailsActivityTests {
                 saveObserver.assertNotChanged(
                         "Note was deleted before the item was saved!");
                 // we're going to wait for this change.
+                waitForFocus();
                 pressButton(scenario, R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(

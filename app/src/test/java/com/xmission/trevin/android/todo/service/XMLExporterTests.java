@@ -67,7 +67,7 @@ public class XMLExporterTests {
     @Before
     public void initializeRepository() {
         if (mockPrefs == null) {
-            underlyingPrefs = new MockSharedPreferences();
+            underlyingPrefs = MockSharedPreferences.getInstance();
             ToDoPreferences.setSharedPreferences(underlyingPrefs);
             mockPrefs = ToDoPreferences.getInstance(null);
         }
@@ -366,7 +366,7 @@ public class XMLExporterTests {
      * Test writing out metadata, including the password hash.
      */
     @Test
-    public void testExportPrivateMedatata() throws Exception {
+    public void testExportPrivateMetadata() throws Exception {
         // The password "hash" doesn't have to be a real hash for this test
         byte[] expectedHash = new byte[32];
         RAND.nextBytes(expectedHash);

@@ -65,18 +65,6 @@ public class ToDoNoteActivity extends Activity {
     public static final String EXTRA_ITEM_NOTE = "ToDoNote";
 
     /**
-     * The columns we are interested in from the item table
-     *
-     * @deprecated
-     */
-    private static final String[] ITEM_PROJECTION = new String[] {
-            ToDoItemColumns._ID,
-            ToDoItemColumns.DESCRIPTION,
-            ToDoItemColumns.NOTE,
-            ToDoItemColumns.PRIVATE,
-    };
-
-    /**
      * The ID of the To-Do item whose note we are editing;
      * {@code null} for a new item.
      */
@@ -115,7 +103,7 @@ public class ToDoNoteActivity extends Activity {
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        Object savedData = null;
+        Object savedData;
         if (savedInstanceState != null) {
             savedData = savedInstanceState.getSerializable("noteFormData");
         } else {
@@ -161,7 +149,7 @@ public class ToDoNoteActivity extends Activity {
 
         // Inflate our view so we can find our field
         setContentView(R.layout.note);
-        toDoNote = (EditText) findViewById(R.id.NoteEditText);
+        toDoNote = findViewById(R.id.NoteEditText);
 
         if (hasSavedState) {
             restoreState((NoteFormData) savedData);
@@ -177,11 +165,11 @@ public class ToDoNoteActivity extends Activity {
         }
 
         // Set callbacks
-        okButton = (Button) findViewById(R.id.NoteButtonOK);
+        okButton = findViewById(R.id.NoteButtonOK);
         okButton.setOnClickListener(new OKButtonOnClickListener());
         okButton.setEnabled(isDetailHandoff);
 
-        deleteButton = (Button) findViewById(R.id.NoteButtonDelete);
+        deleteButton = findViewById(R.id.NoteButtonDelete);
         deleteButton.setOnClickListener(new DeleteButtonOnClickListener());
         deleteButton.setEnabled(isDetailHandoff);
 
@@ -212,7 +200,7 @@ public class ToDoNoteActivity extends Activity {
 
     /**
      * Called (on the UI thread) after we&rsquo;ve established a
-     * connection to the databaase and read the To Do item (if any)
+     * connection to the database and read the To Do item (if any)
      * to populate the UI and enable buttons.
      */
     private class FinalizeUIRunner implements Runnable {

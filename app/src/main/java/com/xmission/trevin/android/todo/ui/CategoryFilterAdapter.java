@@ -303,7 +303,7 @@ public class CategoryFilterAdapter extends BaseAdapter {
     /**
      * Get the position of a category filter from the category ID.
      * If there is no such category, returns the position of the
-     * &ldquo;ALL&rdquo; psuedo-category.
+     * &ldquo;ALL&rdquo; pseudo-category.
      *
      * @param categoryId the ID of the category to find
      *

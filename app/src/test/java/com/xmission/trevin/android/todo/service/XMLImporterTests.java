@@ -62,7 +62,7 @@ public class XMLImporterTests {
     @Before
     public void initializeRepository() {
         if (mockPrefs == null) {
-            underlyingPrefs = new MockSharedPreferences();
+            underlyingPrefs = MockSharedPreferences.getInstance();
             ToDoPreferences.setSharedPreferences(underlyingPrefs);
             mockPrefs = ToDoPreferences.getInstance(null);
         }

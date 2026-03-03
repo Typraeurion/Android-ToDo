@@ -89,31 +89,31 @@ public class PreferencesActivity extends Activity {
 
         prefs = ToDoPreferences.getInstance(this);
 
-        Spinner spinner = (Spinner) findViewById(R.id.PrefsSpinnerSortBy);
+        Spinner spinner = findViewById(R.id.PrefsSpinnerSortBy);
         setSpinnerByID(spinner, prefs.getSortOrder());
         spinner.setOnItemSelectedListener(SORT_ORDER_SELECTED_LISTENER);
 
-        CheckBox checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowChecked);
+        CheckBox checkBox = findViewById(R.id.PrefsCheckBoxShowChecked);
         checkBox.setChecked(prefs.showChecked());
         checkBox.setOnCheckedChangeListener(SHOW_CHECKED_CHANGED_LISTENER);
 
-        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowDueDate);
+        checkBox = findViewById(R.id.PrefsCheckBoxShowDueDate);
         checkBox.setChecked(prefs.showDueDate());
         checkBox.setOnCheckedChangeListener(SHOW_DUE_CHANGED_LISTENER);
 
-        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPriority);
+        checkBox = findViewById(R.id.PrefsCheckBoxShowPriority);
         checkBox.setChecked(prefs.showPriority());
         checkBox.setOnCheckedChangeListener(SHOW_PRIORITIES_CHANGED_LISTENER);
 
-        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowCategory);
+        checkBox = findViewById(R.id.PrefsCheckBoxShowCategory);
         checkBox.setChecked(prefs.showCategory());
         checkBox.setOnCheckedChangeListener(SHOW_CATEGORIES_CHANGED_LISTENER);
 
-        privateCheckBox = (CheckBox) findViewById(R.id.PrefsCheckBoxShowPrivate);
+        privateCheckBox = findViewById(R.id.PrefsCheckBoxShowPrivate);
         privateCheckBox.setChecked(prefs.showPrivate());
         privateCheckBox.setOnCheckedChangeListener(SHOW_PRIVATE_CHANGED_LISTENER);
 
-        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxAlarmVibrate);
+        checkBox = findViewById(R.id.PrefsCheckBoxAlarmVibrate);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             checkBox.setChecked(prefs.notificationVibrate());
             checkBox.setOnCheckedChangeListener(ALARM_VIBRATE_CHANGED_LISTENER);
@@ -132,7 +132,7 @@ public class PreferencesActivity extends Activity {
                     new NoSelectionCursorAdapter(this,
                             audioCursor, AudioColumns.TITLE,
                             getString(R.string.PrefTextNoSound));
-            spinner = (Spinner) findViewById(R.id.PrefsSpinnerAlarmSound);
+            spinner = findViewById(R.id.PrefsSpinnerAlarmSound);
             spinner.setAdapter(soundAdapter);
             final long initialSound = prefs.getNotificationSound();
             setSpinnerByID(spinner, initialSound);
@@ -149,10 +149,10 @@ public class PreferencesActivity extends Activity {
             }
         }
 
-        checkBox = (CheckBox) findViewById(R.id.PrefsCheckBoxLocalZone);
+        checkBox = findViewById(R.id.PrefsCheckBoxLocalZone);
         checkBox.setChecked(prefs.useLocalTimeZone());
         checkBox.setOnCheckedChangeListener(LOCAL_ZONE_CHANGED_LISTENER);
-        timeZoneButton = (Button) findViewById(R.id.PrefsButtonTimeZone);
+        timeZoneButton = findViewById(R.id.PrefsButtonTimeZone);
         timeZoneButton.setText(prefs.getTimeZone().getDisplayName(
                 TextStyle.FULL, Locale.getDefault()));
         timeZoneButton.setEnabled(!prefs.useLocalTimeZone());
@@ -183,8 +183,7 @@ public class PreferencesActivity extends Activity {
                     + " timezone dialog view!");
             return null;
         }
-        timeZoneListView = (ExpandableListView)
-                rootView.findViewById(R.id.TimeZoneList);
+        timeZoneListView = rootView.findViewById(R.id.TimeZoneList);
         timeZoneListView.setAdapter(timeZoneAdapter);
         timeZoneListView.setOnChildClickListener(TIME_ZONE_LIST_LISTENER);
         timeZoneListView.setOnGroupExpandListener(TIME_ZONE_EXPAND_LISTENER);
@@ -484,7 +483,7 @@ public class PreferencesActivity extends Activity {
                 if (results[i] == PackageManager.PERMISSION_GRANTED) {
                     Log.i(LOG_TAG, "Vibrate permission granted, enabling vibrating alarm");
                     prefs.setNotificationVibrate(true);
-                    CheckBox checkBox = (CheckBox)
+                    CheckBox checkBox =
                             findViewById(R.id.PrefsCheckBoxAlarmVibrate);
                     checkBox.setChecked(true);
                 }

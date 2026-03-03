@@ -31,7 +31,7 @@ import java.io.Serializable;
  *
  * @author Trevin Beattie
  */
-class DetailFormData implements Serializable {
+public class DetailFormData implements Serializable {
 
     private static final long serialVersionUID = 4;
 
