@@ -288,8 +288,8 @@ public class ToDoDetailsActivityTests {
             // These dialogs may open the soft keyboard again
             hideKeyboard(wrapper.getScenario());
             pressDialogButton(dialogRef[0], R.id.HideCheckBox);
-            setEditText("Hide days earlier", R.id.HideEditDaysEarlier,
-                    Integer.toString(expectedHide));
+            setEditText(dialogRef[0], "Hide days earlier",
+                    R.id.HideEditDaysEarlier, Integer.toString(expectedHide));
             pressDialogButton(dialogRef[0], R.id.HideButtonOK);
             pressButton(wrapper.getScenario(), R.id.DetailButtonAlarm);
             assertDialogShown(wrapper.getScenario(),
@@ -302,8 +302,11 @@ public class ToDoDetailsActivityTests {
             assertNotNull("The activity did not set alarmDialog",
                     dialogRef[0]);
             pressDialogButton(dialogRef[0], R.id.AlarmCheckBox);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.AlarmTextAlarm));
             hideKeyboard(wrapper.getScenario());
-            setEditText("Alarm days earlier", R.id.AlarmEditDaysEarlier,
+            setEditText(dialogRef[0], "Alarm days earlier",
+                    R.id.AlarmEditDaysEarlier,
                     Integer.toString(expectedAlarmAdvance));
             final Dialog[] alarmDialog = new Dialog[1];
             wrapper.onActivity(activity -> {
@@ -637,8 +640,7 @@ public class ToDoDetailsActivityTests {
                     ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
             waitForFocus();
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(wrapper.getScenario(), "Note",
-                    R.id.NoteEditText, expectedNote);
+            setEditText("Note", R.id.NoteEditText, expectedNote);
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 // Save everything;
@@ -699,8 +701,7 @@ public class ToDoDetailsActivityTests {
                     ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
             waitForFocus();
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(wrapper.getScenario(), "Note",
-                    R.id.NoteEditText, expectedNote);
+            setEditText("Note", R.id.NoteEditText, expectedNote);
 
             // Restart the current activity at this point
             // (not the launch activity)
@@ -780,8 +781,7 @@ public class ToDoDetailsActivityTests {
             instrument.runOnMainSync(() -> hideKeyboard(noteActivity));
             instrument.waitForIdleSync();
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(wrapper.getScenario(), "Note",
-                    R.id.NoteEditText, expectedNote);
+            setEditText("Note", R.id.NoteEditText, expectedNote);
 
             // Save everything;
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
@@ -840,8 +840,7 @@ public class ToDoDetailsActivityTests {
             assertIntentHasStringExtra(ToDoNoteActivity.class,
                     ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(wrapper.getScenario(), "Note",
-                    R.id.NoteEditText, expectedNote);
+            setEditText("Note", R.id.NoteEditText, expectedNote);
 
             // Restart the current activity at this point
             // (not the launch activity)
