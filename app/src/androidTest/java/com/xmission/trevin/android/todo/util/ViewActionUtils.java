@@ -19,6 +19,7 @@ package com.xmission.trevin.android.todo.util;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
@@ -640,8 +641,10 @@ public class ViewActionUtils {
     private static void esSetEditText(int fieldId, final String newText) {
         onView(withId(fieldId))
                 .check(matches(isAssignableFrom(EditText.class)))
-                .perform(requestFocus())
-                .perform(replaceText(newText));
+                .perform(scrollTo(),
+                        requestFocus(),
+                        replaceText(newText),
+                        closeSoftKeyboard());
     }
 
     /**
@@ -659,7 +662,7 @@ public class ViewActionUtils {
     public static <T extends Activity> void setEditText(
             ActivityScenario<T> scenario,
             String fieldName, int fieldId, final String newText) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             esSetEditText(fieldId, newText);
         } else {
             final View[] viewRef = new View[1];
@@ -692,7 +695,7 @@ public class ViewActionUtils {
      */
     public static void setEditText(String fieldName, int fieldId,
                                     final String newText) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             esSetEditText(fieldId, newText);
         } else {
             final Activity activity = getCurrentActivity();
@@ -730,7 +733,7 @@ public class ViewActionUtils {
             ActivityScenario<T> scenario,
             @NonNull final Dialog dialog,
             String fieldName, int fieldId, final String newText) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             esSetEditText(fieldId, newText);
         } else {
             final View[] viewRef = new View[1];
@@ -765,7 +768,7 @@ public class ViewActionUtils {
     public static void setEditText(
             @NonNull final Dialog dialog,
             String fieldName, int fieldId, final String newText) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             esSetEditText(fieldId, newText);
         } else {
             final Activity activity = getCurrentActivity();

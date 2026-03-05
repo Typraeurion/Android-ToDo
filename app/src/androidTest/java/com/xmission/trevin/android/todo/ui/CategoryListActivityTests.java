@@ -46,6 +46,7 @@ import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.provider.MockDataChangedObserver;
 import com.xmission.trevin.android.todo.provider.MockToDoRepository;
+import com.xmission.trevin.android.todo.provider.TestObserver;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 
 import org.junit.After;
@@ -238,7 +239,7 @@ public class CategoryListActivityTests {
         final CategoryListViewData data = new CategoryListViewData();
 
         // Get the actual size of the list
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             onView(withId(R.id.CategoryList))
                     .check((view, noViewFoundException) -> {
                         if (view instanceof ListView) {
@@ -255,15 +256,15 @@ public class CategoryListActivityTests {
         data.count = data.list.getChildCount();
         data.setIndex(position);
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             onData(anything())
                     .inAdapterView(withId(R.id.CategoryList))
                     .atPosition(data.index)
                     .check(matches(isAssignableFrom(EditText.class)))
                     .perform(scrollTo(),
                             requestFocus(),
-                            closeSoftKeyboard(),
-                            replaceText(newText));
+                            replaceText(newText),
+                            closeSoftKeyboard());
         } else {
             scenario.onActivity(activity -> {
                 data.list.setSelection(data.index);
@@ -335,7 +336,8 @@ public class CategoryListActivityTests {
     public void testAddFirstCategory() {
         String expectedCategory = randomCategoryName('A', 'Z');
         try (ActivityScenario<CategoryListActivity> scenario =
-                        ActivityScenario.launch(CategoryListActivity.class)) {
+                        ActivityScenario.launch(CategoryListActivity.class);
+             TestObserver observer = new TestObserver(mockRepo)) {
             hideKeyboard(scenario);
             // Step 1: Verify the category ListView is empty
             assertCategoryListSize(scenario, 0);
@@ -352,6 +354,7 @@ public class CategoryListActivityTests {
             setCategoryText(scenario, -1, expectedCategory);
             // Step 7: Click the "OK" button; wait for the activity to finish
             finishActivity(scenario, true);
+            observer.assertChanged();
         }
         // Step 8: Verify the mock repository contains the new category
         //         (having the provided name with any ID)
@@ -375,7 +378,8 @@ public class CategoryListActivityTests {
     public void testCancelFirstCategory() {
         String unexpectedCategory = randomCategoryName('A', 'Z');
         try (ActivityScenario<CategoryListActivity> scenario =
-                        ActivityScenario.launch(CategoryListActivity.class)) {
+                        ActivityScenario.launch(CategoryListActivity.class);
+             TestObserver observer = new TestObserver(mockRepo)) {
             hideKeyboard(scenario);
             // Step 1: Verify the category ListView is empty
             assertCategoryListSize(scenario, 0);
@@ -392,6 +396,7 @@ public class CategoryListActivityTests {
             setCategoryText(scenario, -1, unexpectedCategory);
             // Step 7: Click the "Cancel" button; wait for the activity to finish
             finishActivity(scenario, false);
+            observer.assertNotChanged();
         }
         // Step 8: Verify the mock repository only contains
         //         the "Unfiled" category
@@ -419,7 +424,8 @@ public class CategoryListActivityTests {
             testCategories.add(category);
         }
         try (ActivityScenario<CategoryListActivity> scenario =
-                        ActivityScenario.launch(CategoryListActivity.class)) {
+                        ActivityScenario.launch(CategoryListActivity.class);
+             TestObserver observer = new TestObserver(mockRepo)) {
             hideKeyboard(scenario);
             // Step 1: Verify the category ListView has the right number of entries
             assertCategoryListSize(scenario, targetCount);
@@ -431,6 +437,7 @@ public class CategoryListActivityTests {
             setCategoryText(scenario, victimLine, "");
             // Step 5: Click the "OK" button; wait for the activity to finish
             finishActivity(scenario, true);
+            observer.assertChanged();
             // Step 6: Verify the mock repository no longer contains
             //         the target category.  (But does contain "Unfiled".)
             Iterator<ToDoCategory> iter = testCategories.iterator();
@@ -459,7 +466,8 @@ public class CategoryListActivityTests {
         unfiledCategory.setName(testContext.getString(
                 R.string.Category_Unfiled));
         try (ActivityScenario<CategoryListActivity> scenario =
-                        ActivityScenario.launch(CategoryListActivity.class)) {
+                        ActivityScenario.launch(CategoryListActivity.class);
+             TestObserver observer = new TestObserver(mockRepo)) {
             hideKeyboard(scenario);
             // Step 1: Verify the category ListView has a single entry
             assertCategoryListSize(scenario, 1);
@@ -471,6 +479,7 @@ public class CategoryListActivityTests {
             setCategoryText(scenario, 0, "");
             // Step 5: Click the "OK" button; wait for the activity to finish
             finishActivity(scenario, true);
+            observer.assertChanged();
         }
         // Step 6: Verify the mock repository only contains the "Unfiled" category
         List<ToDoCategory> allCategories = mockRepo.getCategories();
