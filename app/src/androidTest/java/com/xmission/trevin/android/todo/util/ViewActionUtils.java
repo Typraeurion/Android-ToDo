@@ -54,6 +54,10 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.hamcrest.Matcher;
 
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -68,6 +72,7 @@ public class ViewActionUtils {
      * Wait for a {@link Dialog} with specified text to be shown.
      * Normally this text would be the title, but this will work
      * with text anywhere in the view hierarchy so it should be unique.
+     * The dialog must exist within the {@code scenario}&rsquo;s activity.
      *
      * @param scenario the scenario in which the test is running
      * @param expectedText the text within the dialog to look for
@@ -88,9 +93,14 @@ public class ViewActionUtils {
             while ((title.get() == null) &&
                     (System.nanoTime() < timeout)) {
                 scenario.onActivity(activity -> {
-                    View root = activity.getWindow().getDecorView().getRootView();
-                    TextView found = findViewRecursive(root, expectedText);
-                    title.set(found);
+                    List<View> roots = getWindowRoots();
+                    for (View root : roots) {
+                        TextView found = findViewRecursive(root, expectedText);
+                        if (found != null) {
+                            title.set(found);
+                            return;
+                        }
+                    }
                 });
                 if (title.get() == null) try {
                     Thread.sleep(50);
@@ -102,6 +112,34 @@ public class ViewActionUtils {
                             "Dialog \"%s\" was not found", expectedText),
                     title.get());
         }
+    }
+
+    /**
+     * Find all root views from WindowManagerGlobal.  This is needed
+     * to find views in Dialogs and pop-ups without Espresso.
+     *
+     * @return a {@link List} of root {@link View}s
+     */
+    @SuppressWarnings("unchecked")
+    private static List<View> getWindowRoots() {
+        try {
+            Class<?> wmClass = Class.forName("android.view.WindowManagerGlobal");
+            Object wmInstance = wmClass.getMethod("getInstance").invoke(null);
+            Field viewsField = wmClass.getDeclaredField("mViews");
+            viewsField.setAccessible(true);
+            Object views = viewsField.get(wmInstance);
+            if (views instanceof List) {
+                return (List<View>) views;
+            } else if (views instanceof View[]) {
+                return Arrays.asList((View[]) views);
+            } else if (views != null) {
+                Log.w(LOG_TAG, "Window manager views is neither a List nor"
+                        + " an Array; got " + views.getClass().getName());
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Failed to get window manager views", e);
+        }
+        return Collections.emptyList();
     }
 
     /**
