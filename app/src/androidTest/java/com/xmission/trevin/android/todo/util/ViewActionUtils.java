@@ -41,6 +41,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
@@ -63,19 +64,21 @@ public class ViewActionUtils {
     private static final String LOG_TAG = "ViewActionUtils";
 
     /**
-     * Wait for an {@link AlertDialog} to be shown.
+     * Wait for a {@link Dialog} with specified text to be shown.
+     * Normally this text would be the title, but this will work
+     * with text anywhere in the view hierarchy so it should be unique.
      *
      * @param scenario the scenario in which the test is running
-     * @param expectedTitle the title of the dialog to look for
+     * @param expectedText the text within the dialog to look for
      *
      * @throws AssertionError if no dialog with the given title is found
      * within 5 seconds
      */
-    public static <T extends Activity> void assertAlertDialogShown(
+    public static <T extends Activity> void assertDialogShown(
             @NonNull ActivityScenario<T> scenario,
-            @NonNull String expectedTitle) {
+            @NonNull String expectedText) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withText(expectedTitle))
+            onView(withText(expectedText))
                     .inRoot(isDialog())
                     .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
         } else {
@@ -84,9 +87,8 @@ public class ViewActionUtils {
             while ((title.get() == null) &&
                     (System.nanoTime() < timeout)) {
                 scenario.onActivity(activity -> {
-                    TextView found = findViewRecursive(
-                            activity.getWindow().getDecorView().getRootView(),
-                            expectedTitle);
+                    View root = activity.getWindow().getDecorView().getRootView();
+                    TextView found = findViewRecursive(root, expectedText);
                     title.set(found);
                 });
                 if (title.get() == null) try {
@@ -96,7 +98,7 @@ public class ViewActionUtils {
                 }
             }
             assertNotNull(String.format(Locale.US,
-                    "Dialog \"%s\" was not found", expectedTitle),
+                            "Dialog \"%s\" was not found", expectedText),
                     title.get());
         }
     }
@@ -131,6 +133,49 @@ public class ViewActionUtils {
     /**
      * Verify that a given button is present (and visible).
      * The button must exist within the activity content.
+     * This is the Espresso version.
+     *
+     * @param buttonId the resource ID of the button to check
+     */
+    private static void esAssertButtonShown(int buttonId) {
+        onView(withId(buttonId))
+                .check(matches(allOf(
+                        withEffectiveVisibility(Visibility.VISIBLE),
+                        isEnabled())));
+    }
+
+    /**
+     * Verify that a given view is a button that is visible.
+     * It may be a text {@link Button} or an {@link ImageButton}.
+     * The caller is responsible for finding the view.
+     *
+     * @param view the {@link View} to check
+     * @param buttonName the name of the button for any assertion message
+     * @param buttonId the resource ID of the button for any assertion message
+     *
+     * @throws AssertionError if the button is missing, not visible,
+     * or is neither a {@link Button} nor {@link ImageButton}.
+     */
+    private static void assertViewIsVisibleButton(
+            View view, String buttonName, int buttonId) {
+            assertNotNull(buttonName + " button is missing", view);
+            if (!(view instanceof Button) &&
+                    !(view instanceof ImageButton)) {
+                fail(String.format(Locale.US,
+                        "%s view with ID %d is neither a Button"
+                                + " nor an ImageButton",
+                        buttonName, buttonId));
+            }
+            assertTrue(buttonName + " button is not visible",
+                    view.isShown());
+            assertTrue(buttonName + " button is disabled",
+                    view.isEnabled());
+    }
+
+    /**
+     * Verify that a given button is present (and visible).
+     * The button must exist within the activity content.
+     * It may be a text {@link Button} or an {@link ImageButton}.
      *
      * @param scenario the scenario in which the test is running
      * @param buttonName the name of the button
@@ -142,19 +187,14 @@ public class ViewActionUtils {
             ActivityScenario<T> scenario,
             String buttonName, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId))
-                    .check(matches(allOf(
-                            withEffectiveVisibility(Visibility.VISIBLE),
-                            isEnabled())));
+            esAssertButtonShown(buttonId);
         } else {
+            final View[] buttonRef = new View[1];
             scenario.onActivity(activity -> {
-                Button button = activity.findViewById(buttonId);
-                assertNotNull(buttonName + " button is missing", button);
-                assertTrue(buttonName + " button is not visible",
-                        button.isShown());
-                assertTrue(buttonName + " button is disabled",
-                        button.isEnabled());
+                buttonRef[0] = activity.findViewById(buttonId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsVisibleButton(buttonRef[0], buttonName, buttonId);
         }
     }
 
@@ -171,24 +211,16 @@ public class ViewActionUtils {
     public static <T extends Activity> void assertButtonShown(
             String buttonName, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId))
-                    .check(matches(allOf(
-                            withEffectiveVisibility(Visibility.VISIBLE),
-                            isEnabled())));
+            esAssertButtonShown(buttonId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Button button = activity.findViewById(buttonId);
-                    assertNotNull(buttonName + " button is missing", button);
-                    assertTrue(buttonName + " button is not visible",
-                            button.isShown());
-                    assertTrue(buttonName + " button is disabled",
-                            button.isEnabled());
-                }
+            final View[] buttonRef = new View[1];
+            activity.runOnUiThread(() -> {
+                buttonRef[0] = activity.findViewById(buttonId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsVisibleButton(buttonRef[0], buttonName, buttonId);
         }
     }
 
@@ -206,19 +238,14 @@ public class ViewActionUtils {
             ActivityScenario<T> scenario, @NonNull final Dialog dialog,
             String buttonName, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId))
-                    .check(matches(allOf(
-                            withEffectiveVisibility(Visibility.VISIBLE),
-                            isEnabled())));
+            esAssertButtonShown(buttonId);
         } else {
+            final View[] buttonRef = new View[1];
             scenario.onActivity(activity -> {
-                Button button = dialog.findViewById(buttonId);
-                assertNotNull(buttonName + " button is missing", button);
-                assertTrue(buttonName + " button is not visible",
-                        button.isShown());
-                assertTrue(buttonName + " button is disabled",
-                        button.isEnabled());
+                buttonRef[0] = dialog.findViewById(buttonId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsVisibleButton(buttonRef[0], buttonName, buttonId);
         }
     }
 
@@ -236,24 +263,16 @@ public class ViewActionUtils {
             @NonNull final Dialog dialog,
             String buttonName, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId))
-                    .check(matches(allOf(
-                            withEffectiveVisibility(Visibility.VISIBLE),
-                            isEnabled())));
+            esAssertButtonShown(buttonId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Button button = dialog.findViewById(buttonId);
-                    assertNotNull(buttonName + " button is missing", button);
-                    assertTrue(buttonName + " button is not visible",
-                            button.isShown());
-                    assertTrue(buttonName + " button is disabled",
-                            button.isEnabled());
-                }
+            final View[] buttonRef = new View[1];
+            activity.runOnUiThread(() -> {
+                buttonRef[0] = dialog.findViewById(buttonId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsVisibleButton(buttonRef[0], buttonName, buttonId);
         }
     }
 
@@ -292,9 +311,48 @@ public class ViewActionUtils {
     }
 
     /**
+     * Click the designated button in a dialog.
+     * This is the Espresso-only version.
+     *
+     * @param buttonId the resource ID of the button to click
+     *
+     * @throws AssertionError if the button is not visible or enabled
+     */
+    private static void esPressDialogButton(int buttonId) {
+        // Check whether the button is visible; otherwise click() will fail.
+        boolean isVisible;
+        try {
+            onView(withId(buttonId))
+                    .inRoot(isDialog())
+                    .check(matches(isCompletelyDisplayed()));
+            isVisible = true;
+        } catch (AssertionError | Exception e) {
+            isVisible = false;
+        }
+        // Try scrolling to the button if necessary
+        if (!isVisible) try {
+            onView(withId(buttonId))
+                    .inRoot(isDialog())
+                    .perform(scrollTo());
+        } catch (AssertionError | Exception e) {
+            // Ignore
+            Log.w(LOG_TAG, String.format(Locale.US,
+                    "Button %d is not completedy visible"
+                            + " and we failed to scroll to it.",
+                    buttonId));
+        }
+        onView(withId(buttonId))
+                .inRoot(isDialog())
+                .check(matches(allOf(isEnabled(),
+                        isDisplayingAtLeast(90))))
+                .perform(click());
+    }
+
+    /**
      * Click the designated button.  The button must exist within the
      * activity content.  The test should have already verified that
-     * the button exists and is enabled.
+     * the button exists and is enabled.  It may be either a text
+     * {@link Button} or an {@link ImageButton}.
      *
      * @param scenario the scenario in which the test is running
      * @param buttonId the resource ID of the button to click
@@ -305,11 +363,20 @@ public class ViewActionUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             esPressButton(buttonId);
         } else {
+            final View[] buttonRef = new View[1];
             scenario.onActivity(activity -> {
-                Button button = activity.findViewById(buttonId);
-                assertNotNull(String.format(Locale.US,
-                        "No button found with ID %d", buttonId), button);
-                button.performClick();
+                buttonRef[0] = activity.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "No button found with ID %d", buttonId), buttonRef[0]);
+            if (!(buttonRef[0] instanceof Button) &&
+                    !(buttonRef[0] instanceof ImageButton))
+                fail(String.format(Locale.US,
+                        "View with ID %d is neither a Button nor ImageButton",
+                        buttonId));
+            scenario.onActivity(activity -> {
+                buttonRef[0].performClick();
             });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
@@ -319,6 +386,7 @@ public class ViewActionUtils {
      * Click the designated button in the currently running activity.
      * The button must exist within the activity content.  The test
      * should have already verified that the button exists and is enabled.
+     * It may be either a text {@link Button} or an {@link ImageButton}.
      *
      * @param buttonId the resource ID of the button to click
      */
@@ -328,14 +396,20 @@ public class ViewActionUtils {
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Button button = activity.findViewById(buttonId);
-                    assertNotNull(String.format(Locale.US,
-                            "No button found with ID %d", buttonId), button);
-                    button.performClick();
-                }
+            final View[] buttonRef = new View[1];
+            activity.runOnUiThread(() -> {
+                buttonRef[0] = activity.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "No button found with ID %d", buttonId), buttonRef[0]);
+            if (!(buttonRef[0] instanceof Button) &&
+                    !(buttonRef[0] instanceof ImageButton))
+                fail(String.format(Locale.US,
+                        "View with ID %d is neither a Button nor ImageButton",
+                        buttonId));
+            activity.runOnUiThread(() -> {
+                    buttonRef[0].performClick();
             });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
@@ -348,17 +422,24 @@ public class ViewActionUtils {
      * @param dialog the {@link Dialog} containing the button.
      * @param buttonId the resource ID of the button to click
      */
-    public static <T extends Activity> void pressButton(
+    public static <T extends Activity> void pressDialogButton(
             ActivityScenario<T> scenario, @NonNull final Dialog dialog,
             int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            esPressButton(buttonId);
+            esPressDialogButton(buttonId);
         } else {
+            View[] buttonRef = new View[1];
             scenario.onActivity(activity -> {
-                Button button = dialog.findViewById(buttonId);
-                assertNotNull(String.format(Locale.US,
-                        "No button found with ID %d", buttonId), button);
-                button.performClick();
+                buttonRef[0] = dialog.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "No button found with ID %d", buttonId), buttonRef[0]);
+            assertTrue(String.format(Locale.US,
+                            "View with ID %d is not a Button", buttonId),
+                    buttonRef[0] instanceof Button);
+            scenario.onActivity(activity -> {
+                buttonRef[0].performClick();
             });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
@@ -370,48 +451,28 @@ public class ViewActionUtils {
      * @param dialog the {@link Dialog} containing the button.
      * @param buttonId the resource ID of the button to click
      */
-    public static <T extends Activity> void pressButton(
+    public static <T extends Activity> void pressDialogButton(
             @NonNull final Dialog dialog, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            esPressButton(buttonId);
+            esPressDialogButton(buttonId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Button button = dialog.findViewById(buttonId);
-                    assertNotNull(String.format(Locale.US,
-                            "No button found with ID %d", buttonId), button);
-                    button.performClick();
-                }
+            final View[] buttonRef = new View[1];
+            activity.runOnUiThread(() -> {
+                buttonRef[0] = dialog.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "No button found with ID %d", buttonId), buttonRef[0]);
+            assertTrue(String.format(Locale.US,
+                            "View with ID %d is not a Button", buttonId),
+                    buttonRef[0] instanceof Button);
+            activity.runOnUiThread(() -> {
+                    buttonRef[0].performClick();
             });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-    }
-
-    /**
-     * Click the designated alert dialog button.  The caller should have
-     * already asserted that the dialog is shown via
-     * {@link #assertAlertDialogShown(ActivityScenario, String)}.
-     *
-     * @param scenario the scenario in which the test is running
-     * @param buttonId one of {@link android.R.id#button1} (positive),
-     * {@link android.R.id#button2} (negative), or
-     * {@link android.R.id#button3} (neutral).
-     * @param buttonText the text that should be shown on this button
-     */
-    public static <T extends Activity> void pressAlertDialogButton(
-            ActivityScenario<T> scenario, int buttonId, String buttonText) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            onView(withText(buttonText))
-                    .inRoot(isDialog())
-                    .perform(click());
-        } else {
-            scenario.onActivity(activity -> {
-                activity.findViewById(buttonId).performClick();
-            });
-        }
     }
 
     /**
@@ -424,6 +485,7 @@ public class ViewActionUtils {
             InstrumentationRegistry.getInstrumentation()
                     .sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
         }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
     }
 
     /**
@@ -441,21 +503,24 @@ public class ViewActionUtils {
     public static <T extends Activity> String getElementText(
             ActivityScenario<T> scenario,
             String viewName, int fieldId) {
-        final String[] text = new String[1];
+        final View[] viewRef = new View[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(fieldId))
                     .check((view, noViewFoundException) -> {
-                        text[0] = ((TextView) view).getText().toString();
+                        viewRef[0] = view;
                     });
         } else {
             scenario.onActivity(activity -> {
-                TextView textField = (TextView) activity.findViewById(fieldId);
-                assertNotNull(String.format(Locale.US,
-                        "%s is missing", viewName), textField);
-                text[0] = textField.getText().toString();
+                viewRef[0] = activity.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         }
-        return text[0];
+        assertNotNull(String.format(Locale.US,
+                "%s is missing", viewName), viewRef[0]);
+        assertTrue(String.format(Locale.US,
+                        "%s with ID %d is not a TextView", viewName, fieldId),
+                viewRef[0] instanceof TextView);
+        return ((TextView) viewRef[0]).getText().toString();
     }
 
     /**
@@ -471,27 +536,26 @@ public class ViewActionUtils {
      */
     public static String getElementText(
             String viewName, int fieldId) {
-        final String[] text = new String[1];
+        final View[] viewRef = new View[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(fieldId))
                     .check((view, noViewFoundException) -> {
-                        text[0] = ((TextView) view).getText().toString();
+                        viewRef[0] = view;
                     });
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    TextView textField = (TextView) activity
-                            .findViewById(fieldId);
-                    assertNotNull(String.format(Locale.US,
-                            "%s is missing", viewName), textField);
-                    text[0] = textField.getText().toString();
-                }
+            activity.runOnUiThread(() -> {
+                viewRef[0] = activity.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         }
-        return text[0];
+        assertNotNull(String.format(Locale.US,
+                "%s is missing", viewName), viewRef[0]);
+        assertTrue(String.format(Locale.US,
+                        "%s with ID %d is not a TextView", viewName, fieldId),
+                viewRef[0] instanceof TextView);
+        return ((TextView) viewRef[0]).getText().toString();
     }
 
     /**
@@ -510,21 +574,24 @@ public class ViewActionUtils {
             ActivityScenario<T> scenario,
             @NonNull final Dialog dialog,
             String viewName, int fieldId) {
-        final String[] text = new String[1];
+        final View[] viewRef = new View[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(fieldId))
                     .check((view, noViewFoundException) -> {
-                        text[0] = ((TextView) view).getText().toString();
+                        viewRef[0] = view;
                     });
         } else {
             scenario.onActivity(activity -> {
-                TextView textField = (TextView) dialog.findViewById(fieldId);
-                assertNotNull(String.format(Locale.US,
-                        "%s is missing", viewName), textField);
-                text[0] = textField.getText().toString();
+                viewRef[0] = dialog.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         }
-        return text[0];
+        assertNotNull(String.format(Locale.US,
+                "%s is missing", viewName), viewRef[0]);
+        assertTrue(String.format(Locale.US,
+                        "%s with ID %d is not a TextView", viewName, fieldId),
+                viewRef[0] instanceof TextView);
+        return ((TextView) viewRef[0]).getText().toString();
     }
 
     /**
@@ -541,27 +608,40 @@ public class ViewActionUtils {
      */
     public static String getElementText(@NonNull final Dialog dialog,
                                          String viewName, int fieldId) {
-        final String[] text = new String[1];
+        final View[] viewRef = new View[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             onView(withId(fieldId))
                     .check((view, noViewFoundException) -> {
-                        text[0] = ((TextView) view).getText().toString();
+                        viewRef[0] = view;
                     });
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    TextView textField = (TextView) dialog
-                            .findViewById(fieldId);
-                    assertNotNull(String.format(Locale.US,
-                            "%s is missing", viewName), textField);
-                    text[0] = textField.getText().toString();
-                }
+            activity.runOnUiThread(() -> {
+                viewRef[0] = dialog.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         }
-        return text[0];
+        assertNotNull(String.format(Locale.US,
+                "%s is missing", viewName), viewRef[0]);
+        assertTrue(String.format(Locale.US,
+                        "%s with ID %d is not a TextView", viewName, fieldId),
+                viewRef[0] instanceof TextView);
+        return ((TextView) viewRef[0]).getText().toString();
+    }
+
+    /**
+     * Change the content of an edit text field.  The field must exist
+     * within the activity content.  This is the Espresso version.
+     *
+     * @param fieldId the resource ID of the edit text field
+     * @param newText the text to set in the edit text field
+     */
+    private static void esSetEditText(int fieldId, final String newText) {
+        onView(withId(fieldId))
+                .check(matches(isAssignableFrom(EditText.class)))
+                .perform(requestFocus())
+                .perform(replaceText(newText));
     }
 
     /**
@@ -580,84 +660,92 @@ public class ViewActionUtils {
             ActivityScenario<T> scenario,
             String fieldName, int fieldId, final String newText) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check(matches(isAssignableFrom(EditText.class)))
-                    .perform(requestFocus())
-                    .perform(replaceText(newText));
+            esSetEditText(fieldId, newText);
         } else {
+            final View[] viewRef = new View[1];
             scenario.onActivity(activity -> {
-                EditText textField = (EditText) activity.findViewById(fieldId);
-                assertNotNull(String.format(Locale.US,
-                        "%s is missing", fieldName), textField);
-                textField.requestFocus();
-                textField.setText(newText);
+                viewRef[0] = activity.findViewById(fieldId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "%s is missing", fieldName), viewRef[0]);
+            assertTrue(String.format(Locale.US,
+                "%s with ID %d is not an EditText", fieldName, fieldId),
+                    viewRef[0] instanceof EditText);
+            scenario.onActivity(activity -> {
+                viewRef[0].requestFocus();
+                ((EditText) viewRef[0]).setText(newText);
             });
         }
     }
 
     /**
-     * Return the content of a text view in the currently running activity.
-     * The text view must exist within the activity content.
+     * Change the content of an edit text field in the currently running
+     * activity.  The field must exist within the activity content.
      *
-     * @param viewName the name of the text view to use for any assertion error
-     * @param fieldId the resource ID of the text view
-     *
-     * @return the text of the UI element
+     * @param fieldName the name of the edit text field to use
+     * for any assertion error
+     * @param fieldId the resource ID of the edit text field
+     * @param newText the text to set in the edit text field
      *
      * @throws AssertionError if the given field is missing
      */
-    public static void setEditText(String viewName, int fieldId,
+    public static void setEditText(String fieldName, int fieldId,
                                     final String newText) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check(matches(isAssignableFrom(EditText.class)))
-                    .perform(requestFocus())
-                    .perform(replaceText(newText));
+            esSetEditText(fieldId, newText);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    EditText textField = (EditText) activity
-                            .findViewById(fieldId);
-                    assertNotNull(String.format(Locale.US,
-                            "%s is missing", viewName), textField);
-                    textField.requestFocus();
-                    textField.setText(newText);
-                }
+            final View[] viewRef = new View[1];
+            activity.runOnUiThread(() -> {
+                viewRef[0] = activity.findViewById(fieldId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "%s is missing", fieldName), viewRef[0]);
+            assertTrue(String.format(Locale.US,
+                "%s with ID %d is not an EditText", fieldName, fieldId),
+                    viewRef[0] instanceof EditText);
+            activity.runOnUiThread(() -> {
+                viewRef[0].requestFocus();
+                ((EditText) viewRef[0]).setText(newText);
             });
         }
     }
 
     /**
-     * Return the content of a text view within a dialog.
+     * Change the content of an edit text view within a dialog.
      *
      * @param scenario the scenario in which the test is running
      * @param dialog the {@link Dialog} containing the text view.
-     * @param viewName the name of the text view to use for any assertion error
-     * @param fieldId the resource ID of the text view
-     *
-     * @return the text of the UI element
+     * @param fieldName the name of the edit text field to use
+     * for any assertion error
+     * @param fieldId the resource ID of the edit text field
+     * @param newText the text to set in the edit text field
      *
      * @throws AssertionError if the given field is missing
      */
     public static <T extends Activity> void setEditText(
             ActivityScenario<T> scenario,
             @NonNull final Dialog dialog,
-            String viewName, int fieldId, final String newText) {
+            String fieldName, int fieldId, final String newText) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check(matches(isAssignableFrom(EditText.class)))
-                    .perform(requestFocus())
-                    .perform(replaceText(newText));
+            esSetEditText(fieldId, newText);
         } else {
+            final View[] viewRef = new View[1];
             scenario.onActivity(activity -> {
-                EditText textField = (EditText) dialog.findViewById(fieldId);
-                assertNotNull(String.format(Locale.US,
-                        "%s is missing", viewName), textField);
-                textField.requestFocus();
-                textField.setText(newText);
+                viewRef[0] = dialog.findViewById(fieldId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "%s is missing", fieldName), viewRef[0]);
+            assertTrue(String.format(Locale.US,
+                "%s with ID %d is not an EditText", fieldName, fieldId),
+                    viewRef[0] instanceof EditText);
+            scenario.onActivity(activity -> {
+                viewRef[0].requestFocus();
+                ((EditText) viewRef[0]).setText(newText);
             });
         }
     }
@@ -666,36 +754,84 @@ public class ViewActionUtils {
      * Change the content of an edit text field within a dialog of
      * the currently running activity.
      *
-     * @param dialog the {@link Dialog} containing the text view.
-     * @param viewName the name of the text view to use for any assertion error
-     * @param fieldId the resource ID of the text view
+     * @param dialog the {@link Dialog} containing the edit text field.
+     * @param fieldName the name of the edit text field to use
+     * for any assertion error
+     * @param fieldId the resource ID of the edit text field
      * @param newText the text to set in the edit text field
      *
      * @throws AssertionError if the given field is missing
      */
     public static void setEditText(
             @NonNull final Dialog dialog,
-            String viewName, int fieldId, final String newText) {
+            String fieldName, int fieldId, final String newText) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check(matches(isAssignableFrom(EditText.class)))
-                    .perform(requestFocus())
-                    .perform(replaceText(newText));
+            esSetEditText(fieldId, newText);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    EditText textField = (EditText) dialog
-                            .findViewById(fieldId);
-                    assertNotNull(String.format(Locale.US,
-                            "%s is missing", viewName), textField);
-                    textField.requestFocus();
-                    textField.setText(newText);
-                }
+            final View[] viewRef = new View[1];
+            activity.runOnUiThread(() -> {
+                viewRef[0] = dialog.findViewById(fieldId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "%s is missing", fieldName), viewRef[0]);
+            assertTrue(String.format(Locale.US,
+                            "%s with ID %d is not an EditText",
+                            fieldName, fieldId),
+                    viewRef[0] instanceof EditText);
+            activity.runOnUiThread(() -> {
+                viewRef[0].requestFocus();
+                ((EditText) viewRef[0]).setText(newText);
             });
         }
+    }
+
+    /**
+     * Return the state of a check box.  The check box must exist
+     * within the activity content.  This is the Espresso-only version.
+     *
+     * @param fieldId the resource ID of the check box
+     *
+     * @return whether the box is checked
+     *
+     * @throws AssertionError if the given field is missing or is not a
+     * {@link CheckBox}
+     */
+    private static boolean esGetCheckboxState(int fieldId) {
+        final boolean[] state = new boolean[1];
+        onView(withId(fieldId))
+                .check(matches(isAssignableFrom(CheckBox.class)))
+                .check((view, noViewFoundException) -> {
+                    state[0] = ((CheckBox) view).isChecked();
+                });
+        return state[0];
+    }
+
+    /**
+     * Return the state of the given check box.  This is the
+     * non-Espresso version; the caller is responsible for obtaining
+     * the check box&rsquo; {@link View}.
+     *
+     * @param view the view of the check box (will be checked for {@code null}
+     * @param viewName the name of the check box to use for any assertion error
+     * @param fieldId the resource ID of the check box for any assertion error
+     *
+     * @return whether the box is checked
+     *
+     * @throws AssertionError if the {@code view} is {@code null} or
+     * is not a {@link CheckBox}.
+     */
+    private static boolean getCheckboxState(
+            View view, String viewName, int fieldId) {
+        assertNotNull(String.format(Locale.US,
+                "Checkbox %s with resource ID %d was not found",
+                viewName, fieldId), view);
+        assertTrue(String.format(Locale.US,
+                "%s with ID %d is not a CheckBox", viewName, fieldId),
+                view instanceof CheckBox);
+        return ((CheckBox) view).isChecked();
     }
 
     /**
@@ -706,28 +842,23 @@ public class ViewActionUtils {
      * @param viewName the name of the check box to use for any assertion error
      * @param fieldId the resource ID of the check box
      *
-     * @return the text of the UI element
+     * @return whether the box is checked
      *
      * @throws AssertionError if the given field is missing
      */
     public static <T extends Activity> boolean getCheckboxState(
             ActivityScenario<T> scenario,
             String viewName, int fieldId) {
-        final boolean[] state = new boolean[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check((view, noViewFoundException) -> {
-                        state[0] = ((CheckBox) view).isChecked();
-                    });
+            return esGetCheckboxState(fieldId);
         } else {
+            final View[] viewRef = new View[1];
             scenario.onActivity(activity -> {
-                CheckBox box = (CheckBox) activity.findViewById(fieldId);
-                assertNotNull(String.format(Locale.US,
-                        "%s is missing", viewName), box);
-                state[0] = box.isChecked();
+                viewRef[0] = activity.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getCheckboxState(viewRef[0], viewName, fieldId);
         }
-        return state[0];
     }
 
     /**
@@ -744,25 +875,17 @@ public class ViewActionUtils {
     public static boolean getCheckboxState(String viewName, int fieldId) {
         final boolean[] state = new boolean[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check((view, noViewFoundException) -> {
-                        state[0] = ((CheckBox) view).isChecked();
-                    });
+            return esGetCheckboxState(fieldId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    CheckBox box = (CheckBox) activity
-                            .findViewById(fieldId);
-                    assertNotNull(String.format(Locale.US,
-                            "%s is missing", viewName), box);
-                    state[0] = box.isChecked();
-                }
+            final View[] viewRef = new View[1];
+            activity.runOnUiThread(() -> {
+                viewRef[0] = activity.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getCheckboxState(viewRef[0], viewName, fieldId);
         }
-        return state[0];
     }
 
     /**
@@ -783,19 +906,15 @@ public class ViewActionUtils {
             String viewName, int fieldId) {
         final boolean[] state = new boolean[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check((view, noViewFoundException) -> {
-                        state[0] = ((CheckBox) view).isChecked();
-                    });
+            return esGetCheckboxState(fieldId);
         } else {
+            final View[] viewRef = new View[1];
             scenario.onActivity(activity -> {
-                CheckBox box = (CheckBox) dialog.findViewById(fieldId);
-                assertNotNull(String.format(Locale.US,
-                        "%s is missing", viewName), box);
-                state[0] = box.isChecked();
+                viewRef[0] = dialog.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getCheckboxState(viewRef[0], viewName, fieldId);
         }
-        return state[0];
     }
 
     /**
@@ -814,25 +933,17 @@ public class ViewActionUtils {
                                             String viewName, int fieldId) {
         final boolean[] state = new boolean[1];
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(fieldId))
-                    .check((view, noViewFoundException) -> {
-                        state[0] = ((CheckBox) view).isChecked();
-                    });
+            return esGetCheckboxState(fieldId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    CheckBox box = (CheckBox) dialog
-                            .findViewById(fieldId);
-                    assertNotNull(String.format(Locale.US,
-                            "%s is missing", viewName), box);
-                    state[0] = box.isChecked();
-                }
+            final View[] viewRef = new View[1];
+            activity.runOnUiThread(() -> {
+                viewRef[0] = dialog.findViewById(fieldId);
             });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getCheckboxState(viewRef[0], viewName, fieldId);
         }
-        return state[0];
     }
 
     /**
@@ -873,9 +984,19 @@ public class ViewActionUtils {
                 }
             });
         } else {
+            final View[] viewRef = new View[1];
             scenario.onActivity(activity -> {
-                TimePicker tp = dialog.findViewById(pickerId);
-                assertNotNull("TimePicker is missing", tp);
+                viewRef[0] = dialog.findViewById(pickerId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertNotNull(String.format(Locale.US,
+                    "TimePicker with resource ID %d was not found",
+                    pickerId), viewRef[0]);
+            assertTrue(String.format(Locale.US,
+                            "View with ID %d is not a TimePicker", pickerId),
+                    viewRef[0] instanceof TimePicker);
+            scenario.onActivity(activity -> {
+                TimePicker tp = (TimePicker) viewRef[0];
                 tp.setHour(hour);
                 tp.setMinute(minute);
             });

@@ -18,6 +18,7 @@ package com.xmission.trevin.android.todo.ui;
 
 import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.matcher.RootMatchers.isDialog;
 import static com.xmission.trevin.android.todo.ui.CategoryFilterTests.randomCategoryName;
 import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
 import static com.xmission.trevin.android.todo.util.RandomToDoUtils.*;
@@ -253,9 +254,14 @@ public class ToDoDetailsActivityTests {
                         .getCategoryPosition(expectedCategory.getId()));
             });
             pressButton(R.id.DetailButtonDueDate);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.DueDateOther));
             // Press the `dueDaysOffset'th item in the pop-up list
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-                onData(anything()).atPosition(dueDaysOffset).perform(click());
+                onData(anything())
+                        .inRoot(isDialog())
+                        .atPosition(dueDaysOffset)
+                        .perform(click());
             } else {
                 wrapper.onActivity(activity -> {
                     AlertDialog dialog = (AlertDialog) activity.dueDateListDialog;
@@ -270,14 +276,32 @@ public class ToDoDetailsActivityTests {
             // Having a due date should display and enable the
             // "Hide until", "Alarm", and "Repeat" buttons.
             pressButton(wrapper.getScenario(), R.id.DetailButtonHideUntil);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.HideTextHide));
+            Dialog[] dialogRef = new Dialog[1];
+            wrapper.onActivity(activity -> {
+                dialogRef[0] = activity.hideUntilDialog;
+            });
+            instrument.waitForIdleSync();
+            assertNotNull("The activity did not set hideUntilDialog",
+                    dialogRef[0]);
             // These dialogs may open the soft keyboard again
             hideKeyboard(wrapper.getScenario());
-            pressButton(R.id.HideCheckBox);
+            pressDialogButton(dialogRef[0], R.id.HideCheckBox);
             setEditText("Hide days earlier", R.id.HideEditDaysEarlier,
                     Integer.toString(expectedHide));
-            pressButton(R.id.HideButtonOK);
+            pressDialogButton(dialogRef[0], R.id.HideButtonOK);
             pressButton(wrapper.getScenario(), R.id.DetailButtonAlarm);
-            pressButton(R.id.AlarmCheckBox);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.AlarmTextAlarm));
+            dialogRef[0] = null;
+            wrapper.onActivity(activity -> {
+                dialogRef[0] = activity.alarmDialog;
+            });
+            instrument.waitForIdleSync();
+            assertNotNull("The activity did not set alarmDialog",
+                    dialogRef[0]);
+            pressDialogButton(dialogRef[0], R.id.AlarmCheckBox);
             hideKeyboard(wrapper.getScenario());
             setEditText("Alarm days earlier", R.id.AlarmEditDaysEarlier,
                     Integer.toString(expectedAlarmAdvance));
@@ -287,7 +311,7 @@ public class ToDoDetailsActivityTests {
             });
             setTime(wrapper.getScenario(), alarmDialog[0], R.id.AlarmTimePicker,
                     expectedAlarmTime.getHour(), expectedAlarmTime.getMinute());
-            pressButton(R.id.AlarmButtonOK);
+            pressDialogButton(dialogRef[0], R.id.AlarmButtonOK);
             /*
              * Setting the alarm may trigger an alert dialog to ask the user
              * to grant notification permission.  If present, we need to
@@ -308,6 +332,8 @@ public class ToDoDetailsActivityTests {
                 instrument.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             }
             pressButton(wrapper.getScenario(), R.id.DetailButtonRepeat);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatOther));
             // Press the `repeatTypeOffset'th item in the pop-up list
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
                 onData(anything()).atPosition(repeatTypeOffset).perform(click());
@@ -524,12 +550,17 @@ public class ToDoDetailsActivityTests {
                         .getCategoryPosition(expectedCategory.getId()));
             });
             pressButton(R.id.DetailButtonDueDate);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.DueDateOther));
             // Press the "No Date" item; this should be the one
             // immediately following the formatted dates for the next week.
             int noDatePosition = testContext.getResources()
                     .getStringArray(R.array.DueDateFormatList).length;
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-                onData(anything()).atPosition(noDatePosition).perform(click());
+                onData(anything())
+                        .inRoot(isDialog())
+                        .atPosition(noDatePosition)
+                        .perform(click());
             } else {
                 wrapper.onActivity(activity -> {
                     AlertDialog dialog = (AlertDialog) activity.dueDateListDialog;
@@ -873,13 +904,20 @@ public class ToDoDetailsActivityTests {
             assertIntentHasStringExtra(ToDoNoteActivity.class,
                     ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
             assertButtonShown("Delete", R.id.NoteButtonDelete);
+            Activity currentActivity = getCurrentActivity();
+            assertEquals("Current activity", ToDoNoteActivity.class,
+                    currentActivity.getClass());
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 pressButton(R.id.NoteButtonDelete);
-                assertAlertDialogShown(wrapper.getScenario(), testContext
+                assertDialogShown(wrapper.getScenario(), testContext
                         .getString(R.string.ConfirmationTextDeleteNote));
-                pressAlertDialogButton(wrapper.getScenario(), android.R.id.button1,
-                        testContext.getString(R.string.ConfirmationButtonOK));
+                AlertDialog dialog = ((ToDoNoteActivity)
+                        currentActivity).deleteConfirmationDialog;
+                assertNotNull("Note activity did not set its"
+                        + " deleteConfirmationDialog", dialog);
+                pressDialogButton(wrapper.getScenario(),
+                        dialog, android.R.id.button1);
                 saveObserver.assertNotChanged(
                         "Note was deleted before the item was saved!");
                 // we're going to wait for this change.

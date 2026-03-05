@@ -42,7 +42,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle.State;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.NoMatchingViewException;
 import androidx.test.espresso.intent.Intents;
@@ -67,7 +66,7 @@ public class LaunchUtils {
      * framework; for Baklava and up, we have to look at the current
      * activity so the caller <i>must</i> ensure it has called the
      * instrumentation&rsquo;s {@link Instrumentation#waitForIdleSync()}
-     * before this.  (The {@link ViewActionUtils#pressButton} methods
+     * before this.  (The {@link ViewActionUtils#pressDialogButton} methods
      * do this before returning.)
      *
      * @param expectedActivityClass the class of the activity that should

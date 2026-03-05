@@ -303,6 +303,9 @@ public class ToDoNoteActivity extends Activity {
         super.onSaveInstanceState(outState);
     }
 
+    // This alert dialog is made available at the package level for testing
+    AlertDialog discardConfirmationDialog = null;
+
     /** Called when the user presses the Back button */
     @Override
     public void onBackPressed() {
@@ -311,23 +314,27 @@ public class ToDoNoteActivity extends Activity {
         String note = toDoNote.getText().toString();
         if (!TextUtils.equals(oldNoteText, note)) {
             Log.d(TAG, "Note has been changed; asking for confirmation");
-            new AlertDialog.Builder(this)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .setMessage(R.string.ConfirmUnsavedChanges)
-                    .setTitle(R.string.AlertUnsavedChangesTitle)
-                    .setNegativeButton(R.string.ConfirmationButtonCancel,
-                            ToDoDetailsActivity.DISMISS_LISTENER)
-                    .setPositiveButton(R.string.ConfirmationButtonDiscard,
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog,
-                                                    int which) {
-                                    dialog.dismiss();
-                                    Log.d(TAG, "Calling superclass onBackPressed");
-                                    ToDoNoteActivity.super.onBackPressed();
-                                }
-                            })
-                    .create().show();
+            if (discardConfirmationDialog == null) {
+                discardConfirmationDialog = new AlertDialog
+                        .Builder(this)
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .setMessage(R.string.ConfirmUnsavedChanges)
+                        .setTitle(R.string.AlertUnsavedChangesTitle)
+                        .setNegativeButton(R.string.ConfirmationButtonCancel,
+                                ToDoDetailsActivity.DISMISS_LISTENER)
+                        .setPositiveButton(R.string.ConfirmationButtonDiscard,
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog,
+                                                        int which) {
+                                        dialog.dismiss();
+                                        Log.d(TAG, "Calling superclass onBackPressed");
+                                        ToDoNoteActivity.super.onBackPressed();
+                                    }
+                                })
+                        .create();
+            }
+            discardConfirmationDialog.show();
             return;
         }
         super.onBackPressed();
@@ -407,19 +414,25 @@ public class ToDoNoteActivity extends Activity {
         }
     }
 
+    // This alert dialog is made available at the package level for testing
+    AlertDialog deleteConfirmationDialog = null;
+
     class DeleteButtonOnClickListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
             Log.d(TAG, "NoteButtonDelete.onClick");
-            AlertDialog.Builder builder =
-                    new AlertDialog.Builder(ToDoNoteActivity.this);
-            builder.setIcon(android.R.drawable.ic_dialog_alert);
-            builder.setMessage(R.string.ConfirmationTextDeleteNote);
-            builder.setNegativeButton(R.string.ConfirmationButtonCancel,
-                    ToDoDetailsActivity.DISMISS_LISTENER);
-            builder.setPositiveButton(R.string.ConfirmationButtonOK,
-                    new DeleteConfirmedOnClickListener());
-            builder.create().show();
+            if (deleteConfirmationDialog == null) {
+                deleteConfirmationDialog = new AlertDialog
+                        .Builder(ToDoNoteActivity.this)
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .setMessage(R.string.ConfirmationTextDeleteNote)
+                        .setNegativeButton(R.string.ConfirmationButtonCancel,
+                                ToDoDetailsActivity.DISMISS_LISTENER)
+                        .setPositiveButton(R.string.ConfirmationButtonOK,
+                                new DeleteConfirmedOnClickListener())
+                        .create();
+            }
+            deleteConfirmationDialog.show();
         }
     }
 

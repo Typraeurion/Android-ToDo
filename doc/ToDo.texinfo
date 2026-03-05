@@ -90,8 +90,9 @@ The application is designed for compatibility with Android 14
 (Upside-down Cake) but also runs on Android 4.0 (Ice Cream Sandwich)
 through 14 (@emph{FIX ME}: Upside-down Cake) which should cover at
 least 65.5% of Android devices on the market as of February 2026.  (It
-has been tested on Ice Cream Sandwich, Upside-down Cake, @emph{FIX
-ME}.)  Support for newer Android devices is planned.
+has been tested on Ice Cream Sandwich, Jellybean, KitKat, Lollipop,
+Marshmallow, Nougat, Oreo, Quince Tart, Snow Cone, Upside-down Cake,
+@emph{FIX ME}.)  Support for newer Android devices is planned.
 
 @node Permissions, Adding To Do Items, Device Compatibility, The Basics
 @section Permissions
@@ -786,7 +787,7 @@ same password if you wish.)}
 @chapter Known Bugs
 
 The following bugs are known to exist in version 1.5.0 (build date
-2026.03.03) of To Do.  If you encounter any other bugs, please go to
+2026.03.05) of To Do.  If you encounter any other bugs, please go to
 my project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}
@@ -822,7 +823,7 @@ When importing a backup file, the progress bar may not update properly.
 @end itemize
 
 The following bugs were in the 1.4.3 release (built 2025.12.29) but
-have been fixed as of 1.5.0 (built 2026.12.17).
+have been fixed as of 1.5.0 (built 2026.03.05).
 
 @itemize @bullet
 @item

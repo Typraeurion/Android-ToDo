@@ -746,7 +746,6 @@ public class ToDoDetailsActivity extends Activity {
     @Override
     public Dialog onCreateDialog(int id) {
         Log.d(TAG, String.format(Locale.US, ".onCreateDialog(%d)", id));
-        AlertDialog.Builder builder;
         switch (id) {
             default:
                 Log.e(TAG, ".onCreateDialog: undefined dialog ID " + id);
@@ -755,10 +754,10 @@ public class ToDoDetailsActivity extends Activity {
             case DUEDATE_LIST_ID:
                 if (dueDateAdapter == null)
                     dueDateAdapter = new DueDateSelectAdapter(this, prefs);
-                builder = new AlertDialog.Builder(this);
-                builder.setAdapter(dueDateAdapter,
-                        new DueDateListSelectionListener());
-                dueDateListDialog = builder.create();
+                dueDateListDialog = new AlertDialog.Builder(this)
+                        .setAdapter(dueDateAdapter,
+                                new DueDateListSelectionListener())
+                        .create();
                 return dueDateListDialog;
 
             case DUEDATE_DIALOG_ID:
@@ -814,10 +813,10 @@ public class ToDoDetailsActivity extends Activity {
             case REPEAT_LIST_ID:
                 String[] repeatListStrings =
                         getResources().getStringArray(R.array.RepeatList);
-                builder = new AlertDialog.Builder(this);
-                builder.setItems(repeatListStrings,
-                        new RepeatListSelectionListener());
-                repeatListDialog = builder.create();
+                repeatListDialog = new AlertDialog.Builder(this)
+                        .setItems(repeatListStrings,
+                                new RepeatListSelectionListener())
+                        .create();
                 return repeatListDialog;
 
             case ENDDATE_DIALOG_ID:
