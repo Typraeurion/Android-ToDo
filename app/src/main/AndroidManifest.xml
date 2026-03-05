@@ -137,6 +137,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- This Android service declaration is required to support using a
+             ForegroundInfo notification in AlarmWorker. -->
+        <service android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge"/>
+
     </application>
 
 </manifest>
