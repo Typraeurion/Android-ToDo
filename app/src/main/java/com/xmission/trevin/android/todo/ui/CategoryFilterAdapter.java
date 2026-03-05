@@ -197,18 +197,18 @@ public class CategoryFilterAdapter extends BaseAdapter {
     /**
      * Read in the category list if we don&rsquo;t already have it.
      *
-     * @return true if the category list is available, false otherwise
+     * @return the category list if it is available, {@code null} otherwise
      */
-    private synchronized boolean readCategories() {
+    private synchronized List<ToDoCategory> readCategories() {
         Log.d(TAG, ".readCategories(): cache is currently "
                 + ((categories == null) ? "empty" : "full"));
         if (categories != null)
-            return true;
+            return categories;
         if (!isOpen) try {
             wait(5000);
         } catch (InterruptedException e) {
             Log.e(TAG, "Did not open the repository within 5 seconds");
-            return false;
+            return null;
         }
         if (categories == null) {
             if (Looper.getMainLooper().getThread() != Thread.currentThread()) {
@@ -226,7 +226,7 @@ public class CategoryFilterAdapter extends BaseAdapter {
                 }
             }
         }
-        return (categories != null);
+        return categories;
     }
 
     /** Indicate that all items in this adapter are enabled */
@@ -242,7 +242,8 @@ public class CategoryFilterAdapter extends BaseAdapter {
      */
     @Override
     public synchronized int getCount() {
-        if (readCategories())
+        List<ToDoCategory> categories = readCategories();
+        if (categories != null)
             return categories.size() + 2;
         return 2;
     }
@@ -268,7 +269,8 @@ public class CategoryFilterAdapter extends BaseAdapter {
         }
         if (position == 0)
             return ALL_CATEGORY;
-        if (!readCategories() || (position == categories.size() + 1))
+        List<ToDoCategory> categories = readCategories();
+        if ((categories == null) || (position == categories.size() + 1))
             return EDIT_CATEGORY;
         if (position > categories.size() + 1) {
             Log.w(TAG, String.format(
@@ -295,7 +297,8 @@ public class CategoryFilterAdapter extends BaseAdapter {
     public long getItemId(int position) {
         if (position <= 0)
             return ToDoPreferences.ALL_CATEGORIES;
-        if (!readCategories() || (position >= categories.size() + 1))
+        List<ToDoCategory> categories = readCategories();
+        if ((categories == null) || (position >= categories.size() + 1))
             return EDIT_CATEGORY.getId();
         return categories.get(position - 1).getId();
     }
@@ -311,6 +314,9 @@ public class CategoryFilterAdapter extends BaseAdapter {
      */
     public int getCategoryPosition(long categoryId) {
         if (categoryId == ToDoPreferences.ALL_CATEGORIES)
+            return 0;
+        List<ToDoCategory> categories = readCategories();
+        if (categories == null)
             return 0;
         for (int i = 0; i < categories.size(); i++) {
             if (categories.get(i).getId() == categoryId)

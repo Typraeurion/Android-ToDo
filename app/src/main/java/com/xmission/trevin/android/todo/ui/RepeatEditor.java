@@ -912,7 +912,7 @@ public class RepeatEditor extends FrameLayout
     }
 
     class EndDateOnDateSetListener
-            implements CalendarDatePickerDialog.OnDateSetListener {
+            implements CalendarDatePicker.OnDateSetListener {
         @Override
         public void onDateSet(CalendarDatePicker picker,
                               LocalDate date) {

@@ -51,6 +51,7 @@ import com.xmission.trevin.android.todo.provider.TestObserver;
 import com.xmission.trevin.android.todo.provider.ToDoCursor;
 import com.xmission.trevin.android.todo.provider.ToDoRepositoryImpl;
 import com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns;
+import com.xmission.trevin.android.todo.util.ActivityScenarioResultsWrapper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -227,26 +228,27 @@ public class ToDoDetailsActivityTests {
                     + repeatTypeOffset);
         }
 
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Step 1: Check the default category first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
             assertEquals("Selected category ID", ToDoCategory.UNFILED,
                     categorySelect.getSelectedItemId());
 
             // Step 2: Fill in our custom details
-            setEditText(scenario, "Description",
+            setEditText(wrapper.getScenario(), "Description",
                     R.id.DetailEditTextDescription, expectedDescription);
             // The "OK" button should be enabled now that the description is set
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
-            setEditText(scenario, "Priority",
+            assertButtonShown(wrapper.getScenario(),
+                    "OK", R.id.DetailButtonOK);
+            setEditText(wrapper.getScenario(), "Priority",
                     R.id.DetailEditTextPriority,
                     Integer.toString(expectedPriority));
             final CategorySelectAdapter categoryAdapter = (CategorySelectAdapter)
                     categorySelect.getAdapter();
-            scenario.onActivity(activity -> {
+            wrapper.onActivity(activity -> {
                 categorySelect.setSelection(categoryAdapter
                         .getCategoryPosition(expectedCategory.getId()));
             });
@@ -255,7 +257,7 @@ public class ToDoDetailsActivityTests {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
                 onData(anything()).atPosition(dueDaysOffset).perform(click());
             } else {
-                scenario.onActivity(activity -> {
+                wrapper.onActivity(activity -> {
                     AlertDialog dialog = (AlertDialog) activity.dueDateListDialog;
                     ListView listView = dialog.getListView();
                     ListAdapter listAdapter = listView.getAdapter();
@@ -267,20 +269,23 @@ public class ToDoDetailsActivityTests {
             }
             // Having a due date should display and enable the
             // "Hide until", "Alarm", and "Repeat" buttons.
-            pressButton(scenario, R.id.DetailButtonHideUntil);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonHideUntil);
+            // These dialogs may open the soft keyboard again
+            hideKeyboard(wrapper.getScenario());
             pressButton(R.id.HideCheckBox);
             setEditText("Hide days earlier", R.id.HideEditDaysEarlier,
                     Integer.toString(expectedHide));
             pressButton(R.id.HideButtonOK);
-            pressButton(scenario, R.id.DetailButtonAlarm);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonAlarm);
             pressButton(R.id.AlarmCheckBox);
+            hideKeyboard(wrapper.getScenario());
             setEditText("Alarm days earlier", R.id.AlarmEditDaysEarlier,
                     Integer.toString(expectedAlarmAdvance));
             final Dialog[] alarmDialog = new Dialog[1];
-            scenario.onActivity(activity -> {
+            wrapper.onActivity(activity -> {
                 alarmDialog[0] = activity.alarmDialog;
             });
-            setTime(scenario, alarmDialog[0], R.id.AlarmTimePicker,
+            setTime(wrapper.getScenario(), alarmDialog[0], R.id.AlarmTimePicker,
                     expectedAlarmTime.getHour(), expectedAlarmTime.getMinute());
             pressButton(R.id.AlarmButtonOK);
             /*
@@ -296,18 +301,18 @@ public class ToDoDetailsActivityTests {
                 try { Thread.sleep(500); }
                 catch (InterruptedException ie) {}
                 instrument.waitForIdleSync();
-                scenario.onActivity(activity -> {
+                wrapper.onActivity(activity -> {
                     hasFocus[0] = activity.hasWindowFocus();
                 });
                 if (hasFocus[0]) break;
                 instrument.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             }
-            pressButton(scenario, R.id.DetailButtonRepeat);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonRepeat);
             // Press the `repeatTypeOffset'th item in the pop-up list
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
                 onData(anything()).atPosition(repeatTypeOffset).perform(click());
             } else {
-                scenario.onActivity(activity -> {
+                wrapper.onActivity(activity -> {
                     AlertDialog dialog = (AlertDialog) activity.repeatListDialog;
                     ListView listView = dialog.getListView();
                     ListAdapter listAdapter = listView.getAdapter();
@@ -317,16 +322,16 @@ public class ToDoDetailsActivityTests {
                             listAdapter.getItemId(repeatTypeOffset));
                 });
             }
-            pressButton(scenario, R.id.DetailCheckBoxPrivate);
+            pressButton(wrapper.getScenario(), R.id.DetailCheckBoxPrivate);
 
             // Step 3: Restart the activity
-            scenario.recreate();
+            wrapper.recreate();
             waitForFocus();
-            hideKeyboard(scenario);
+            hideKeyboard(wrapper.getScenario());
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 // Step 4: Save the item; we're going to wait for this change.
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -392,17 +397,17 @@ public class ToDoDetailsActivityTests {
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
                 expectedCategory.getId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Get the category spinner first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
             assertEquals("Description", newItem.getDescription(),
-                    getElementText(scenario, "Description",
+                    getElementText(wrapper.getScenario(), "Description",
                             R.id.DetailEditTextDescription));
             assertEquals("Priority", Integer.toString(newItem.getPriority()),
-                    getElementText(scenario, "Priority",
+                    getElementText(wrapper.getScenario(), "Priority",
                             R.id.DetailEditTextPriority));
             long actualCategoryId = categorySelect.getSelectedItemId();
             ToDoCategory actualCategory =
@@ -413,7 +418,7 @@ public class ToDoDetailsActivityTests {
             String expectedButtonText = newItem.getDue().format(
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM));
             assertEquals("Due date", expectedButtonText,
-                    getElementText(scenario, "Due date",
+                    getElementText(wrapper.getScenario(), "Due date",
                             R.id.DetailButtonDueDate));
             // The "hide until" text should be pluralized
             expectedButtonText = testContext.getResources().getQuantityString(
@@ -421,7 +426,7 @@ public class ToDoDetailsActivityTests {
                     newItem.getHideDaysEarlier(),
                     newItem.getHideDaysEarlier());
             assertEquals("Hide until", expectedButtonText,
-                    getElementText(scenario, "Hide until",
+                    getElementText(wrapper.getScenario(), "Hide until",
                             R.id.DetailButtonHideUntil));
             // The "Alarm" text should indicate the "days earlier" field
             expectedButtonText = testContext.getResources().getQuantityString(
@@ -429,7 +434,7 @@ public class ToDoDetailsActivityTests {
                     newItem.getAlarm().getAlarmDaysEarlier(),
                     newItem.getAlarm().getAlarmDaysEarlier());
             assertEquals("Alarm", expectedButtonText,
-                    getElementText(scenario, "Alarm",
+                    getElementText(wrapper.getScenario(), "Alarm",
                             R.id.DetailButtonAlarm));
             // The "Repeat" text has multiple possibilities
             // depending on the repeat type, which is one
@@ -439,10 +444,10 @@ public class ToDoDetailsActivityTests {
                             DateTimeFormatter.ofLocalizedDate(
                                     FormatStyle.SHORT)));
             assertEquals("Repeat", expectedButtonText,
-                    getElementText(scenario, "Repeat",
+                    getElementText(wrapper.getScenario(), "Repeat",
                             R.id.DetailButtonRepeat));
             assertEquals("Private", newItem.isPrivate(),
-                    getCheckboxState(scenario, "Private",
+                    getCheckboxState(wrapper.getScenario(), "Private",
                             R.id.DetailCheckBoxPrivate));
         }
     }
@@ -497,24 +502,24 @@ public class ToDoDetailsActivityTests {
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
                 category.getId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Step 1: Check the initial category first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
             assertEquals("Selected category ID (before changes)", category,
                     mockRepo.getCategoryById(categorySelect.getSelectedItemId()));
 
             // Step 2: Edit the details
-            setEditText(scenario, "Description",
+            setEditText(wrapper.getScenario(), "Description",
                     R.id.DetailEditTextDescription, expectedDescription);
-            setEditText(scenario, "Priority",
+            setEditText(wrapper.getScenario(), "Priority",
                     R.id.DetailEditTextPriority,
                     Integer.toString(expectedPriority));
             final CategorySelectAdapter categoryAdapter = (CategorySelectAdapter)
                     categorySelect.getAdapter();
-            scenario.onActivity(activity -> {
+            wrapper.onActivity(activity -> {
                 categorySelect.setSelection(categoryAdapter
                         .getCategoryPosition(expectedCategory.getId()));
             });
@@ -526,7 +531,7 @@ public class ToDoDetailsActivityTests {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
                 onData(anything()).atPosition(noDatePosition).perform(click());
             } else {
-                scenario.onActivity(activity -> {
+                wrapper.onActivity(activity -> {
                     AlertDialog dialog = (AlertDialog) activity.dueDateListDialog;
                     ListView listView = dialog.getListView();
                     ListAdapter listAdapter = listView.getAdapter();
@@ -537,16 +542,17 @@ public class ToDoDetailsActivityTests {
                 });
             }
             pressButton(R.id.DetailCheckBoxPrivate);
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
+            assertButtonShown(wrapper.getScenario(),
+                    "OK", R.id.DetailButtonOK);
 
             // Step 3: Restart the activity
-            scenario.recreate();
+            wrapper.recreate();
             waitForFocus();
-            hideKeyboard(scenario);
+            hideKeyboard(wrapper.getScenario());
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 // Step 4: Save the item; we're going to wait for this change.
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -579,19 +585,20 @@ public class ToDoDetailsActivityTests {
         Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
 
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Get the category spinner first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
-            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(),
+                    "Note", R.id.DetailButtonNote);
             String description = randomSentence();
-            setEditText(scenario, "Description",
+            setEditText(wrapper.getScenario(), "Description",
                     R.id.DetailEditTextDescription, description);
             // The "OK" button should be enabled now that the description is set
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
-            pressButton(scenario, R.id.DetailButtonNote);
+            assertButtonShown(wrapper.getScenario(), "OK", R.id.DetailButtonOK);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonNote);
             assertActivityLaunched(ToDoNoteActivity.class);
             assertIntentDoesNotHaveExtra(ToDoNoteActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID);
@@ -599,7 +606,8 @@ public class ToDoDetailsActivityTests {
                     ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
             waitForFocus();
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+            setEditText(wrapper.getScenario(), "Note",
+                    R.id.NoteEditText, expectedNote);
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 // Save everything;
@@ -608,7 +616,7 @@ public class ToDoDetailsActivityTests {
                         "Note was saved before the item was created!");
                 // we're going to wait for this change.
                 waitForFocus();
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -639,19 +647,20 @@ public class ToDoDetailsActivityTests {
         Intent intent = new Intent(testContext, ToDoDetailsActivity.class);
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
 
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Get the category spinner first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
-            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(),
+                    "Note", R.id.DetailButtonNote);
             String description = randomSentence();
-            setEditText(scenario, "Description",
+            setEditText(wrapper.getScenario(), "Description",
                     R.id.DetailEditTextDescription, description);
             // The "OK" button should be enabled now that the description is set
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
-            pressButton(scenario, R.id.DetailButtonNote);
+            assertButtonShown(wrapper.getScenario(), "OK", R.id.DetailButtonOK);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonNote);
             assertActivityLaunched(ToDoNoteActivity.class);
             assertIntentDoesNotHaveExtra(ToDoNoteActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID);
@@ -659,7 +668,8 @@ public class ToDoDetailsActivityTests {
                     ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION, description);
             waitForFocus();
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+            setEditText(wrapper.getScenario(), "Note",
+                    R.id.NoteEditText, expectedNote);
 
             // Restart the current activity at this point
             // (not the launch activity)
@@ -677,7 +687,7 @@ public class ToDoDetailsActivityTests {
                         "Note was saved before the item was created!");
                 // we're going to wait for this change.
                 waitForFocus();
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -715,15 +725,17 @@ public class ToDoDetailsActivityTests {
                 newItem.getCategoryId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
 
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Get the category spinner first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
-            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
-            pressButton(scenario, R.id.DetailButtonNote);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(),
+                    "Note", R.id.DetailButtonNote);
+            assertButtonShown(wrapper.getScenario(),
+                    "OK", R.id.DetailButtonOK);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonNote);
             assertActivityLaunched(ToDoNoteActivity.class);
             assertIntentHasLongExtra(ToDoNoteActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
@@ -737,7 +749,8 @@ public class ToDoDetailsActivityTests {
             instrument.runOnMainSync(() -> hideKeyboard(noteActivity));
             instrument.waitForIdleSync();
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+            setEditText(wrapper.getScenario(), "Note",
+                    R.id.NoteEditText, expectedNote);
 
             // Save everything;
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
@@ -745,9 +758,9 @@ public class ToDoDetailsActivityTests {
                 saveObserver.assertNotChanged(
                         "Note was saved before the item!");
                 waitForFocus();
-                hideKeyboard(scenario);
+                hideKeyboard(wrapper.getScenario());
                 // we're going to wait for this change.
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -776,15 +789,17 @@ public class ToDoDetailsActivityTests {
                 newItem.getCategoryId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
 
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Get the category spinner first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
-            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
-            pressButton(scenario, R.id.DetailButtonNote);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(),
+                    "Note", R.id.DetailButtonNote);
+            assertButtonShown(wrapper.getScenario(),
+                    "OK", R.id.DetailButtonOK);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonNote);
             assertActivityLaunched(ToDoNoteActivity.class);
             assertIntentHasLongExtra(ToDoNoteActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
@@ -794,7 +809,8 @@ public class ToDoDetailsActivityTests {
             assertIntentHasStringExtra(ToDoNoteActivity.class,
                     ToDoNoteActivity.EXTRA_ITEM_NOTE, oldNote);
             assertButtonShown("OK", R.id.NoteButtonOK);
-            setEditText(scenario, "Note", R.id.NoteEditText, expectedNote);
+            setEditText(wrapper.getScenario(), "Note",
+                    R.id.NoteEditText, expectedNote);
 
             // Restart the current activity at this point
             // (not the launch activity)
@@ -809,7 +825,7 @@ public class ToDoDetailsActivityTests {
                         "Note was saved before the item!");
                 waitForFocus();
                 // we're going to wait for this change.
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -837,15 +853,17 @@ public class ToDoDetailsActivityTests {
                 newItem.getCategoryId());
         intent.putExtra(ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
 
-        try (ActivityScenario<ToDoDetailsActivity> scenario =
-                ActivityScenario.launch(intent)) {
-            hideKeyboard(scenario);
+        try (ActivityScenarioResultsWrapper<ToDoDetailsActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(intent)) {
+            hideKeyboard(wrapper.getScenario());
             // Get the category spinner first;
             // this call will wait for its data to be ready.
-            Spinner categorySelect = getCategorySpinner(scenario);
-            assertButtonShown(scenario, "Note", R.id.DetailButtonNote);
-            assertButtonShown(scenario, "OK", R.id.DetailButtonOK);
-            pressButton(scenario, R.id.DetailButtonNote);
+            Spinner categorySelect = getCategorySpinner(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(),
+                    "Note", R.id.DetailButtonNote);
+            assertButtonShown(wrapper.getScenario(),
+                    "OK", R.id.DetailButtonOK);
+            pressButton(wrapper.getScenario(), R.id.DetailButtonNote);
             assertActivityLaunched(ToDoNoteActivity.class);
             assertIntentHasLongExtra(ToDoNoteActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID, newItem.getId());
@@ -858,15 +876,15 @@ public class ToDoDetailsActivityTests {
 
             try (TestObserver saveObserver = new TestObserver(mockRepo)) {
                 pressButton(R.id.NoteButtonDelete);
-                assertAlertDialogShown(scenario, testContext
+                assertAlertDialogShown(wrapper.getScenario(), testContext
                         .getString(R.string.ConfirmationTextDeleteNote));
-                pressAlertDialogButton(scenario, android.R.id.button1,
+                pressAlertDialogButton(wrapper.getScenario(), android.R.id.button1,
                         testContext.getString(R.string.ConfirmationButtonOK));
                 saveObserver.assertNotChanged(
                         "Note was deleted before the item was saved!");
                 // we're going to wait for this change.
                 waitForFocus();
-                pressButton(scenario, R.id.DetailButtonOK);
+                pressButton(wrapper.getScenario(), R.id.DetailButtonOK);
                 // Step 5: Verify the saved item
                 saveObserver.assertChanged(
                         "Timed out waiting for the item to be saved");
@@ -876,5 +894,8 @@ public class ToDoDetailsActivityTests {
         assertNotNull("The To Do item was deleted!", updatedItem);
         assertNull("Updated item note", updatedItem.getNote());
     }
+
+    // To Do: Test attempting to open a locked item
+    //        when encrypted items have not been unlocked.
 
 }

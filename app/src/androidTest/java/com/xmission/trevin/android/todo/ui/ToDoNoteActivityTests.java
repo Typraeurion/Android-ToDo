@@ -351,19 +351,20 @@ public class ToDoNoteActivityTests {
         item = mockRepo.insertItem(item);
         final String expectedNote = randomParagraph();
         Intent intent = noteIntent(item.getId());
-        try (ActivityScenario<ToDoNoteActivity> scenario =
-                     ActivityScenario.launch(intent);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(intent);
              TestObserver observer = new TestObserver(mockRepo)) {
-            hideKeyboard(scenario);
-            assertButtonShown(scenario, "OK", R.id.NoteButtonOK);
+            hideKeyboard(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(), "OK", R.id.NoteButtonOK);
             assertEquals("Initial note content", item.getNote(),
-                    getElementText(scenario, "Note", R.id.NoteEditText));
-            setEditText(scenario, "Note", R.id.NoteEditText,
+                    getElementText(wrapper.getScenario(),
+                            "Note", R.id.NoteEditText));
+            setEditText(wrapper.getScenario(), "Note", R.id.NoteEditText,
                     expectedNote);
 
-            scenario.recreate();
+            wrapper.recreate();
 
-            pressButton(scenario, R.id.NoteButtonOK);
+            pressButton(wrapper.getScenario(), R.id.NoteButtonOK);
             observer.assertChanged("Note was not saved to the repository");
         }
         ToDoItem updatedItem = mockRepo.getItemById(item.getId());
@@ -385,15 +386,16 @@ public class ToDoNoteActivityTests {
         item.setNote(expectedNote);
         item = mockRepo.insertItem(item);
         Intent intent = noteIntent(item.getId());
-        try (ActivityScenario<ToDoNoteActivity> scenario =
-                     ActivityScenario.launch(intent);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(intent);
              TestObserver observer = new TestObserver(mockRepo)) {
-            hideKeyboard(scenario);
+            hideKeyboard(wrapper.getScenario());
             assertEquals("Initial note content", expectedNote,
-                    getElementText(scenario, "Note", R.id.NoteEditText));
-            setEditText(scenario, "Note", R.id.NoteEditText,
+                    getElementText(wrapper.getScenario(),
+                            "Note", R.id.NoteEditText));
+            setEditText(wrapper.getScenario(), "Note", R.id.NoteEditText,
                     randomParagraph());
-            discardChanges(scenario);
+            discardChanges(wrapper.getScenario());
             observer.assertNotChanged();
         }
     }
@@ -410,18 +412,20 @@ public class ToDoNoteActivityTests {
         item.setNote(randomParagraph());
         item = mockRepo.insertItem(item);
         Intent intent = noteIntent(item.getId());
-        try (ActivityScenario<ToDoNoteActivity> scenario =
-                     ActivityScenario.launch(intent);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(intent);
              TestObserver observer = new TestObserver(mockRepo)) {
-            hideKeyboard(scenario);
-            assertButtonShown(scenario, "Delete", R.id.NoteButtonDelete);
+            hideKeyboard(wrapper.getScenario());
+            assertButtonShown(wrapper.getScenario(),
+                    "Delete", R.id.NoteButtonDelete);
             assertEquals("Initial note content", item.getNote(),
-                    getElementText(scenario, "Note", R.id.NoteEditText));
-            pressButton(scenario, R.id.NoteButtonDelete);
+                    getElementText(wrapper.getScenario(),
+                            "Note", R.id.NoteEditText));
+            pressButton(wrapper.getScenario(), R.id.NoteButtonDelete);
 
-            assertAlertDialogShown(scenario, testContext
+            assertAlertDialogShown(wrapper.getScenario(), testContext
                     .getString(R.string.ConfirmationTextDeleteNote));
-            pressAlertDialogButton(scenario, android.R.id.button1,
+            pressAlertDialogButton(wrapper.getScenario(), android.R.id.button1,
                     testContext.getString(R.string.ConfirmationButtonOK));
             observer.assertChanged("Note was not deleted from the repository");
         }

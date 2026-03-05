@@ -422,12 +422,17 @@ public class ToDoDetailsActivity extends Activity {
                                 todo.setNote(encryptor.decrypt(
                                         todo.getEncryptedNote()));
                         } catch (EncryptionException e) {
+                            Log.e(TAG, String.format(Locale.US,
+                                    "Error decrypting item #%d", todoId), e);
                             Toast.makeText(ToDoDetailsActivity.this,
                                     e.getMessage(), Toast.LENGTH_LONG).show();
                             finish();
                             return;
                         }
                     } else {
+                        Log.i(TAG, String.format(Locale.US,
+                                "Cannot open encrypted item #%d"
+                                        + " without a password", todoId));
                         Toast.makeText(ToDoDetailsActivity.this,
                                 R.string.PasswordProtected,
                                 Toast.LENGTH_LONG).show();
@@ -1108,7 +1113,7 @@ public class ToDoDetailsActivity extends Activity {
 
     /** Called when the user picks an end date for a repeating interval */
     class RepeatEndPickListener
-            implements CalendarDatePickerDialog.OnDateSetListener {
+            implements CalendarDatePicker.OnDateSetListener {
         @Override
         public void onDateSet(CalendarDatePicker dp, LocalDate day) {
             if (repeatSettings != null)
@@ -1279,7 +1284,7 @@ public class ToDoDetailsActivity extends Activity {
      * from the calendar date picker
      */
     class DueDateCalendarSelectionListener
-            implements CalendarDatePickerDialog.OnDateSetListener {
+            implements CalendarDatePicker.OnDateSetListener {
         @Override
         public void onDateSet(CalendarDatePicker dp, LocalDate day) {
             todo.setDue(day);
@@ -1521,6 +1526,7 @@ public class ToDoDetailsActivity extends Activity {
     private final Runnable SAVE_FINISHED_RUNNER = new Runnable() {
         @Override
         public void run() {
+            Log.d(TAG, "Save finished");
             todoId = null;
             todo.setDescription(null);
             todo.setNote(null);

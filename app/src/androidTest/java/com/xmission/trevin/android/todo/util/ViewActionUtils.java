@@ -20,6 +20,7 @@ import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.replaceText;
+import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.RootMatchers.isDialog;
 import static androidx.test.espresso.matcher.ViewMatchers.*;
@@ -33,6 +34,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Build;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -57,6 +59,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * Common action methods for UI tests to validate or interact with UI elements.
  */
 public class ViewActionUtils {
+
+    private static final String LOG_TAG = "ViewActionUtils";
 
     /**
      * Wait for an {@link AlertDialog} to be shown.
@@ -254,6 +258,40 @@ public class ViewActionUtils {
     }
 
     /**
+     * Click the designated button.  This is the Espresso-only version.
+     *
+     * @param buttonId the resource ID of the button to click
+     *
+     * @throws AssertionError if the button is not visible or enabled
+     */
+    private static void esPressButton(int buttonId) {
+        // Check whether the button is visible; otherwise click() will fail.
+        boolean isVisible;
+        try {
+            onView(withId(buttonId))
+                    .check(matches(isCompletelyDisplayed()));
+            isVisible = true;
+        } catch (AssertionError | Exception e) {
+            isVisible = false;
+        }
+        // Try scrolling to the button if necessary
+        if (!isVisible) try {
+            onView(withId(buttonId))
+                    .perform(scrollTo());
+        } catch (AssertionError | Exception e) {
+            // Ignore
+            Log.w(LOG_TAG, String.format(Locale.US,
+                    "Button %d is not completedy visible"
+                            + " and we failed to scroll to it.",
+                    buttonId));
+        }
+        onView(withId(buttonId))
+                .check(matches(allOf(isEnabled(),
+                        isDisplayingAtLeast(90))))
+                .perform(click());
+    }
+
+    /**
      * Click the designated button.  The button must exist within the
      * activity content.  The test should have already verified that
      * the button exists and is enabled.
@@ -264,8 +302,8 @@ public class ViewActionUtils {
     public static <T extends Activity> void pressButton(
             ActivityScenario<T> scenario,
             int buttonId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId)).perform(click());
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            esPressButton(buttonId);
         } else {
             scenario.onActivity(activity -> {
                 Button button = activity.findViewById(buttonId);
@@ -285,8 +323,8 @@ public class ViewActionUtils {
      * @param buttonId the resource ID of the button to click
      */
     public static <T extends Activity> void pressButton(int buttonId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId)).perform(click());
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            esPressButton(buttonId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
@@ -313,8 +351,8 @@ public class ViewActionUtils {
     public static <T extends Activity> void pressButton(
             ActivityScenario<T> scenario, @NonNull final Dialog dialog,
             int buttonId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId)).perform(click());
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            esPressButton(buttonId);
         } else {
             scenario.onActivity(activity -> {
                 Button button = dialog.findViewById(buttonId);
@@ -334,8 +372,8 @@ public class ViewActionUtils {
      */
     public static <T extends Activity> void pressButton(
             @NonNull final Dialog dialog, int buttonId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withId(buttonId)).perform(click());
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            esPressButton(buttonId);
         } else {
             final Activity activity = getCurrentActivity();
             assertNotNull("No activity is running", activity);
@@ -365,7 +403,7 @@ public class ViewActionUtils {
      */
     public static <T extends Activity> void pressAlertDialogButton(
             ActivityScenario<T> scenario, int buttonId, String buttonText) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             onView(withText(buttonText))
                     .inRoot(isDialog())
                     .perform(click());
@@ -380,7 +418,7 @@ public class ViewActionUtils {
      * Press the system &ldquo;Back&rdquo; button.
      */
     public static void pressBackButton() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             pressBack();
         } else {
             InstrumentationRegistry.getInstrumentation()

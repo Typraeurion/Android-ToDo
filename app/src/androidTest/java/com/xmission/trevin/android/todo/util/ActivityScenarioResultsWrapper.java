@@ -5,24 +5,36 @@ import android.app.Instrumentation.ActivityResult;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 
+import androidx.lifecycle.Lifecycle.State;
 import androidx.test.core.app.ActivityScenario;
 
 import java.io.Closeable;
 import java.lang.reflect.Field;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Replacement for {@link ActivityScenario} for tests that
  * need to validate the results of an {@link Activity} since
  * {@link ActivityScenario#launchActivityForResult} is broken
- * on API level 34 (Upside-down Cake).
+ * on API level 34 (Upside-down Cake), or for tests in which
+ * the normal {@link ActivityScenario#close()} method fails
+ * to detect the activity transition to {@link State#DESTROYED}.
  */
 public class ActivityScenarioResultsWrapper<T extends Activity>
         implements AutoCloseable, Closeable {
 
+    private static final String LOG_TAG = "ActivityScenarioRW";
+
+    private static final ExecutorService executor =
+            Executors.newCachedThreadPool();
+
     /** The underlying {@link ActivityScenario} */
     private final ActivityScenario<T> scenario;
     private final boolean launchedForResult;
+    private boolean isClosed = false;
 
     /**
      * Launches an activity of a given class and constructs
@@ -114,6 +126,8 @@ public class ActivityScenarioResultsWrapper<T extends Activity>
      * Finishes the managed activity and cleans up the device state.
      * This method blocks execution until the activity becomes
      * {@link androidx.lifecycle.Lifecycle.State#DESTROYED DESTROYED}.
+     * If the underlying scenario fails to close, this will <i>note</i>
+     * bubble up the exception but will silently return (after logging).
      * <p>
      * It is highly recommended to call this method after you test is done
      * to keep the device state clean although this is optional.
@@ -128,7 +142,34 @@ public class ActivityScenarioResultsWrapper<T extends Activity>
      * </p>
      */
     public void close() {
-        scenario.close();
+        if (isClosed) {
+            Log.d(LOG_TAG, "close() called after wrapper was already closed");
+            return;
+        }
+        isClosed = true;
+        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) &&
+                (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP_MR1)) {
+            // Workaround for broken platforms:
+            // close the scenario on a background thread and don't wait up.
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i(LOG_TAG, "Closing the scenario in the background");
+                    try {
+                        scenario.close();
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Failed to close the scenario", e);
+                    }
+                }
+            });
+            return;
+        }
+        Log.d(LOG_TAG, "Closing the scenario on the main thread");
+        try {
+            scenario.close();
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Failed to close the scenario", e);
+        }
     }
 
     /**

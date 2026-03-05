@@ -20,9 +20,11 @@ import static com.xmission.trevin.android.todo.util.LaunchUtils.hideKeyboard;
 import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.junit.Assert.*;
 
+import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Typeface;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TableRow;
@@ -48,7 +50,10 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests for the {@link CalendarDatePicker}
@@ -83,30 +88,166 @@ public class CalendarDatePickerTests {
     }
 
     /**
-     * Dialog listener for date set events
+     * Listener for date set events
      */
-    public static class TestDateSetDialogListener
-            implements CalendarDatePickerDialog.OnDateSetListener {
+    public static class TestDateSetListener
+            implements CalendarDatePicker.OnDateSetListener {
+
+        private static final String LOG_TAG = "TestDateSetListener";
+
         public CalendarDatePickerDialog dialog = null;
         public CalendarDatePicker widget = null;
+        private CountDownLatch latch;
         public LocalDate setDate = null;
-        @Override
-        public void onDateSet(CalendarDatePicker view, LocalDate date) {
-            setDate = date;
-        }
-    }
 
-    /**
-     * Widget listener for date set events
-     */
-    public static class TestDateSetWidgetListener
-            implements CalendarDatePicker.OnDateSetListener {
-        public CalendarDatePicker widget = null;
-        public LocalDate setDate = null;
+        /**
+         * Construct a new listener with an initial count of 1.
+         */
+        public TestDateSetListener() {
+            latch = new CountDownLatch(1);
+        }
+
+        /**
+         * Construct a new listener with a specified latch count.
+         *
+         * @param initialCount the number of times this listener
+         * is expected to be called.
+         */
+        public TestDateSetListener(int initialCount) {
+            latch = new CountDownLatch(initialCount);
+        }
+
+        /** Called when the date is set */
         @Override
         public void onDateSet(CalendarDatePicker view, LocalDate date) {
             setDate = date;
+            latch.countDown();
         }
+
+        /**
+         * Reset this listener.  This uses the {@link InstrumentationRegistry}
+         * to wait for the application to idle then starts a new countdown latch
+         * with a count of 1.
+         */
+        public void reset() {
+            reset(1);
+        }
+
+        /**
+         * Reset this listener.  This uses the {@link InstrumentationRegistry}
+         * to wait for the application to idle then starts a new countdown latch.
+         *
+         * @param newCount the number of times this observer is expected
+         * to be called.
+         */
+        public void reset(int newCount) {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    ".reset(%d)", newCount));
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            setDate = null;
+            latch = new CountDownLatch(newCount);
+        }
+
+        /**
+         * Wait for the latch to show the listener was notified.
+         * Times out after a second.  This is called internally
+         * before every {@code assert}&hellip; method; test cases
+         * only need to call it if an exception prevents them
+         * from checking the observer before unregistering it.
+         *
+         * @throws AssertionError if the latch times out
+         * @throws RuntimeException (wrapping an {@link InterruptedException})
+         * if the wait was interrupted
+         */
+        private void await() throws AssertionError {
+            Log.d(LOG_TAG, String.format(Locale.US,
+                    ".await(1 second): latch count=%d, setDate=%s",
+                    latch.getCount(), (setDate == null) ? null
+                            : setDate.format(DateTimeFormatter.ISO_LOCAL_DATE)));
+            try {
+                assertTrue("Timed out waiting for the listener to be notified",
+                        latch.await(1, TimeUnit.SECONDS));
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Interrupted while waiting"
+                        + " for the listener to be notified", e);
+            }
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify that
+         * {@link #onDateSet} was called.  This uses a default
+         * assertion message.
+         */
+        public void assertDateSet() {
+            assertDateSet("The date set listener was not called back");
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify that
+         * {@link #onDateSet} was called using the given
+         * assertion message.
+         *
+         * @param message the message to show if {@link #onDateSet}
+         * was not called.
+         */
+        public void assertDateSet(String message) {
+            await();
+            assertNotNull(message, setDate);
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify that
+         * {@link #onDateSet} was called for the given date.
+         *
+         * @param expectedDate the expected date
+         */
+        public void assertDateSet(LocalDate expectedDate) {
+            assertDateSet();
+            assertEquals("Picked date", expectedDate, setDate);
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify that
+         * {@link #onDateSet} was called for the given date
+         * using the given assertion message.
+         *
+         * @param message the message to show if {@link #onDateSet}
+         * was not called.
+         * @param expectedDate the expected date
+         */
+        public void assertDateSet(String message, LocalDate expectedDate) {
+            assertDateSet();
+            assertEquals(message, expectedDate, setDate);
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify
+         * that {@link #onDateSet} was <i>not</i> called.  This uses
+         * a default assertion message.
+         */
+        public void assertDateNotSet() {
+            assertDateNotSet("The date set listener was called");
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify
+         * that {@link #onDateSet} was <i>not</i> called using
+         * the given assertion message.
+         *
+         * @param message the message to show if {@link #onDateSet}
+         * was called.
+         */
+        public void assertDateNotSet(String message) {
+            if (latch.getCount() > 0)
+                Log.d(LOG_TAG, "Waiting 250ms to clear the latch");
+            try {
+                latch.await(250, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                // Ignore
+            }
+            assertNull(message, setDate);
+        }
+
     }
 
     /**
@@ -120,11 +261,11 @@ public class CalendarDatePickerTests {
      *
      * @return the listener for the date set event
      */
-    private TestDateSetWidgetListener showDatePickerWidget(
-            ActivityScenario<ToDoNoteActivity> scenario,
+    private <T extends Activity> TestDateSetListener showDatePickerWidget(
+            ActivityScenario<T> scenario,
             LocalDate showDate, LocalDate today) {
-        final TestDateSetWidgetListener listener =
-                new TestDateSetWidgetListener();
+        final TestDateSetListener listener =
+                new TestDateSetListener();
         hideKeyboard(scenario);
         scenario.onActivity(activity -> {
             listener.widget = new CalendarDatePicker(activity);
@@ -148,11 +289,11 @@ public class CalendarDatePickerTests {
      * @return the listener for the date set event, which also
      * includes a reference to the date picker widget.
      */
-    private TestDateSetDialogListener showDatePickerDialog(
+    private TestDateSetListener showDatePickerDialog(
             ActivityScenario<ToDoNoteActivity> scenario,
             LocalDate date, ZoneId zone) {
-        final TestDateSetDialogListener listener =
-                new TestDateSetDialogListener();
+        final TestDateSetListener listener =
+                new TestDateSetListener();
         hideKeyboard(scenario);
         scenario.onActivity(activity -> {
             listener.dialog = new CalendarDatePickerDialog(
@@ -226,7 +367,7 @@ public class CalendarDatePickerTests {
     }
 
     /** Button ID&rsquo;s of month buttons, from January through December */
-    public static int MONTH_BUTTON_IDS[] = {
+    public static int[] MONTH_BUTTON_IDS = {
             R.id.DatePickerJanuaryButton, R.id.DatePickerFebruaryButton,
             R.id.DatePickerMarchButton, R.id.DatePickerAprilButton,
             R.id.DatePickerMayButton, R.id.DatePickerJuneButton,
@@ -239,7 +380,7 @@ public class CalendarDatePickerTests {
      * String resource ID&rsquo;s of (short) month names,
      * from January through December
      */
-    public static int MONTH_SHORT_NAME_IDS[] = {
+    public static int[] MONTH_SHORT_NAME_IDS = {
             R.string.MonthJan, R.string.MonthFeb, R.string.MonthMar,
             R.string.MonthApr, R.string.MonthMay, R.string.MonthJun,
             R.string.MonthJul, R.string.MonthAug, R.string.MonthSep,
@@ -288,7 +429,7 @@ public class CalendarDatePickerTests {
     /**
      * Label ID&rsquo;s for days of the week, from Sunday through Saturday
      */
-    public static int DAY_LABEL_IDS[] = {
+    public static int[] DAY_LABEL_IDS = {
             R.id.DatePickerTextSunday, R.id.DatePickerTextMonday,
             R.id.DatePickerTextTuesday, R.id.DatePickerTextWednesday,
             R.id.DatePickerTextThursday, R.id.DatePickerTextFriday,
@@ -299,7 +440,7 @@ public class CalendarDatePickerTests {
      * String resource ID&rsquo;s of day initials,
      * from (S)unday through (S)aturday
      */
-    public static int DAY_NAME_INITIAL_IDS[] = {
+    public static int[] DAY_NAME_INITIAL_IDS = {
             R.string.DatePickerSun, R.string.DatePickerMon,
             R.string.DatePickerTue, R.string.DatePickerWed,
             R.string.DatePickerThu, R.string.DatePickerFri,
@@ -314,7 +455,7 @@ public class CalendarDatePickerTests {
      * @throws AssertionError if any of the labels are missing
      */
     void verifyDayLabels(CalendarDatePicker widget) {
-        String expectedText = "";
+        String expectedText;
         for (WeekDays day : WeekDays.values()) {
             int textId = DAY_LABEL_IDS[day.getValue() - WeekDays.SUNDAY.getValue()];
             expectedText = widget.getResources().getString(
@@ -322,16 +463,14 @@ public class CalendarDatePickerTests {
                             - WeekDays.SUNDAY.getValue()]);
             TextView label = widget.findViewById(textId);
             assertNotNull(String.format(Locale.US,
-                    "The %s label was not found", day.toString()),
-                    label);
-            assertEquals(String.format(Locale.US,
-                            "%s label text", day.toString()),
+                            "The %s label was not found", day), label);
+            assertEquals(String.format(Locale.US, "%s label text", day),
                     expectedText, label.getText().toString());
         }
     }
 
     /** Row ID&rsquo;s of the weeks. */
-    public static final int WEEK_ROW_IDS[] = {
+    public static final int[] WEEK_ROW_IDS = {
             R.id.DatePickerWeekRow0, R.id.DatePickerWeekRow1,
             R.id.DatePickerWeekRow2, R.id.DatePickerWeekRow3,
             R.id.DatePickerWeekRow4, R.id.DatePickerWeekRow5
@@ -342,7 +481,7 @@ public class CalendarDatePickerTests {
      * First index is the week number (from 0) and second is the
      * day of the week (Sunday through Saturday).
      */
-    public static int DATE_BUTTON_IDS[][] = {
+    public static int[][] DATE_BUTTON_IDS = {
             { R.id.DatePickerDay01Button, R.id.DatePickerDay02Button,
                     R.id.DatePickerDay03Button, R.id.DatePickerDay04Button,
                     R.id.DatePickerDay05Button, R.id.DatePickerDay06Button,
@@ -537,7 +676,7 @@ public class CalendarDatePickerTests {
     }
 
     /**
-     * Test configuring the date picker for Februrary 13, 2026.
+     * Test configuring the date picker for February 13, 2026.
      * This is a rare month in which only four week rows are
      * displayed.
      */
@@ -545,7 +684,7 @@ public class CalendarDatePickerTests {
     public void testCalendarFebruary2026() {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetWidgetListener listener = showDatePickerWidget(
+            TestDateSetListener listener = showDatePickerWidget(
                     scenario, LocalDate.of(2026, 2, 13),
                     LocalDate.of(2026, 2, 13));
             verifyYear(listener.widget, 2026, true);
@@ -570,7 +709,7 @@ public class CalendarDatePickerTests {
     public void testCalendarNovember2025() {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetWidgetListener listener = showDatePickerWidget(
+            TestDateSetListener listener = showDatePickerWidget(
                     scenario, LocalDate.of(2025, 11, 27),
                     LocalDate.of(2026, 2, 13));
             verifyYear(listener.widget, 2025, false);
@@ -592,7 +731,7 @@ public class CalendarDatePickerTests {
     public void testJuly2026PriorYear() {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetWidgetListener listener = showDatePickerWidget(
+            TestDateSetListener listener = showDatePickerWidget(
                     scenario, LocalDate.of(2026, 7, 4),
                     LocalDate.of(2026, 7, 4));
             verifyYear(listener.widget, 2026, true);
@@ -618,7 +757,7 @@ public class CalendarDatePickerTests {
     public void testNovember2026NextYear() {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetWidgetListener listener = showDatePickerWidget(
+            TestDateSetListener listener = showDatePickerWidget(
                     scenario, LocalDate.of(2026, 11, 27),
                     LocalDate.of(2027, 11, 25));
             verifyYear(listener.widget, 2026, false);
@@ -646,7 +785,7 @@ public class CalendarDatePickerTests {
     private void runMonthChangeTest(LocalDate fromDate, Month targetMonth) {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetWidgetListener listener = showDatePickerWidget(
+            TestDateSetListener listener = showDatePickerWidget(
                     scenario, fromDate, fromDate);
             verifyYear(listener.widget, fromDate.getYear(), true);
             verifyMonthButtons(listener.widget, fromDate.getMonth());
@@ -783,7 +922,7 @@ public class CalendarDatePickerTests {
                 today = expectedDate.withDayOfMonth(
                         RAND.nextInt(expectedDate.lengthOfMonth()) + 1);
             } while (today.equals(expectedDate));
-            TestDateSetWidgetListener listener = showDatePickerWidget(
+            TestDateSetListener listener = showDatePickerWidget(
                     scenario, today, today);
             int buttonId = DATE_BUTTON_IDS[week - 1][day.getValue()
                     - WeekDays.SUNDAY.getValue()];
@@ -791,10 +930,7 @@ public class CalendarDatePickerTests {
                     + expectedDate, buttonId);
 
             pressButton(scenario, buttonId);
-            assertNotNull("The date set listener was not called back",
-                    listener.setDate);
-            assertEquals("Date set by the CalendarDatePicker",
-                    expectedDate, listener.setDate);
+            listener.assertDateSet(expectedDate);
         }
     }
 
@@ -828,12 +964,27 @@ public class CalendarDatePickerTests {
      */
     @Test
     public void testDateSelectWeeks2Through5() {
-        for (int week = 2; week <= 5; week++) {
-            for (WeekDays day : WeekDays.values()) {
-                LocalDate targetDate = LocalDate.of(2026, 1,
-                        7 * week - 10 + day.getValue()
-                                - WeekDays.SUNDAY.getValue());
-                runDateSelectTest(week, day, targetDate);
+        try (ActivityScenario<ToDoNoteActivity> scenario =
+                     ActivityScenario.launch(ToDoNoteActivity.class)) {
+            // Set up the date picker just once; we'll re-use
+            // this for testing all buttons.
+            LocalDate initialDate = LocalDate.of(2026, 1, 1);
+            TestDateSetListener listener = showDatePickerWidget(
+                    scenario, initialDate, initialDate);
+
+            for (int week = 2; week <= 5; week++) {
+                for (WeekDays day : WeekDays.values()) {
+                    LocalDate targetDate = LocalDate.of(2026, 1,
+                            7 * week - 10 + day.getValue()
+                                    - WeekDays.SUNDAY.getValue());
+                    int buttonId = DATE_BUTTON_IDS[week - 1][day.getValue()
+                            - WeekDays.SUNDAY.getValue()];
+                    assertButtonShown(scenario, "Button for "
+                            + targetDate, buttonId);
+
+                    pressButton(scenario, buttonId);
+                    listener.assertDateSet(targetDate);
+                }
             }
         }
     }
@@ -859,7 +1010,7 @@ public class CalendarDatePickerTests {
     public void testDialogFebruary2026() {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetDialogListener listener =
+            TestDateSetListener listener =
                     showDatePickerDialog(scenario,
                             LocalDate.of(2026, 2, 27),
                             ZoneOffset.UTC);
@@ -877,18 +1028,16 @@ public class CalendarDatePickerTests {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
             ZoneId zone = ZoneId.of("US/Samoa");
-            TestDateSetDialogListener listener =
+            TestDateSetListener listener =
                     showDatePickerDialog(scenario,
                             LocalDate.of(2000, 1, 1), zone);
             // "Today" is set as button 2 in the dialog constructor.
             assertButtonShown(scenario, listener.dialog,
                     "Today", android.R.id.button2);
-            pressButton(scenario, android.R.id.button2);
-            assertNotNull("The date set listener was not called back",
-                    listener.setDate);
-            assertEquals(String.format(Locale.US,
+            pressButton(scenario, listener.dialog, android.R.id.button2);
+            listener.assertDateSet(String.format(Locale.US,
                             "Date set for Today (in %s)", zone.toString()),
-                    LocalDate.now(zone), listener.setDate);
+                    LocalDate.now(zone));
         }
     }
 
@@ -900,18 +1049,16 @@ public class CalendarDatePickerTests {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
             ZoneId zone = ZoneId.of("Pacific/Tongatapu");
-            TestDateSetDialogListener listener =
+            TestDateSetListener listener =
                     showDatePickerDialog(scenario,
                             LocalDate.of(2000, 1, 1), zone);
             // "Today" is set as button 2 in the dialog constructor.
             assertButtonShown(scenario, listener.dialog,
                     "Today", android.R.id.button2);
-            pressButton(scenario, android.R.id.button2);
-            assertNotNull("The date set listener was not called back",
-                    listener.setDate);
-            assertEquals(String.format(Locale.US,
+            pressButton(scenario, listener.dialog, android.R.id.button2);
+            listener.assertDateSet(String.format(Locale.US,
                             "Date set for Today (in %s)", zone.toString()),
-                    LocalDate.now(zone), listener.setDate);
+                    LocalDate.now(zone));
         }
     }
 
@@ -922,14 +1069,13 @@ public class CalendarDatePickerTests {
     public void testDialogCancel() {
         try (ActivityScenario<ToDoNoteActivity> scenario =
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
-            TestDateSetDialogListener listener = showDatePickerDialog(
+            TestDateSetListener listener = showDatePickerDialog(
                     scenario, LocalDate.now(), ZoneId.systemDefault());
             // "Cancel" is set as button 1 in the dialog constructor.
             assertButtonShown(scenario, listener.dialog,
                     "Cancel", android.R.id.button1);
             pressButton(scenario, listener.dialog, android.R.id.button1);
-            assertNull("The date set listener was called back",
-                    listener.setDate);
+            listener.assertDateNotSet();
         }
     }
 

@@ -30,6 +30,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 import com.xmission.trevin.android.todo.R;
+import com.xmission.trevin.android.todo.ui.CalendarDatePicker.OnDateSetListener;
 
 /**
  * A simple dialog containing a {@link CalendarDatePicker}.
@@ -43,15 +44,6 @@ public class CalendarDatePickerDialog extends AlertDialog
     private ZoneId zone;
     private final CalendarDatePicker datePicker;
     private final OnDateSetListener callback;
-
-    /** The callback used to indicate the user has selected a date. */
-    public interface OnDateSetListener {
-        /**
-         * @param view The view associated with this listener.
-         * @param date The date that was set.
-         */
-        void onDateSet(CalendarDatePicker view, LocalDate date);
-    }
 
     /**
      * Create a new calendar date picker dialog.

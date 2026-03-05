@@ -42,6 +42,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle.State;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.NoMatchingViewException;
 import androidx.test.espresso.intent.Intents;
@@ -57,6 +58,8 @@ import java.util.Locale;
  * (where applicable) obtaining their results.
  */
 public class LaunchUtils {
+
+    private static final String LOG_TAG = "LaunchUtils";
 
     /**
      * Verify that an activity has been launched.  For versions of
@@ -377,7 +380,7 @@ public class LaunchUtils {
                 // Ignore...
             }
         }
-        Log.w("LaunchUtils", "Timed out waiting for activity to gain focus");
+        Log.w(LOG_TAG, "Timed out waiting for activity to gain focus");
     }
 
 }

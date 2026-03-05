@@ -94,12 +94,15 @@ public class CategoryEditorTests {
         final CategoryEditorAdapter adapter =
                 new CategoryEditorAdapter(testContext, categories);
         final int targetCategory = RAND.nextInt(adapter.getCount());
-        final EditText textBox = (EditText) adapter.getView(
-                targetCategory, null, null);
-        runOnUiAndWait(() -> textBox.requestFocus());
+        final EditText[] textBoxHolder = new EditText[1];
+        instrument.runOnMainSync(() -> {
+            textBoxHolder[0] = (EditText) adapter.getView(
+                    targetCategory, null, null);
+        });
+        runOnUiAndWait(() -> textBoxHolder[0].requestFocus());
         ToDoCategory oldCategory = categories.get(targetCategory).clone();
         String expectedName = randomCategoryName('A', 'Z');
-        runOnUiAndWait(() -> textBox.setText(expectedName));
+        runOnUiAndWait(() -> textBoxHolder[0].setText(expectedName));
 
         // Changing the text alone shouldn't change the category ... yet
         ToDoCategory actualCategory = adapter.getItem(targetCategory);
@@ -107,7 +110,7 @@ public class CategoryEditorTests {
                 oldCategory, actualCategory);
 
         // After focus changes, the category should have changed
-        runOnUiAndWait(() -> textBox.clearFocus());
+        runOnUiAndWait(() -> textBoxHolder[0].clearFocus());
         ToDoCategory expectedCategory = oldCategory.clone();
         expectedCategory.setName(expectedName);
         actualCategory = adapter.getItem(targetCategory);

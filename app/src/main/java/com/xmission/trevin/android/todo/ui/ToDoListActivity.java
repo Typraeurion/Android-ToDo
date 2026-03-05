@@ -1070,7 +1070,7 @@ public class ToDoListActivity extends AppCompatActivity {
     }
 
     class CalendarPickerDateSetListener
-            implements CalendarDatePickerDialog.OnDateSetListener {
+            implements CalendarDatePicker.OnDateSetListener {
         @Override
         public void onDateSet(CalendarDatePicker dp, final LocalDate date) {
             final long todoItemId = itemAdapter.getSelectedItemId();
