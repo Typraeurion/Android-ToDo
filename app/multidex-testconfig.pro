@@ -30,3 +30,7 @@
 -keep class androidx.test.** { *; }
 -keep class androidx.test.internal.** { *; }
 -keep class androidx.tracing.** { *; }
+
+# Don't obfuscate anything
+-keep class com.xmission.trevin.android.todo.** { *; }
+-dontobfuscate

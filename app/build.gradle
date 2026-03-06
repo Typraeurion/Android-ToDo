@@ -14,7 +14,7 @@ android {
 
     compileSdk = 36
 
-    buildToolsVersion = "35.0.1"
+    buildToolsVersion = "36.1.0"
 
     /**
      * The defaultConfig block encapsulates default settings and entries
@@ -36,10 +36,10 @@ android {
         targetSdk = 34
 
         // Defines the version number of your app.
-        versionCode = 1040301
+        versionCode = 1050001
 
         // Defines a user-friendly version name for your app.
-        versionName = "1.4.3"
+        versionName = "1.5.0"
 
         testInstrumentationRunner "com.xmission.trevin.android.todo.util.MultiDexJUnitRunner"
 
@@ -68,8 +68,9 @@ android {
             enableUnitTestCoverage = true
         }
         release {
-            // Minifying entails removing unused code and resources,
+            // Minifying entails removing "unused" code and resources,
             // obfuscating class names, and rewriting code.
+            // THIS WILL RESULT IN CRASHES!!
             minifyEnabled = false
         }
     }
@@ -84,7 +85,7 @@ android {
         disable 'MissingDefaultResource'
 
         // Workaround for issues with Android Studio
-	// complaining about not targeting the latest SDK
+        // complaining about not targeting the latest SDK
         disable 'ExpiredTargetSdkVersion'
     }
 
