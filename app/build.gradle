@@ -44,9 +44,6 @@ android {
         testInstrumentationRunner "com.xmission.trevin.android.todo.util.MultiDexJUnitRunner"
 
         multiDexEnabled = true
-        // FIXME: How do we specify one file for APK builds
-        // and a different one for androidTest builds?
-        multiDexKeepProguard file('multidex-testconfig.pro')
     }
 
     // Java 1.8 compatibility is recommended for backward
@@ -66,12 +63,15 @@ android {
             testCoverageEnabled = true
             enableAndroidTestCoverage = true
             enableUnitTestCoverage = true
+            multiDexKeepProguard file('multidex-testconfig.pro')
         }
         release {
             // Minifying entails removing "unused" code and resources,
             // obfuscating class names, and rewriting code.
             // THIS WILL RESULT IN CRASHES!!
-            minifyEnabled = false
+            minifyEnabled = true
+            multiDexKeepProguard file('multidex-config.pro')
+	    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 

@@ -138,7 +138,7 @@
         </receiver>
 
         <!-- This Android service declaration is required to support using a
-             ForegroundInfo notification in AlarmWorker. -->
+             ForegroundInfo notification in the import/export workers. -->
         <service android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge"/>

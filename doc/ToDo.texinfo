@@ -108,9 +108,11 @@ come due prior to your device starting up.
 
 @item Foreground service.
 This permission was added in Android 10 (Quince Tart).  The app runs a
-service to handle alarms for To Do items that are due at a time that
-you set.  As of Android 8 (Oreo), this service needs to run in the
-foreground in order to post notifications.
+background worker to handle exporting or importing data as an
+``expedited'' job.  When running on Android 8 (Oreo) through 11 (Red
+Velvet Cake), the @code{WorkManager} uses a foreground service for
+this behavior and may need to post a notification about the job in
+certain conditions.
 
 @item Post notifications.
 The app sends notifications if you set an alarm for any To Do items at
@@ -123,7 +125,7 @@ In the app notification settings, there will be separate settings for
 items whose due date is today or upcoming versus items that are
 overdue.  There is also a category for ``Updating Alarms''; this can
 be ignored as it is only required by Android for the background
-service which posts the other notifications.
+worker which posts the other notifications.
 
 @item Vibrating the device.
 The app may use this for a haptic notification of an alarm, in
@@ -787,7 +789,7 @@ same password if you wish.)}
 @chapter Known Bugs
 
 The following bugs are known to exist in version 1.5.0 (build date
-2026.03.05) of To Do.  If you encounter any other bugs, please go to
+2026.03.06) of To Do.  If you encounter any other bugs, please go to
 my project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}
@@ -800,35 +802,21 @@ details form.  I tried making the text in the list editable, but had
 difficulty getting it to work.
 
 @item
-If all categories are shown in the list page and you click ``New'', the
-application may or may not crash; normally it should create the item
-with a category of ``Unfiled.''  I haven't been able to reproduce this
-bug consistently.
-
-@item
-It is not possible to delete the last remaining category in the category
-list.
-
-@item
-When choosing an end date for a repeating task, the ``End on'' button
-text is not changed to show the chosen date.  (The end date will be
-saved when you click ``OK''.)
-
-@item
 If an end date has been chosen for a repeating task, there is no way to
 change it back to ``no end date.''
-
-@item
-When importing a backup file, the progress bar may not update properly.
 @end itemize
 
 The following bugs were in the 1.4.3 release (built 2025.12.29) but
-have been fixed as of 1.5.0 (built 2026.03.05).
+have been fixed as of 1.5.0 (built 2026.03.06).
 
 @itemize @bullet
 @item
 If you start to create a new item and then press ``Cancel'' instead of
 ``OK'', a blank item will be left in the list.
+
+@item
+It is not possible to delete the last remaining category in the category
+list.
 
 @item
 The number of records that can be imported from a previously exported
@@ -842,6 +830,14 @@ import them separately.
 When tapping the due date of an item from the list screen to change
 it, the drop-down list of dates for the next several days may be out
 of date (i.e. ``Today'' and ``Tomorrow'' shows dates in the past).
+
+@item
+When choosing an end date for a repeating task, the ``End on'' button
+text is not changed to show the chosen date.  (The end date will be
+saved when you click ``OK''.)
+
+@item
+When importing a backup file, the progress bar may not update properly.
 @end itemize
 
 The following bugs were in the 1.2.1 release (built 2025.02.24) but

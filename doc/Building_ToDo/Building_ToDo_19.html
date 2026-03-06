@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on February 17, 2026 by texi2html 5.0
+<!-- Created on March 6, 2026 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -74,23 +74,22 @@ need <a href="http://www.gnu.org/software/texinfo/"><code>texinfo</code></a> and
 <a href="https://www.gnu.org/software/texinfo/manual/texinfo/html_node/Format-with-texi2dvi-or-texi2pdf.html"><code>texi2pdf</code></a>
 and/or <a href="http://www.nongnu.org/texi2html/"><code>texi2html</code></a>.
 </p>
-<p>To generate the manual in PDF, simply run:
+<p>There is a &lsquo;<tt>Makefile</tt>&rsquo; in the &lsquo;<tt>doc/</tt>&rsquo; directory that wll
+re-generate the manual and this document.  Running <code>make</code> will
+make them in both formats.
 </p>
-<div class="example">
-<pre class="example">texi2pdf ToDo.texinfo
-</pre></div>
-
-<p>To generate the manual in HTML, run:
+<p>To generate the manuals in PDF, simply run <code>make pdf</code> or
+<code>make ToDo.pdf</code> for just the user manual.
 </p>
-<div class="example">
-<pre class="example">texi2html --split node ToDo.texinfo
-</pre></div>
-<p>which will produce the manual under &lsquo;<tt>doc/ToDo/ToDo.html</tt>&rsquo;.
+<p>To generate the manuals in HTML, run <code>make html</code> or
+<code>make ToDo/ToDo.html</code> for just the user manual.  The HTML
+version is formatted with one file per &ldquo;node&rdquo; (chapter or section),
+with &lsquo;<tt>ToDo/ToDo.html</tt>&rsquo; as the title page.
 </p>
 <hr>
 <p>
  <font size="-1">
-  This document was generated on <i>February 17, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 6, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 

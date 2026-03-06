@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on February 17, 2026 by texi2html 5.0
+<!-- Created on March 6, 2026 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -69,44 +69,48 @@ ul.no-bullet {list-style: none}
 <a name="Services-1"></a>
 <h2 class="section">1.4 Services</h2>
 
-<p>Background services are in the <code>service</code> subpackage.  These are:
+<p>Background workers are in the <code>service</code> subpackage.  The package
+name is a holdover from earlier versions of the app; since version
+1.5, these are implemented as Android <code>Worker</code> classes which are
+handled purely internally rather than using the Service architecture.
+</p>
+<p>In most cases, each <code>Worker</code> class has a corresponding plain
+class.  This is done to separate Android-specific code from pure Java
+code, so the bulk of the algorithm can be tested on a stand-alone
+basis without needing to run on an Android device.
 </p>
 <ul>
-<li> <code>AlarmService</code>
+<li> <code>AlarmWorker</code>
 &mdash; Keeps track of which To Do items have an upcoming alarm, and posts
 notifications when the next one(s) are due.
 
-</li><li> <code>PasswordChangeService</code>
+</li><li> <code>PasswordChangeWorker</code>, <code>PasswordChanger</code>
 &mdash; When you change your password for private records, it changes
 their encryption key so all records need to be decrypted with the old
-password and re-encrypted with the new one.  This service is
-responsible for updating the stored data.  The changes occur in the
-following sequence:
+password and re-encrypted with the new one.  This class is responsible
+for updating the stored data.  All changes are done in a database
+transaction, so that if any update operation fails then no changes
+will be made leaving the old password and encryption (if any) intact.
 
-<ol>
-<li> If there was an old password, all private records are decrypted.
-</li><li> The hash of the old password (if any) is removed from the database.
-</li><li> The hash of the new password (if any) is written to the database.
-</li><li> If there is a new password, all private records are encrypted.
-</li></ol>
-
-<p>This ensures that if the process fails at any point, you will never
-have data encrypted by two different keys.
-</p>
-</li><li> <code>PalmImporterService</code>
-&mdash; This service is used when importing a &lsquo;<tt>.dat</tt>&rsquo; file, which the
+</li><li> <code>PalmImportWorker</code>, <code>PalmImporter</code>
+&mdash; This worker is used when importing a &lsquo;<tt>.dat</tt>&rsquo; file, which the
 app assumes was created by
 <a href="https://palmdb.net/app/palm-desktop">Palm Desktop</a> as a backup of
 a To Do list from a <a href="https://en.wikipedia.org/wiki/PalmPilot">Palm Pilot</a> or <a href="https://en.wikipedia.org/wiki/Palm_Tungsten">Palm Tungsten</a> PDA.
 
-</li><li> <code>XMLExporterService</code>
-&mdash; This service is used when exporting your To Do list(s) to a backup
-file.
+</li><li> <code>XMLExportWorker</code>, <code>XMLExporter</code>
+&mdash; This worker is used when exporting your To Do list(s) to a backup
+file.  The format of the file has changed slightly as of version 1.5:
+a few attributes were added or changed to use values that are easier
+to read, and the section headings now include counters so that the app
+will know the number of records in the file without having to first
+read the whole file into memory.
 
-</li><li> <code>XMLImporterService</code>
-&mdash; This service is used when importing To Do items from an XML file.
+</li><li> <code>XMLImportWorker</code>, <code>XMLImporter</code>
+&mdash; This worker is used when importing To Do items from an XML file.
 (The app currently assumes any file not ending in &lsquo;<tt>.dat</tt>&rsquo; is XML
-data.)
+data.)  It can handle XML files written by both pre- and post-1.5
+versions of the app.
 
 </li></ul>
 
@@ -128,7 +132,7 @@ data.)
 </tr></table>
 <p>
  <font size="-1">
-  This document was generated on <i>February 17, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 6, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 

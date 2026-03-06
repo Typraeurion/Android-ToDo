@@ -21,7 +21,3 @@
 ## These are essential for the application to run on API < 21
 -keep class j$.** { *; }
 -keep interface j$.** { *; }
-
-# Don't obfuscate anything
--keep class com.xmission.trevin.android.todo.** { *; }
--dontobfuscate

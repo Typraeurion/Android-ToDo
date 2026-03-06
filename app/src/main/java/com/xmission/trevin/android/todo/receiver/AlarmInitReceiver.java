@@ -17,9 +17,6 @@
 package com.xmission.trevin.android.todo.receiver;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
-import static com.xmission.trevin.android.todo.service.AlarmWorker.ALMOST_DUE_CHANNEL_ID;
-import static com.xmission.trevin.android.todo.service.AlarmWorker.OVERDUE_CHANNEL_ID;
-import static com.xmission.trevin.android.todo.service.AlarmWorker.SILENT_CHANNEL_ID;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -28,7 +25,6 @@ import android.os.Build;
 import android.util.Log;
 
 import androidx.work.OneTimeWorkRequest;
-import androidx.work.OutOfQuotaPolicy;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
@@ -44,6 +40,14 @@ import com.xmission.trevin.android.todo.service.AlarmWorker;
 public class AlarmInitReceiver extends BroadcastReceiver {
 
     private static final String TAG = "AlarmInitReceiver";
+
+    public static final String ALMOST_DUE_CHANNEL_ID =
+            "due_notification_channel";
+    public static final String OVERDUE_CHANNEL_ID =
+            "overdue_notification_channel";
+
+    public static final String SILENT_CHANNEL_ID =
+            "silent_notification_channel";
 
     private WorkManager workManager;
 

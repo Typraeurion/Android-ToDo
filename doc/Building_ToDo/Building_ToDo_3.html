@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on February 17, 2026 by texi2html 5.0
+<!-- Created on March 6, 2026 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -69,11 +69,28 @@ ul.no-bullet {list-style: none}
 <a name="Data-Model-1"></a>
 <h2 class="section">1.2 Data Model</h2>
 
-<i>To Do &#x2026;</i>
+<p>Java objects representing To Do records managed by the app are located
+in the <code>data</code> subpackage, with additional classes under
+<code>data.repeat</code> for the various types of repeating intervals and
+<code>data.palm</code> for models of records found in a Palm ToDo database.
+A few of the more significant object models are:
+</p>
+<ul>
+<li> <code>ToDoItem</code>
+&ndash; The parent class for a To Do record.
+
+</li><li> <code>ToDoCategory</code>
+&ndash; The class for a category.
+
+</li><li> <code>ToDoPreferences</code>
+&ndash; This class is a wrapper around Android&rsquo;s <code>SharedPreferences</code>
+which acts as a unified model for this app.
+</li></ul>
+
 <hr>
 <p>
  <font size="-1">
-  This document was generated on <i>February 17, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 6, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 

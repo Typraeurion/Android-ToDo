@@ -16,17 +16,25 @@
  */
 package com.xmission.trevin.android.todo.service;
 
+import static com.xmission.trevin.android.todo.receiver.AlarmInitReceiver.SILENT_CHANNEL_ID;
+
+import android.app.Notification;
 import android.content.Context;
+import android.content.pm.ServiceInfo;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 import androidx.work.Data;
+import androidx.work.ForegroundInfo;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
+import androidx.work.impl.utils.futures.SettableFuture;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.provider.ToDoRepository;
@@ -62,6 +70,13 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
     public static final String EXPORT_PRIVATE = "XMLExportPrivate";
 
     /**
+     * Notification ID to use when running this worker in the foreground
+     * (Oreo or later).  This <b>must not</b> conflict with the ID of
+     * any alarm notification, which are based on To Do item ID&rsquo;s.
+     */
+    private static final int FG_NOTIFICATION_ID = -1160081013;
+
+    /**
      * Output stream where we be writing the XML document.
      * <p>
      * <b>Caution:</b> in order to properly use the Storage Access
@@ -78,6 +93,8 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
 
     /** Internal time when we last updated the async progress */
     private long lastProgressTimeNano;
+
+    private String lastProgressMessage = null;
 
     @NonNull
     private final Context context;
@@ -257,6 +274,31 @@ public class XMLExportWorker extends Worker implements ProgressBarUpdater {
                         Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    /**
+     * Return a notification of this worker when it&rsquo;s run
+     * in the foreground.
+     */
+    @Override
+    @NonNull
+    public ListenableFuture<ForegroundInfo> getForegroundInfoAsync() {
+        Log.d(TAG, ".getForegroundInfoAsync");
+        Notification busyNotification = new NotificationCompat
+                .Builder(context, SILENT_CHANNEL_ID)
+                .setSmallIcon(R.drawable.stat_todo)
+                .setContentText(context.getString(R.string.app_name))
+                .setContentText((lastProgressMessage == null)
+                        ? context.getString(R.string.ImportFileDialogTitle)
+                        : lastProgressMessage)
+                .setOnlyAlertOnce(true)
+                .build();
+        ForegroundInfo info = new ForegroundInfo(
+                FG_NOTIFICATION_ID, busyNotification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        SettableFuture<ForegroundInfo> future = SettableFuture.create();
+        future.set(info);
+        return future;
     }
 
 }

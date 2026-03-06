@@ -18,10 +18,11 @@ package com.xmission.trevin.android.todo.service;
 
 import static android.content.Context.ALARM_SERVICE;
 import static android.content.Context.NOTIFICATION_SERVICE;
+import static com.xmission.trevin.android.todo.receiver.AlarmInitReceiver.ALMOST_DUE_CHANNEL_ID;
+import static com.xmission.trevin.android.todo.receiver.AlarmInitReceiver.OVERDUE_CHANNEL_ID;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_CATEGORY_ID;
 import static com.xmission.trevin.android.todo.ui.ToDoListActivity.EXTRA_ITEM_ID;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.AlarmInfo;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
@@ -38,7 +39,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore.Audio.Media;
@@ -46,10 +46,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
-import androidx.work.ForegroundInfo;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-import androidx.work.impl.utils.futures.SettableFuture;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -86,14 +84,6 @@ public class AlarmWorker extends Worker {
     public static final String EXTRA_NOTIFICATION_DATE =
             "com.xmission.trevin.android.todo.AlarmTime";
 
-    public static final String ALMOST_DUE_CHANNEL_ID =
-            "due_notification_channel";
-    public static final String OVERDUE_CHANNEL_ID =
-            "overdue_notification_channel";
-
-    public static final String SILENT_CHANNEL_ID =
-            "silent_notification_channel";
-
     /**
      * Template for notification groups.  This needs to be a unique string
      * (the documentation isn&rsquo;t clear whether that means unique within
@@ -102,13 +92,6 @@ public class AlarmWorker extends Worker {
      */
     private static final String NOTIFICATION_GROUP_FORMAT =
             "com.xmission.trevin.android.todo.category.%04d";
-
-    /**
-     * Notification ID to use when running this service in the foreground
-     * (Oreo or later).  This <b>must not</b> conflict with the ID of
-     * any alarm notification, which are based on To Do item ID&rsquo;s.
-     */
-    private static final int FG_NOTIFICATION_ID = -379110754;
 
     private final Context context;
     private final AlarmManager alarmManager;
@@ -456,30 +439,6 @@ public class AlarmWorker extends Worker {
         notificationManager.notify((int) alarm.getId(), notice);
         alarm.setNotificationTime(now);
 
-    }
-
-    /**
-     * Return a notification of this worker when it&rsquo;s run
-     * in the foreground.
-     */
-    @Override
-    @NonNull
-    public ListenableFuture<ForegroundInfo> getForegroundInfoAsync() {
-        Log.d(TAG, ".getForegroundInfoAsync");
-        Notification busyNotification = new NotificationCompat
-                .Builder(context, SILENT_CHANNEL_ID)
-                .setSmallIcon(R.drawable.stat_todo)
-                .setContentText(context.getString(R.string.app_name))
-                .setContentText(context.getString(
-                        R.string.AlarmServiceBackgroundMessage))
-                .setOnlyAlertOnce(true)
-                .build();
-        ForegroundInfo info = new ForegroundInfo(
-                FG_NOTIFICATION_ID, busyNotification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        SettableFuture<ForegroundInfo> future = SettableFuture.create();
-        future.set(info);
-        return future;
     }
 
 }

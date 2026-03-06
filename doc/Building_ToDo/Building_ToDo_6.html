@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Created on February 17, 2026 by texi2html 5.0
+<!-- Created on March 6, 2026 by texi2html 5.0
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
             Karl Berry  <karl@freefriends.org>
@@ -70,14 +70,20 @@ ul.no-bullet {list-style: none}
 <h2 class="section">1.5 Receiver</h2>
 
 <p>In the <code>receiver</code> subpackage, the <code>AlarmInitReceiver</code> is
-called when Android starts up so that it can start the
-<code>AlarmService</code> which will let you know of any To Do items which
-came due while the device was off.
+called when Android starts up so that it can run the
+<code>AlarmWorker</code> which will let you know of any To Do items which
+came due while the device was off.  It also is called when the user
+changes the system time and date or when the time zone is changed so
+that alarms can be adjusted to the new time zone if the user has set
+the app to track local time.  Finally, this receiver is called when an
+alarm for a To Do item goes off.  In all these cases it runs the
+<code>AlarmWorker</code> to manage showing notifications and scheduling the
+next alarm.
 </p>
 <hr>
 <p>
  <font size="-1">
-  This document was generated on <i>February 17, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
+  This document was generated on <i>March 6, 2026</i> using <a href="http://www.nongnu.org/texi2html/"><i>texi2html 5.0</i></a>.
  </font>
  <br>
 
