@@ -617,8 +617,15 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             db.beginTransaction();
             int count = db.delete(CATEGORY_TABLE_NAME,
             ToDoCategoryColumns._ID + " != ?", whereArgs);
-            if (count <= 0)
+            if (count <= 0) {
+                /*
+                 * There were no categories to delete, so we don't need to
+                 * update any items or notify observers.  But we do need
+                 * to end the transaction normally.
+                 */
+                db.setTransactionSuccessful();
                 return false;
+            }
             ContentValues update = new ContentValues();
             update.put(ToDoItemColumns.CATEGORY_ID, ToDoCategory.UNFILED);
             db.update(TODO_TABLE_NAME, update,
@@ -1394,7 +1401,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
 
     @Override
     public synchronized void runInTransaction(@NonNull Runnable callback) {
-        Log.d(TAG, String.format(".runInTransaction(%s)",
+        Log.d(TAG, String.format(Locale.US, ".runInTransaction(%s)",
                 callback.getClass().getName()));
         SQLiteDatabase db = getDb();
         boolean nestedTransaction = db.inTransaction();
@@ -1402,8 +1409,12 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         try {
             callback.run();
             db.setTransactionSuccessful();
+            Log.d(TAG, "Successfully completed transaction");
             if (!nestedTransaction)
                 notifyObservers();
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Rolling back the transaction", e);
+            throw e;
         } finally {
             db.endTransaction();
         }

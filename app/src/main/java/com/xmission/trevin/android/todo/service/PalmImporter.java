@@ -287,6 +287,7 @@ public class PalmImporter implements Runnable {
             progressUpdater.updateProgress(modeText.get(OpMode.FINISH),
                     importer.importCount, importer.totalCount, false);
         } catch (UncaughtIOException ui) {
+            Log.e(TAG, "I/O Error reading the Palm database", ui);
             throw ui.getCause();
         } finally {
             inStream.close();

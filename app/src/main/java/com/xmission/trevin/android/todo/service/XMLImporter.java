@@ -379,6 +379,9 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
     /** Flag indicating we have read the categories section */
     private boolean categoriesRead = false;
 
+    /** Flag indicating we have read the ToDoList section */
+    private boolean todoListRead = false;
+
     /** Next free record ID (counting both the XML file and local database) */
     private long nextFreeRecordID = 1;
 
@@ -482,6 +485,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             progressUpdater.updateProgress(modeText.get(OpMode.FINISH),
                     importer.processedRecords, importer.totalRecords, false);
         } catch (UncaughtIOException ue) {
+            Log.e(LOG_TAG, "I/O Error reading the XML file", ue);
             throw ue.getCause();
         } finally {
             inStream.close();
@@ -1213,6 +1217,11 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 break;
 
             case TODOS:
+                if (todoListRead)
+                    throw new XMLParseException(String.format(Locale.US,
+                            "Multiple <%s> sections in document", qName),
+                            xmlFileName, xmlLocator.getLineNumber(),
+                            xmlLocator.getColumnNumber());
                 int todoCount = parseIntAttribute(attributes,
                         ITEMS_TAG, ATTR_COUNT, -1, 0, null);
                 // For this section we currently don't do anything with
@@ -1545,6 +1554,10 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                 currentCategory.name = textContent;
                 categories.add(currentCategory);
                 currentCategory = null;
+                break;
+
+            case TODOS:
+                todoListRead = true;
                 break;
 
             case TODO_HEAD:

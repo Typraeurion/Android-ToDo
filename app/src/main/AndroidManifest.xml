@@ -45,7 +45,7 @@
          No other changes are anticipated through SDK [35]. -->
 
     <uses-sdk android:minSdkVersion="14"
-              android:targetSdkVersion="34"/>
+              android:targetSdkVersion="35"/>
 
     <!-- For data extraction rules, see: https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore -->
     <!-- For full backup content, see: https://developer.android.com/identity/data/autobackup#Files -->
@@ -61,7 +61,7 @@
         android:label="@string/app_name"
         android:name="com.xmission.trevin.android.todo.ToDoApplication"
         android:theme="@style/Theme.Light.WithActionBar"
-        tools:targetApi="34">
+        tools:targetApi="35">
 
         <activity
             android:name=".ui.ToDoListActivity"
