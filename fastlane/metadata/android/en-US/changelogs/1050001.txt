@@ -20,3 +20,4 @@ Version 1.5.0
   either return to the list window or become unusable.
 * Fixed an issue where rotating the screen while editing
   an item's note would cause all changes to be lost.
+* Bumped the target SDK from 34 (Upside-down Cake) to 35 (Vanilla Ice Cream).
