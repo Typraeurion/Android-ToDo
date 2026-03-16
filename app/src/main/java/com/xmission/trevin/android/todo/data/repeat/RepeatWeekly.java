@@ -98,7 +98,7 @@ public class RepeatWeekly extends AbstractRepeat {
         // Get the next available day in the current week
         SortedSet<WeekDays> remainingDays =
                 new TreeSet<>(fixedWeekDays.tailSet(day));
-        remainingDays.removeFirst();
+        remainingDays.remove(remainingDays.first());
         if (remainingDays.isEmpty())
             // If no days left this week, skip `increment' weeks
             // and go to the first available day that week.
