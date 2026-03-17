@@ -929,8 +929,9 @@ public class ToDoItemTests {
                     LocalDate.ofEpochDay(RAND.nextInt(100000))));
         } while (item2.getRepeatInterval().equals(
                 itemWithRepeat.getRepeatInterval()));
-        assertNotEquals("Item hash codes with different repeat intervals",
-                itemWithRepeat.hashCode(), item2.hashCode());
+        if (itemWithRepeat.hashCode() == item2.hashCode())
+        fail(String.format("Items with different repeat intervals have the same hash code:\n"
+                + "Item 1: %s\nItem 2: %s", itemWithRepeat, item2));
     }
 
     @Test

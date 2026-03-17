@@ -239,6 +239,10 @@ public class RepeatSemiMonthlyOnDatesTests {
                     adjustTarget(targetDate, allowed, direction);
             if (withEnd && expectedDate.isAfter(endDate))
                 expectedDate = null;
+            // In the rare case the "expected" next due date is the same
+            // as the current due date (due to adjustment), skip it.
+            if (startDate.equals(expectedDate))
+                continue;
             LocalDate actualDue = repeat
                     .computeNextDueDate(startDate, completed);
             StringBuffer message = new StringBuffer(

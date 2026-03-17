@@ -330,8 +330,10 @@ public class RepeatDayAfterTests {
         // Choose 3 consecutive days of the week to allow
         for (int d = RAND.nextInt(WeekDays.values().length);
              allowed.size() < 3; d++) {
-            if (d >= WeekDays.SATURDAY.getValue())
+            if (d > WeekDays.SATURDAY.getValue())
                 d = WeekDays.SUNDAY.getValue();
+            else if (d < WeekDays.SUNDAY.getValue())
+                d = WeekDays.SATURDAY.getValue();
             allowed.add(WeekDays.fromValue(d));
         }
         LocalDate startDate = LocalDate.now();

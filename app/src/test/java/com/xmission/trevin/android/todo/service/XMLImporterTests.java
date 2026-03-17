@@ -38,6 +38,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -57,27 +58,26 @@ public class XMLImporterTests {
     private static ToDoPreferences mockPrefs = null;
     private static MockToDoRepository mockRepo = null;
     private StringEncryption globalEncryption = null;
-    private String unfiledName;
+    private static String unfiledName;
+
+    @BeforeClass
+    public static void initializeMocks() {
+        underlyingPrefs = MockSharedPreferences.getInstance();
+        ToDoPreferences.setSharedPreferences(underlyingPrefs);
+        mockPrefs = ToDoPreferences.getInstance(null);
+        mockRepo = MockToDoRepository.getInstance();
+        unfiledName = mockRepo.getCategoryById(ToDoCategory.UNFILED).getName();
+    }
 
     @Before
-    public void initializeRepository() {
-        if (mockPrefs == null) {
-            underlyingPrefs = MockSharedPreferences.getInstance();
-            ToDoPreferences.setSharedPreferences(underlyingPrefs);
-            mockPrefs = ToDoPreferences.getInstance(null);
-        }
-        if (mockRepo == null) {
-            mockRepo = MockToDoRepository.getInstance();
-        }
+    public void resetMocks() {
         underlyingPrefs.resetMock();
         // With rare exceptions, all time and date conversions
         // should use UTC.
         mockPrefs.setTimeZone(ZoneOffset.UTC);
         mockRepo.clear();
         globalEncryption = StringEncryption.holdGlobalEncryption();
-        if (unfiledName == null)
-            unfiledName = mockRepo.getCategoryById(
-                    ToDoCategory.UNFILED).getName();
+        globalEncryption.forgetPassword();
     }
 
     @After
@@ -1731,7 +1731,7 @@ public class XMLImporterTests {
             alreadyImportedItem = TEST_TODOS_1.get(RAND.nextInt(TEST_TODOS_1.size()));
             if (alreadyImportedItem.getCategoryId() == ToDoCategory.UNFILED) {
                 alreadyImportedItem = null;
-                break;
+                continue;
             }
             for (ToDoItem todo : oldItems) {
                 if (todo.getId().equals(alreadyImportedItem.getId()) ||
