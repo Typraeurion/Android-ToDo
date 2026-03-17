@@ -300,18 +300,15 @@ public class ImportActivity extends Activity {
         importRadioPrivate.setOnCheckedChangeListener(
                 new PrivateStorageCheckedChangeListener());
 
-        SharedStorageCheckedChangeListener sharedListener =
-                new SharedStorageCheckedChangeListener();
         /*
          * This button responds to both clicks and check changes
          * so that the user can change the import file without
          * having to switch the radio button back and forth.
          */
-        //importRadioShared.setOnCheckedChangeListener(sharedListener);
-        importRadioShared.setOnClickListener(sharedListener);
+        importRadioShared.setOnClickListener(
+                new SharedStorageCheckedChangeListener());
 
-        importFileName.addTextChangedListener(
-                new FileNameChangedListener());
+        importFileName.addTextChangedListener(new FileNameChangedListener());
 
         importTypeList.setOnItemSelectedListener(
                 new ImportTypeChangedListener());
@@ -438,7 +435,8 @@ public class ImportActivity extends Activity {
     private class PrivateStorageCheckedChangeListener
             implements RadioButton.OnCheckedChangeListener {
         @Override
-        public void onCheckedChanged(CompoundButton button, boolean selected) {
+        public void onCheckedChanged(
+                @NonNull CompoundButton button, boolean selected) {
             Log.d(TAG, String.format(Locale.US,
                     "PrivateStorageCheckedChangeListener.onCheckedChanged(%s)",
                     selected));
@@ -531,7 +529,8 @@ public class ImportActivity extends Activity {
             Log.d(TAG, String.format(Locale.US,
                     "ImportTypeChangedListener.onItemSelected(%d,%d)",
                     position, id));
-            if ((position < 0) || (position >= ToDoPreferences.ImportType.values().length)) {
+            if ((position < 0) ||
+                    (position >= ToDoPreferences.ImportType.values().length)) {
                 Log.w(TAG, "Invalid import type index!");
                 return;
             }
@@ -548,7 +547,7 @@ public class ImportActivity extends Activity {
             implements CompoundButton.OnCheckedChangeListener {
         @Override
         public void onCheckedChanged(
-                CompoundButton b, boolean checked) {
+                @NonNull CompoundButton b, boolean checked) {
             prefs.setImportPrivate(checked);
             passwordFieldRows[0].setVisibility(checked &&
                     (encryptor.getPassword() == null)
@@ -566,7 +565,7 @@ public class ImportActivity extends Activity {
             implements CompoundButton.OnCheckedChangeListener {
         @Override
         public void onCheckedChanged(
-                CompoundButton b, boolean checked) {
+                @NonNull CompoundButton b, boolean checked) {
             int oldType = importPassword.getInputType();
             if (checked)
                 oldType &= ~InputType.TYPE_TEXT_VARIATION_PASSWORD;

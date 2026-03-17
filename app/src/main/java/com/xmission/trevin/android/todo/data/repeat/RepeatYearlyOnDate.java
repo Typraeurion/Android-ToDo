@@ -89,9 +89,10 @@ public class RepeatYearlyOnDate extends AbstractDateRepeat {
 
     private LocalDate setDateAndAdjust(LocalDate base) {
         // Remember, our months are 0-based while withMonth() is 1-based.
-        LocalDate hardDate = base.withMonth(month.getValue() + 1)
-                // Cap the date in case it's February 29
-                .withDayOfMonth(Math.min(date, base.lengthOfMonth()));
+        LocalDate hardDate = base.withMonth(month.getValue() + 1);
+        // Cap the date in case it's February 29
+        hardDate = hardDate.withDayOfMonth(
+                Math.min(date, hardDate.lengthOfMonth()));
         return adjustDueDate(hardDate);
     }
 
@@ -103,8 +104,7 @@ public class RepeatYearlyOnDate extends AbstractDateRepeat {
         // an adjustment will cross back to the previous year.
         LocalDate nextYear = priorDueDate.plusYears(1);
         LocalDate candiDate = setDateAndAdjust(nextYear);
-        if (candiDate.withDayOfMonth(1)
-                .isBefore(nextYear.withDayOfMonth(1))) {
+        if (candiDate.equals(priorDueDate)) {
             // Confirmed month crossing; increment
             // 1 year more than the normal increment.
             Log.d(getClass().getSimpleName(), String.format(
@@ -112,7 +112,6 @@ public class RepeatYearlyOnDate extends AbstractDateRepeat {
                             + " advancing %d years",
                     nextYear, candiDate, increment + 1));
             candiDate = setDateAndAdjust(nextYear.plusYears(increment));
-            // To Do: Finish method stub
         } else if (increment > 1) {
             // No year crossing; use the normal increment
             candiDate = setDateAndAdjust(priorDueDate.plusYears(increment));

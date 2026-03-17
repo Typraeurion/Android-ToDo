@@ -18,11 +18,13 @@ package com.xmission.trevin.android.todo.provider;
 
 import com.xmission.trevin.android.todo.data.ToDoItem;
 
+import java.io.Closeable;
+
 /**
  * An interface which provides random read access to the result set
  * returned by {@link ToDoRepository#getItems(long, boolean, boolean, String)}.
  */
-public interface ToDoCursor {
+public interface ToDoCursor extends Closeable {
 
     /** Close the cursor and release its resources */
     void close();

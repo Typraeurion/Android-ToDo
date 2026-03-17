@@ -476,7 +476,6 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
             encryptor.setPassword(currentPassword.toCharArray());
         }
         try {
-            // To Do: Read the document tag and extract the version number, if any
             XMLImporter importer = new XMLImporter(prefs, repository,
                     fileName, inStream, importType, importPrivate,
                     decryptor, encryptor, progressUpdater);
@@ -1222,6 +1221,7 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                             "Multiple <%s> sections in document", qName),
                             xmlFileName, xmlLocator.getLineNumber(),
                             xmlLocator.getColumnNumber());
+                // Unused ... for now
                 int todoCount = parseIntAttribute(attributes,
                         ITEMS_TAG, ATTR_COUNT, -1, 0, null);
                 // For this section we currently don't do anything with
@@ -1244,7 +1244,10 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
                         TODO_ITEM, ATTR_PRIORITY, null, null, null));
                 if (Boolean.parseBoolean(attributes.getValue(ATTR_PRIVATE)))
                     currentToDoItem.setPrivate(parseIntAttribute(attributes,
-                            TODO_ITEM, ATTR_ENCRYPTION, 1, 1, 2));
+                            TODO_ITEM, ATTR_ENCRYPTION,
+                            StringEncryption.NO_ENCRYPTION,
+                            StringEncryption.NO_ENCRYPTION,
+                            StringEncryption.MAX_SUPPORTED_ENCRYPTION));
                 else
                     currentToDoItem.setPrivate(0);
                 break;

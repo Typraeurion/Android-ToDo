@@ -1713,7 +1713,7 @@ public class XMLImporterTests {
     /**
      * Test importing private (but not encrypted) To Do records in
      * {@link ImportType#ADD ADD} mode.  Any imported item with the same
-     * ID as an existing item will be  assigned a new ID regardless of its
+     * ID as an existing item will be assigned a new ID regardless of its
      * contents.  This test uses the version 1 import file.
      */
     @Test

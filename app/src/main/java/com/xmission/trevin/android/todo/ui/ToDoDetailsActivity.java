@@ -1370,7 +1370,7 @@ public class ToDoDetailsActivity extends Activity {
                             if (todo.getNote() != null)
                                 todo.setEncryptedNote(encryptor.encrypt(
                                         todo.getEncryptedNote()));
-                            todo.setPrivate(StringEncryption.BUNDLED_ENCRYPTION);
+                            todo.setPrivate(StringEncryption.encryptionType());
                         } catch (EncryptionException e) {
                             Toast.makeText(ToDoDetailsActivity.this,
                                     e.getMessage(), Toast.LENGTH_LONG).show();

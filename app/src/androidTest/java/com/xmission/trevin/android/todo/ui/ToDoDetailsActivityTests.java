@@ -126,9 +126,9 @@ public class ToDoDetailsActivityTests {
         scenario.onActivity(activity -> {
             spinner[0] = (Spinner) activity.findViewById(
                     R.id.DetailSpinnerCategory);
-            assertNotNull("Category drop-down was not found", spinner[0]);
-            adapter[0] = (CategorySelectAdapter) spinner[0].getAdapter();
         });
+	assertNotNull("Category drop-down was not found", spinner[0]);
+	adapter[0] = (CategorySelectAdapter) spinner[0].getAdapter();
         // Step 2: If the adapter hasn't been populated yet,
         //         we have to wait for a data update...
         //         and then for the activity to change the selection.
@@ -400,7 +400,7 @@ public class ToDoDetailsActivityTests {
 
     /**
      * Verify that when the details form is shown for an existing item,
-     * it’s populated with that item&rsquo;s data from the repository.
+     * it&rsquo;s populated with that item&rsquo;s data from the repository.
      */
     @Test
     public void testEditItem() {

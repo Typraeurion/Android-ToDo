@@ -90,8 +90,9 @@ public class MockToDoRepository implements ToDoRepository {
 
     /** @return the singleton instance of the To Do repository */
     public static MockToDoRepository getInstance() {
-        if (instance == null)
+        if (instance == null) {
             instance = new MockToDoRepository();
+        }
         return instance;
     }
 
@@ -334,9 +335,9 @@ public class MockToDoRepository implements ToDoRepository {
             // both be non-null; do an unsigned byte-by-byte comparison.
             int i = 0;
             while ((i < ba1.length) || (i < ba2.length)) {
-                if (i > ba1.length)
+                if (i >= ba1.length)
                     return -1;
-                if (i > ba2.length)
+                if (i >= ba2.length)
                     return 1;
                 if (ba1[i] != ba2[i])
                     return ((ba1[i] & 0xff) < (ba2[i] & 0xff)) ? -1 : 1;
@@ -979,9 +980,6 @@ public class MockToDoRepository implements ToDoRepository {
         final int MGROUP_DIR = 5;
         Matcher m = sortItemPattern.matcher(sortOrder);
         while (m.find()) {
-        // for (String sortItem : sortOrder.split(",")) {
-        //    sortItem = sortItem.trim();
-        //    String[] sortParts = sortItem.split(" +");
             String function = m.group(MGROUP_BASE);
             String[] args = m.group(MGROUP_ARGS) == null ? null
                     : m.group(MGROUP_ARGS).split(",");

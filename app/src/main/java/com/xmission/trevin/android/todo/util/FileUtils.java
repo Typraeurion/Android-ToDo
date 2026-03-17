@@ -52,25 +52,25 @@ public class FileUtils {
      * @param context the activity requesting the default directory
      */
     public static String getDefaultStorageDirectory(Context context) {
-	Log.d(TAG, ".getDefaultStorageDirectory");
-	String dirName;
-	if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-	    dirName = Environment.getExternalStorageDirectory().getAbsolutePath()
-		+ "/Android/Data/com.xmission.trevin.android.todo";
-	} else {
+        Log.d(TAG, ".getDefaultStorageDirectory");
+        String dirName;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+            dirName = Environment.getExternalStorageDirectory().getAbsolutePath()
+                    + "/Android/Data/com.xmission.trevin.android.todo";
+        } else {
             File filesDir = context.getExternalFilesDir(null);
             if (filesDir == null) {
                 Log.w(TAG, "External storage is unavailable!"
                         + "  Cannot determine default storage path.");
                 // Fall back to the Jelly Bean path
                 dirName = Environment.getExternalStorageDirectory().getAbsolutePath()
-		+ "/Android/Data/com.xmission.trevin.android.todo";
+                        + "/Android/Data/com.xmission.trevin.android.todo";
             } else {
                 dirName = filesDir.getAbsolutePath();
             }
-	}
-	Log.d(TAG, "Default storage directory is " + dirName);
-	return dirName;
+        }
+        Log.d(TAG, "Default storage directory is " + dirName);
+        return dirName;
     }
 
     /**
@@ -104,17 +104,17 @@ public class FileUtils {
     public static boolean isStorageAvailable(
             File file, boolean checkWriteAccess)
             throws IOException {
-	Log.d(TAG, ".isStorageAvailable");
-	if (file.getParentFile().getCanonicalPath().startsWith(
-		Environment.getExternalStorageDirectory().getCanonicalPath()
+        Log.d(TAG, ".isStorageAvailable");
+        if (file.getParentFile().getCanonicalPath().startsWith(
+                Environment.getExternalStorageDirectory().getCanonicalPath()
                         + File.separator)) {
-	    String storageState = Environment.getExternalStorageState();
-	    Log.d(TAG, "External storage is " + storageState);
-	    if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(storageState))
-		return !checkWriteAccess;
-	    return Environment.MEDIA_MOUNTED.equals(storageState);
-	}
-	return true;
+            String storageState = Environment.getExternalStorageState();
+            Log.d(TAG, "External storage is " + storageState);
+            if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(storageState))
+                return !checkWriteAccess;
+            return Environment.MEDIA_MOUNTED.equals(storageState);
+        }
+        return true;
     }
 
     /**
@@ -192,14 +192,14 @@ public class FileUtils {
      * parent directory.
      */
     public static void ensureParentDirectoryExists(File file)
-	throws SecurityException {
-	if (!file.getParentFile().exists()) {
-	    Log.i(TAG, ".ensureParentDirectoryExists: "
-		  + file.getParent() + " does not exist; attempting to create it");
-	    boolean status = file.getParentFile().mkdirs();
-	    Log.d(TAG, file.getParent()
-		  + (status ? " was created" : " was NOT created"));
-	}
+            throws SecurityException {
+        if (!file.getParentFile().exists()) {
+            Log.i(TAG, ".ensureParentDirectoryExists: "
+                    + file.getParent() + " does not exist; attempting to create it");
+            boolean status = file.getParentFile().mkdirs();
+            Log.d(TAG, file.getParent()
+                    + (status ? " was created" : " was NOT created"));
+        }
     }
 
     /**
@@ -221,10 +221,13 @@ public class FileUtils {
                 null, null, null, null, null);
         try {
             if ((cursor != null) && cursor.moveToFirst()) {
-                fileName = cursor.getString(
-                        cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
-                Log.d(TAG, String.format("Got the display name: \"%s\"",
-                        fileName));
+                int nameColumn = cursor.getColumnIndex(
+                        OpenableColumns.DISPLAY_NAME);
+                if (nameColumn >= 0) {
+                    fileName = cursor.getString(nameColumn);
+                    Log.d(TAG, String.format("Got the display name: \"%s\"",
+                            fileName));
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, String.format("Failed to query %s from URI \"%s\"",

@@ -241,7 +241,7 @@ public class CategoryFilterAdapter extends BaseAdapter {
      * @return the number of categories in the database plus 2
      */
     @Override
-    public synchronized int getCount() {
+    public int getCount() {
         List<ToDoCategory> categories = readCategories();
         if (categories != null)
             return categories.size() + 2;

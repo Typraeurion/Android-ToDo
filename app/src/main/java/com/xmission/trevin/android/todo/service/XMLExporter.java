@@ -239,8 +239,7 @@ public class XMLExporter {
                               boolean exportPrivate,
                               ProgressBarUpdater progressUpdater) {
 
-        PrintStream out = new PrintStream(outStream);
-        try {
+        try (PrintStream out = new PrintStream(outStream)) {
             // Get all of the preferences, metadata, and categories;
             // these should be very short collections.
             Map<String,?> prefsMap = prefs.getAllPreferences();
@@ -297,8 +296,6 @@ public class XMLExporter {
                     totalCount, false);
 
             out.printf(Locale.US, "</%s>\n", DOCUMENT_TAG);
-        } finally {
-            out.close();
         }
     }
 

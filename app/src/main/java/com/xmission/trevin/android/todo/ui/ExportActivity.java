@@ -382,7 +382,8 @@ public class ExportActivity extends Activity {
     private class PrivateStorageCheckedChangeListener
             implements RadioButton.OnCheckedChangeListener {
         @Override
-        public void onCheckedChanged(CompoundButton button, boolean selected) {
+        public void onCheckedChanged(
+                @NonNull CompoundButton button, boolean selected) {
             Log.d(TAG, String.format(Locale.US,
                     "PrivateStorageCheckedChangeListener.onCheckedChanged(%s)",
                     selected));
@@ -403,8 +404,7 @@ public class ExportActivity extends Activity {
             exportDirectoryName.setEnabled(false);
             exportFileName.setEnabled(true);
             exportDirectoryRow.setVisibility(View.VISIBLE);
-            prefs.setExportFile(
-                directoryName + File.separator + fileName);
+            prefs.setExportFile(directoryName + File.separator + fileName);
             exportRadioState = button.getId();
         }
     }
@@ -439,8 +439,7 @@ public class ExportActivity extends Activity {
                 exportDirectoryName.setEnabled(true);
                 exportFileName.setEnabled(true);
                 exportDirectoryRow.setVisibility(View.VISIBLE);
-                prefs.setExportFile(
-                    directoryName + File.separator + fileName);
+                prefs.setExportFile(directoryName + File.separator + fileName);
                 exportRadioState = view.getId();
             }
         }

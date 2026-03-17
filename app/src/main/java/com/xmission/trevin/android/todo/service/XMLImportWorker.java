@@ -28,12 +28,12 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.app.NotificationCompat;
 import androidx.work.Data;
 import androidx.work.ForegroundInfo;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-import androidx.work.impl.utils.futures.SettableFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.xmission.trevin.android.todo.R;
@@ -339,12 +339,18 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
                         : lastProgressMessage)
                 .setOnlyAlertOnce(true)
                 .build();
-        ForegroundInfo info = new ForegroundInfo(
+        final ForegroundInfo info = new ForegroundInfo(
                 FG_NOTIFICATION_ID, busyNotification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        SettableFuture<ForegroundInfo> future = SettableFuture.create();
-        future.set(info);
-        return future;
+        return CallbackToFutureAdapter.getFuture(new CallbackToFutureAdapter
+                .Resolver<ForegroundInfo>() {
+            @Override
+            public String attachCompleter(@NonNull CallbackToFutureAdapter
+                    .Completer<ForegroundInfo> completer) {
+                completer.set(info);
+                return TAG + " foreground info";
+            }
+        });
     }
 
 }

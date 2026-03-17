@@ -16,6 +16,7 @@
  */
 package com.xmission.trevin.android.todo.util;
 
+import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
@@ -28,6 +29,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.*;
 
 import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
 import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
+import static org.hamcrest.CoreMatchers.anything;
 import static org.hamcrest.core.AllOf.allOf;
 import static org.junit.Assert.*;
 
@@ -43,6 +45,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
@@ -339,7 +342,7 @@ public class ViewActionUtils {
         } catch (AssertionError | Exception e) {
             // Ignore
             Log.w(LOG_TAG, String.format(Locale.US,
-                    "Button %d is not completedy visible"
+                    "Button %d is not completely visible"
                             + " and we failed to scroll to it.",
                     buttonId));
         }
@@ -376,7 +379,7 @@ public class ViewActionUtils {
         } catch (AssertionError | Exception e) {
             // Ignore
             Log.w(LOG_TAG, String.format(Locale.US,
-                    "Button %d is not completedy visible"
+                    "Button %d is not completely visible"
                             + " and we failed to scroll to it.",
                     buttonId));
         }
@@ -523,6 +526,139 @@ public class ViewActionUtils {
         } else {
             InstrumentationRegistry.getInstrumentation()
                     .sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
+
+    private static void esAssertSpinnerShown(int spinnerId) {
+        onView(withId(spinnerId))
+                .check(matches(allOf(
+                        isAssignableFrom(Spinner.class),
+                        withEffectiveVisibility(Visibility.VISIBLE),
+                        isEnabled())));
+    }
+
+    private static void assertViewIsSpinner(
+            View view, String spinnerName, int spinnerId) {
+            assertNotNull(spinnerName + " spinner is missing", view);
+            if (!(view instanceof Spinner))
+                fail(String.format(Locale.US,
+                        "%s view with ID %d is not a Spinner",
+                        spinnerName, spinnerId));
+            assertTrue(spinnerName + " spinner is not visible",
+                    view.isShown());
+            assertTrue(spinnerName + " spinner is disabled",
+                    view.isEnabled());
+    }
+
+    /**
+     * Verify that a given spinner is present in the activity..
+     *
+     * @param scenario the scenario in which the test is running
+     * @param name the name of the spinner
+     * @param spinnerId the resource ID of the spinner to check
+     *
+     * @throws AssertionError if the spinner is missing.
+     */
+    public static <T extends Activity> void assertSpinnerShown(
+            ActivityScenario<T> scenario,
+            String name, int spinnerId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            esAssertSpinnerShown(spinnerId);
+        } else {
+            final View[] spinnerRef = new View[1];
+            scenario.onActivity(activity -> {
+                spinnerRef[0] = activity.findViewById(spinnerId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsSpinner(spinnerRef[0], name, spinnerId);
+        }
+    }
+
+    /**
+     * Verify that a given spinner is present in a dialog.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the spinner.
+     * @param name the name of the spinner
+     * @param spinnerId the resource ID of the spinner to check
+     *
+     * @throws AssertionError if the spinner is missing.
+     */
+    public static <T extends Activity> void assertSpinnerShown(
+            ActivityScenario<T> scenario, @NonNull final Dialog dialog,
+            String name, int spinnerId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            esAssertSpinnerShown(spinnerId);
+        } else {
+            final View[] spinnerRef = new View[1];
+            scenario.onActivity(activity -> {
+                spinnerRef[0] = dialog.findViewById(spinnerId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsSpinner(spinnerRef[0], name, spinnerId);
+        }
+    }
+
+    private static void esSelectFromSpinner(int spinnerId, int itemPosition) {
+        onView(withId(spinnerId))
+                .perform(click());
+        onData(anything())
+                .atPosition(itemPosition)
+                .perform(click());
+    }
+
+    /**
+     * Click the designated spinner.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param spinnerId the resource ID of the spinner to click
+     * @param itemPosition the position of the item in the drop-down
+     *to click next
+     */
+    public static <T extends Activity> void selectFromSpinner(
+            ActivityScenario<T> scenario,
+            int spinnerId, int itemPosition) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            esSelectFromSpinner(spinnerId, itemPosition);
+        } else {
+            final View[] spinnerRef = new View[1];
+            scenario.onActivity(activity -> {
+                spinnerRef[0] = activity.findViewById(spinnerId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsSpinner(spinnerRef[0], "Spinner", spinnerId);
+            scenario.onActivity(activity -> {
+                ((Spinner) spinnerRef[0]).setSelection(itemPosition);
+            });
+        }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
+
+    /**
+     * Click the designated dialog spinner.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the spinner.
+     * @param spinnerId the resource ID of the spinner to click
+     * @param itemPosition the position of the item in the drop-down
+     *to click next
+     */
+    public static <T extends Activity> void selectFromSpinner(
+            ActivityScenario<T> scenario, @NonNull Dialog dialog,
+            int spinnerId, int itemPosition) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            esSelectFromSpinner(spinnerId, itemPosition);
+        } else {
+            final View[] spinnerRef = new View[1];
+            scenario.onActivity(activity -> {
+                spinnerRef[0] = dialog.findViewById(spinnerId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            assertViewIsSpinner(spinnerRef[0], "Spinner", spinnerId);
+            scenario.onActivity(activity -> {
+                ((Spinner) spinnerRef[0]).setSelection(itemPosition);
+            });
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
     }

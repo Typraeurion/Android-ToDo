@@ -216,6 +216,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      *
      * @throws SQLException if we fail to connect to the database
      */
+    @SuppressWarnings("resource")
     private synchronized SQLiteDatabase getDb() throws SQLException {
         if ((db != null) && !db.isOpen())
             db = null;
@@ -242,7 +243,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      * Call the registered observers when any To Do data changes.
      * The calls <b>must</b> be done on the main UI thread.
      */
-    private Runnable observerNotificationRunner = new Runnable() {
+    private final Runnable observerNotificationRunner = new Runnable() {
         @Override
         public void run() {
             for (DataSetObserver observer : registeredObservers) try {
@@ -274,6 +275,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
     }
 
     @Override
+    @SuppressWarnings("resource")
     public void open(@NonNull Context context) throws SQLException {
         Log.d(TAG, ".open");
         if (db == null) {
@@ -303,7 +305,7 @@ public class ToDoRepositoryImpl implements ToDoRepository {
      * repository.
      * The calls <b>must</b> be done on the main UI thread.
      */
-    private Runnable observerInvalidationRunner = new Runnable() {
+    private final Runnable observerInvalidationRunner = new Runnable() {
         @Override
         public void run() {
             for (DataSetObserver observer : registeredObservers) try {
@@ -381,9 +383,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
     @Override
     public int countCategories() {
         Log.d(TAG, ".countCategories");
-        Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
-                + CATEGORY_TABLE_NAME, null);
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
+                + CATEGORY_TABLE_NAME, null)) {
             if (c.moveToFirst()) {
                 return c.getInt(0);
             }
@@ -392,17 +393,14 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of categories!", e);
             return 1;
-        } finally {
-            c.close();
         }
     }
 
     @Override
     public long getMaxCategoryId() {
         Log.d(TAG, ".getMaxCategoryId");
-        Cursor c = getDb().rawQuery("SELECT MAX(" + ToDoCategoryColumns._ID
-                + ") FROM " + CATEGORY_TABLE_NAME, null);
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT MAX(" + ToDoCategoryColumns._ID
+                + ") FROM " + CATEGORY_TABLE_NAME, null)) {
             if (c.moveToFirst()) {
                 return c.getLong(0);
             }
@@ -413,8 +411,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of categories!", e);
             return 1;
-        } finally {
-            c.close();
         }
     }
 
@@ -423,9 +419,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         Log.d(TAG, ".getCategories");
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(CATEGORY_TABLE_NAME);
-        Cursor c = qb.query(getDb(), CATEGORY_FIELDS, null, null,
-                null, null, ToDoCategoryColumns.DEFAULT_SORT_ORDER);
-        try {
+        try (Cursor c = qb.query(getDb(), CATEGORY_FIELDS, null, null,
+                null, null, ToDoCategoryColumns.DEFAULT_SORT_ORDER)) {
             List<ToDoCategory> categoryList = new ArrayList<>(c.getCount());
             int idColumn = getColumnIndex(c, ToDoCategoryColumns._ID);
             int nameColumn = getColumnIndex(c, ToDoCategoryColumns.NAME);
@@ -442,8 +437,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
             unfiled.setId(ToDoSchema.ToDoCategoryColumns.UNFILED);
             unfiled.setName(unfiledCategoryName);
             return Collections.singletonList(unfiled);
-        } finally {
-            c.close();
         }
     }
 
@@ -452,11 +445,10 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         Log.d(TAG, String.format(".getCategoryById(%d)", categoryId));
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(CATEGORY_TABLE_NAME);
-        Cursor c = qb.query(getDb(), CATEGORY_FIELDS,
-        ToDoCategoryColumns._ID + " = ?",
+        try (Cursor c = qb.query(getDb(), CATEGORY_FIELDS,
+                ToDoCategoryColumns._ID + " = ?",
                 new String[] {String.valueOf(categoryId)},
-                null, null, null, "1");
-        try {
+                null, null, null, "1")) {
             int nameColumn = getColumnIndex(c, ToDoCategoryColumns.NAME);
             if (c.moveToFirst()) {
                 ToDoCategory cat = new ToDoCategory();
@@ -468,8 +460,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to read category #" + categoryId, e);
             return null;
-        } finally {
-            c.close();
         }
     }
 
@@ -645,9 +635,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
     @Override
     public int countMetadata() {
         Log.d(TAG, ".countMetadata");
-        Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
-                + METADATA_TABLE_NAME, null);
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
+                + METADATA_TABLE_NAME, null)) {
             if (c.moveToFirst()) {
                 return c.getInt(0);
             }
@@ -656,8 +645,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of metadata!", e);
             return 1;
-        } finally {
-            c.close();
         }
     }
 
@@ -666,9 +653,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         Log.d(TAG, ".getMetadata");
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(METADATA_TABLE_NAME);
-        Cursor c = qb.query(getDb(), METADATA_FIELDS, null, null,
-                null, null, ToDoMetadataColumns.NAME);
-        try {
+        try (Cursor c = qb.query(getDb(), METADATA_FIELDS, null, null,
+                null, null, ToDoMetadataColumns.NAME)) {
             List<ToDoMetadata> metadataList = new ArrayList<>(c.getCount());
             int idColumn = getColumnIndex(c, ToDoMetadataColumns._ID);
             int nameColumn = getColumnIndex(c, ToDoMetadataColumns.NAME);
@@ -684,8 +670,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to read the metadata table!", e);
             return Collections.emptyList();
-        } finally {
-            c.close();
         }
     }
 
@@ -694,10 +678,9 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         Log.d(TAG, String.format(".getMetadataByName(\"%s\")", key));
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(METADATA_TABLE_NAME);
-        Cursor c = qb.query(getDb(), METADATA_FIELDS,
+        try (Cursor c = qb.query(getDb(), METADATA_FIELDS,
                 ToDoMetadataColumns.NAME + " = ?",
-                new String[] { key }, null, null, null, "1");
-        try {
+                new String[] { key }, null, null, null, "1")) {
             int idColumn = getColumnIndex(c, ToDoMetadataColumns._ID);
             int nameColumn = getColumnIndex(c, ToDoMetadataColumns.NAME);
             int valueColumn = getColumnIndex(c, ToDoMetadataColumns.VALUE);
@@ -712,8 +695,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to look up metadata " + key, e);
             return null;
-        } finally {
-            c.close();
         }
     }
 
@@ -722,11 +703,10 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         Log.d(TAG, String.format(".getMetadataById(%d)", id));
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(METADATA_TABLE_NAME);
-        Cursor c = qb.query(getDb(), METADATA_FIELDS,
+        try (Cursor c = qb.query(getDb(), METADATA_FIELDS,
                 ToDoMetadataColumns._ID + " = ?",
                 new String[] { Long.toString(id) },
-                null, null, null, "1");
-        try {
+                null, null, null, "1")) {
             int idColumn = getColumnIndex(c, ToDoMetadataColumns._ID);
             int nameColumn = getColumnIndex(c, ToDoMetadataColumns.NAME);
             int valueColumn = getColumnIndex(c, ToDoMetadataColumns.VALUE);
@@ -741,8 +721,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to look up metadata #" + id, e);
             return null;
-        } finally {
-            c.close();
         }
     }
 
@@ -855,9 +833,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
     @Override
     public int countItems() {
         Log.d(TAG, ".countItems");
-        Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
-                + TODO_TABLE_NAME, null);
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
+                + TODO_TABLE_NAME, null)) {
             if (c.moveToFirst()) {
                 return c.getInt(0);
             }
@@ -866,18 +843,16 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of To Do items!", e);
             return 0;
-        } finally {
-            c.close();
         }
     }
 
     @Override
     public int countItemsInCategory(long categoryId) {
         Log.d(TAG, String.format(".countItemsInCategory(%d)", categoryId));
-        Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM " + TODO_TABLE_NAME
-                + " WHERE " + ToDoItemColumns.CATEGORY_ID + " = ?",
-                new String[] { Long.toString(categoryId) });
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
+                        + TODO_TABLE_NAME + " WHERE " +
+                        ToDoItemColumns.CATEGORY_ID + " = ?",
+                new String[] { Long.toString(categoryId) })) {
             if (c.moveToFirst()) {
                 return c.getInt(0);
             }
@@ -886,18 +861,16 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of To Do items!", e);
             return 0;
-        } finally {
-            c.close();
         }
     }
 
     @Override
     public int countPrivateItems() {
         Log.d(TAG, ".countPrivateItems()");
-        Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM " + TODO_TABLE_NAME
-                + " WHERE " + ToDoItemColumns.PRIVATE + " >= ?",
-                new String[] { "1" });
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
+                        + TODO_TABLE_NAME + " WHERE "
+                        + ToDoItemColumns.PRIVATE + " >= ?",
+                new String[] { "1" })) {
             if (c.moveToFirst()) {
                 return c.getInt(0);
             }
@@ -906,18 +879,16 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of private To Do items!", e);
             return 0;
-        } finally {
-            c.close();
         }
     }
 
     @Override
     public int countEncryptedItems() {
         Log.d(TAG, ".countEncryptedItems()");
-        Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM " + TODO_TABLE_NAME
-                + " WHERE " + ToDoItemColumns.PRIVATE + " > ?",
-                new String[] { "1" });
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT COUNT(1) FROM "
+                        + TODO_TABLE_NAME + " WHERE "
+                        + ToDoItemColumns.PRIVATE + " > ?",
+                new String[] { "1" })) {
             if (c.moveToFirst()) {
                 return c.getInt(0);
             }
@@ -926,17 +897,14 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of encrypted To Do items!", e);
             return 0;
-        } finally {
-            c.close();
         }
     }
 
     @Override
     public long getMaxItemId() {
         Log.d(TAG, ".getMaxItemId()");
-        Cursor c = getDb().rawQuery("SELECT MAX(" + ToDoItemColumns._ID
-                + ") FROM " + TODO_TABLE_NAME, null);
-        try {
+        try (Cursor c = getDb().rawQuery("SELECT MAX(" + ToDoItemColumns._ID
+                + ") FROM " + TODO_TABLE_NAME, null)) {
             if (c.moveToFirst()) {
                 return c.isNull(0) ? 0 : c.getLong(0);
             }
@@ -944,22 +912,18 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to count the number of To Do items!", e);
             return 1;
-        } finally {
-            c.close();
         }
 
         // If there are no items, try to get the sequence value from SQLite.
-        c = getDb().rawQuery("SELECT seq FROM sqlite_sequence WHERE name = ?",
-                new String[] { TODO_TABLE_NAME });
-        try {
+        try (Cursor c = getDb().rawQuery(
+                "SELECT seq FROM sqlite_sequence WHERE name = ?",
+                new String[] { TODO_TABLE_NAME })) {
             if (c.moveToFirst()) {
                 return c.getLong(0);
             }
             Log.w(TAG, "No items in the database and"
                     + " SQLite sequence was not found");
             return 1;
-        } finally {
-            c.close();
         }
     }
 
@@ -1023,9 +987,8 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                 .append(ToDoItemColumns.DUE_TIME).append(" IS NOT NULL AND ")
                 .append(ToDoItemColumns.ALARM_TIME).append(" IS NOT NULL AND ")
                 .append(ToDoItemColumns.ALARM_DAYS_EARLIER).append(" IS NOT NULL");
-        Cursor c = qb.query(getDb(), ALARM_ITEM_FIELDS, where.toString(),
-                null, null, null, null);
-        try {
+        try (Cursor c = qb.query(getDb(), ALARM_ITEM_FIELDS, where.toString(),
+                null, null, null, null)) {
             SortedSet<AlarmInfo> alarms = new TreeSet<>();
             AlarmInfoCursor ac = new AlarmInfoCursor(c, timeZone);
             while (ac.moveToNext()) {
@@ -1033,8 +996,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                 alarms.add(item);
             }
             return alarms;
-        } finally {
-            c.close();
         }
     }
 
@@ -1045,19 +1006,15 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         qb.setTables(TODO_TABLE_NAME);
         String selection = ToDoItemColumns.PRIVATE + " >= ?";
         String[] selectionArgs = new String[] { "1" };
-        Cursor c = qb.query(getDb(), new String[] { ToDoItemColumns._ID },
-                selection, selectionArgs, null, null,
-                ToDoItemColumns._ID);
-        try {
+        try (Cursor c = qb.query(getDb(), new String[] { ToDoItemColumns._ID },
+                selection, selectionArgs,
+                null, null, ToDoItemColumns._ID)) {
             long[] ids = new long[c.getCount()];
             for (int i = 0; i < ids.length; i++) {
                 c.moveToNext();
                 ids[i] = c.getLong(0);
             }
             return ids;
-        }
-        finally {
-            c.close();
         }
     }
 
@@ -1069,11 +1026,10 @@ public class ToDoRepositoryImpl implements ToDoRepository {
                 + " ON (" + TODO_TABLE_NAME + "." + ToDoItemColumns.CATEGORY_ID
                 + " = " + CATEGORY_TABLE_NAME + "." + ToDoCategoryColumns._ID + ")");
         qb.setProjectionMap(ITEM_PROJECTION_MAP);
-        Cursor c = qb.query(getDb(), ITEM_FIELDS,
+        try (Cursor c = qb.query(getDb(), ITEM_FIELDS,
                 TODO_TABLE_NAME + "." + ToDoItemColumns._ID + " = ?",
                 new String[] { Long.toString(itemId) },
-                null, null, null, "1");
-        try {
+                null, null, null, "1")) {
             ToDoCursor tc = new ToDoCursorImpl(c);
             if (tc.moveToFirst()) {
                 return tc.getItem();
@@ -1082,8 +1038,6 @@ public class ToDoRepositoryImpl implements ToDoRepository {
         } catch (SQLException e) {
             Log.e(TAG, "Failed to read To Do item #" + itemId, e);
             return null;
-        } finally {
-            c.close();
         }
     }
 

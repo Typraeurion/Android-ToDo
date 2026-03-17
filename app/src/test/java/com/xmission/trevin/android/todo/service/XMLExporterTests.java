@@ -956,7 +956,7 @@ public class XMLExporterTests {
 
     /**
      * Test writing out basic To Do items &mdash; no due dates,
-     * alarms, repeating intervals, etc.  Private records only.
+     * alarms, repeating intervals, etc.  Public records only.
      */
     @Test
     public void testExportPublicItems() throws Exception {

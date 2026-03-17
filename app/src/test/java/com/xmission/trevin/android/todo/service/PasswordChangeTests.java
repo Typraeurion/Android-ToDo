@@ -141,11 +141,9 @@ public class PasswordChangeTests {
 
         // Check the encryption on the encrypted item
         StringEncryption se = new StringEncryption();
-        if (se.getPassword() == null) {
-            se.setPassword(password.toCharArray());
-            assertTrue("New password hash was not stored in the repository",
-                    se.checkPassword(mockRepo));
-        }
+	se.setPassword(password.toCharArray());
+	assertTrue("New password hash was not stored in the repository",
+		   se.checkPassword(mockRepo));
         String decrypted = (savedItem.getEncryptedDescription() == null)
                 ? null : se.decrypt(savedItem.getEncryptedDescription());
         assertEquals("Decrypted description does not match original",

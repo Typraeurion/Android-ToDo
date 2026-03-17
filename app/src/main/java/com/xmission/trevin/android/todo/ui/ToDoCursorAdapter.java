@@ -227,7 +227,8 @@ public class ToDoCursorAdapter extends BaseAdapter {
         Log.d(TAG, String.format(Locale.US, ".getView(%d, %s, %s)",
                 position, (convertView == null) ? null
                         : convertView.getClass().getSimpleName(),
-                parent.getClass().getSimpleName()));
+                (parent == null) ? null
+                        : parent.getClass().getSimpleName()));
 
         if (cursor == null) {
             Log.e(TAG, ".getView: The cursor has not been set!");
@@ -411,18 +412,25 @@ public class ToDoCursorAdapter extends BaseAdapter {
                     // Sanity check in case the due date was cleared
                     if (oldDue == null)
                         oldDue = today;
-                    LocalDate nextDueDate = todo.getRepeatInterval()
-                            .computeNextDueDate(oldDue, today);
-                    if (nextDueDate != null) {
-                        Log.d(TAG, String.format(Locale.US,
-                                "Changing the next due date for item %d from %s to %s",
-                                itemId, oldDue.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                                nextDueDate.format(DateTimeFormatter.ISO_LOCAL_DATE)));
-                        todo.setDue(nextDueDate);
-                        todo.setChecked(false);
-                    } else {
-                        Log.d(TAG, String.format(Locale.US,
-                                "No more repeats for item %d", itemId));
+                    try {
+                        LocalDate nextDueDate = todo.getRepeatInterval()
+                                .computeNextDueDate(oldDue, today);
+                        if (nextDueDate != null) {
+                            Log.d(TAG, String.format(Locale.US,
+                                    "Changing the next due date for item %d from %s to %s",
+                                    itemId, oldDue.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                                    nextDueDate.format(DateTimeFormatter.ISO_LOCAL_DATE)));
+                            todo.setDue(nextDueDate);
+                            todo.setChecked(false);
+                        } else {
+                            Log.d(TAG, String.format(Locale.US,
+                                    "No more repeats for item %d", itemId));
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, String.format(Locale.US,
+                                "Error computing the next due date for item %d:"
+                                + " previous due date = %s, completed %s",
+                                itemId, todo.getDue(), today), e);
                     }
                 }
                 if (todo.getAlarm() != null) {

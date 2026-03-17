@@ -149,8 +149,7 @@ public class ToDoItem implements Cloneable, Serializable {
     }
 
     /**
-     * Get the creation time of the To Do item
-     * in milliseconds since the Epoch.
+     * Get the creation time of the To Do item.
      *
      * @return the note creation time
      */
@@ -160,8 +159,7 @@ public class ToDoItem implements Cloneable, Serializable {
     }
 
     /**
-     * Set the creation time of the To Do item
-     * in milliseconds since the Epoch.
+     * Set the creation time of the To Do item.
      *
      * @param timestamp the creation time to set
      */
@@ -180,8 +178,7 @@ public class ToDoItem implements Cloneable, Serializable {
     }
 
     /**
-     * Get the last modification time of the To Do item
-     * in milliseconds since the epoch.
+     * Get the last modification time of the To Do item.
      *
      * @return the note creation time
      */
@@ -191,8 +188,7 @@ public class ToDoItem implements Cloneable, Serializable {
     }
 
     /**
-     * Set the last modification time of the To Do item
-     * in milliseconds since the epoch.
+     * Set the last modification time of the To Do item.
      *
      * @param timestamp the creation time to set
      */

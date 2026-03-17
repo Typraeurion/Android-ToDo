@@ -1,0 +1,8 @@
+* Version 1.5.1
+* Fixed a regression bug in weekly repeat intervals where Android 14
+  and lower didn't support a Java call used in the calculating
+  the next date, resulting in the item not getting updated.
+* Fixed a bug in calculating the next due date of a yearly repeat interval
+  which could result in an incorrect date under certain conditions.
+* Fixed several lint errors about using newer API calls without
+  checking the platform SDK and using restricted API methods.

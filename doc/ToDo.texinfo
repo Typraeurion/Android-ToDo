@@ -806,6 +806,24 @@ If an end date has been chosen for a repeating task, there is no way to
 change it back to ``no end date.''
 @end itemize
 
+The following bugs were in the 1.5.0 release (built 2026.03.06) but
+have been fixed as of 1.5.1 (built 2026.03.17).
+
+@itemize @bullet
+@item
+When checking an item complete which has a weekly repeating interval,
+its next due date is not computed and its completion status is not
+reset.  This bug was introduced in the 1.5.0 release and did not
+affect older versions.
+
+@item
+Under certain conditions, completing an item with a yearly repeat
+interval for a specific date (around the first of a month for a subset
+of week days) may incorrectly calculate the next due date.  This bug
+was introduced in the 1.5.0 release and @emph{probably} did not affect
+older versions@dots?
+@end itemize
+
 The following bugs were in the 1.4.3 release (built 2025.12.29) but
 have been fixed as of 1.5.0 (built 2026.03.06).
 

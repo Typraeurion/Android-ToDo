@@ -22,7 +22,6 @@ import android.database.SQLException;
 import androidx.annotation.NonNull;
 
 import com.xmission.trevin.android.todo.data.AlarmInfo;
-import com.xmission.trevin.android.todo.data.AlarmItemInfo;
 import com.xmission.trevin.android.todo.data.ToDoCategory;
 import com.xmission.trevin.android.todo.data.ToDoItem;
 import com.xmission.trevin.android.todo.data.ToDoMetadata;
@@ -335,7 +334,7 @@ public interface ToDoRepository {
      *
      * @param timeZone the zone for which to calculate alarm times
      *
-     * @return a {@link SortedSet} of {@link AlarmItemInfo} objects
+     * @return a {@link SortedSet} of {@link AlarmInfo} objects
      * for the pending To Do items
      */
     SortedSet<AlarmInfo> getPendingAlarms(ZoneId timeZone);

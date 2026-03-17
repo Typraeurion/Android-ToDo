@@ -882,7 +882,8 @@ public class ToDoPreferences
                     new ListenerCallbackRunner(listeners.get(key));
             if (uiHandler == null)
                 runner.run();
-            else uiHandler.post(runner);
+            else
+                uiHandler.post(runner);
         } else {
             Log.w(TAG, "Received change notice for unhandled preference: " + key);
         }

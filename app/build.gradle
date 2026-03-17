@@ -36,10 +36,10 @@ android {
         targetSdk = 35
 
         // Defines the version number of your app.
-        versionCode = 1050001
+        versionCode = 1050101
 
         // Defines a user-friendly version name for your app.
-        versionName = "1.5.0"
+        versionName = "1.5.1"
 
         testInstrumentationRunner "com.xmission.trevin.android.todo.util.MultiDexJUnitRunner"
 
@@ -98,6 +98,7 @@ dependencies {
 
     implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.concurrent:concurrent-futures:1.1.0'
     implementation 'androidx.core:core:1.7.0'
     implementation 'androidx.multidex:multidex:2.0.0'
     implementation 'androidx.work:work-runtime:2.7.1'
