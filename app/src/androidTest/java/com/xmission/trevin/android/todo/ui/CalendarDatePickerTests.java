@@ -1032,7 +1032,7 @@ public class CalendarDatePickerTests {
                     showDatePickerDialog(scenario,
                             LocalDate.of(2000, 1, 1), zone);
             // "Today" is set as button 2 in the dialog constructor.
-            assertButtonShown(scenario, listener.dialog,
+            assertDialogButtonShown(scenario, listener.dialog,
                     "Today", android.R.id.button2);
             pressDialogButton(scenario, listener.dialog, android.R.id.button2);
             listener.assertDateSet(String.format(Locale.US,
@@ -1053,7 +1053,7 @@ public class CalendarDatePickerTests {
                     showDatePickerDialog(scenario,
                             LocalDate.of(2000, 1, 1), zone);
             // "Today" is set as button 2 in the dialog constructor.
-            assertButtonShown(scenario, listener.dialog,
+            assertDialogButtonShown(scenario, listener.dialog,
                     "Today", android.R.id.button2);
             pressDialogButton(scenario, listener.dialog, android.R.id.button2);
             listener.assertDateSet(String.format(Locale.US,
@@ -1072,7 +1072,7 @@ public class CalendarDatePickerTests {
             TestDateSetListener listener = showDatePickerDialog(
                     scenario, LocalDate.now(), ZoneId.systemDefault());
             // "Cancel" is set as button 1 in the dialog constructor.
-            assertButtonShown(scenario, listener.dialog,
+            assertDialogButtonShown(scenario, listener.dialog,
                     "Cancel", android.R.id.button1);
             pressDialogButton(scenario, listener.dialog, android.R.id.button1);
             listener.assertDateNotSet();

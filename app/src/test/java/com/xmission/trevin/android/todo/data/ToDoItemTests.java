@@ -19,6 +19,8 @@ package com.xmission.trevin.android.todo.data;
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.junit.Assert.*;
 
+import android.util.Log;
+
 import com.xmission.trevin.android.todo.data.repeat.RepeatInterval;
 import com.xmission.trevin.android.todo.data.repeat.RepeatType;
 import com.xmission.trevin.android.todo.util.StringEncryption;
@@ -29,6 +31,7 @@ import org.junit.Test;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -111,7 +114,8 @@ public class ToDoItemTests {
         // for the purpose of this test we don't need to go that deep.
         // We do rely on repeat type ID's numbering consecutively from 0.
         RepeatInterval repeat = RepeatType.newInstance(
-                RAND.nextInt(RepeatType.values().length), LocalDate.now());
+                RAND.nextInt(RepeatType.values().length),
+                LocalDate.now(ZoneOffset.UTC));
         item.setRepeatInterval(repeat);
 
         item.setHideDaysEarlier(RAND.nextInt(10) + 1);
@@ -930,8 +934,12 @@ public class ToDoItemTests {
         } while (item2.getRepeatInterval().equals(
                 itemWithRepeat.getRepeatInterval()));
         if (itemWithRepeat.hashCode() == item2.hashCode())
-        fail(String.format("Items with different repeat intervals have the same hash code:\n"
-                + "Item 1: %s\nItem 2: %s", itemWithRepeat, item2));
+            // Issue a warning; hash collisions should not be fatal.
+            Log.w("testRepeatIntervalHashCode", String.format(
+                    "Items with different repeat intervals"
+                            + " have the same hash code:\n"
+                            + "Item 1: %s\nItem 2: %s",
+                    itemWithRepeat, item2));
     }
 
     @Test

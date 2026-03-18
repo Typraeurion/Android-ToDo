@@ -81,7 +81,7 @@ public class RepeatMonthlyOnDayTests {
             case 2: return "2nd";
             case 3: return "3rd";
             case -1: return "last";
-            default: return String.format("%dth", week + 1);
+            default: return String.format("%dth", week);
         }
     }
 
@@ -133,7 +133,7 @@ public class RepeatMonthlyOnDayTests {
     @Test
     public void testRepeatMonthlyFourthWeek() {
         LocalDate startDate = LocalDate.now()
-                .withDayOfMonth(RAND.nextInt(7) + 21);
+                .withDayOfMonth(RAND.nextInt(7) + 22);
         RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(startDate);
         WeekDays targetDay = WeekDays.fromJavaDay(startDate.getDayOfWeek());
         repeat.setDay(targetDay);

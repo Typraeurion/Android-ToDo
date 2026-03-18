@@ -25,6 +25,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.time.zone.ZoneRulesException;
@@ -469,7 +471,20 @@ public class ToDoPreferences
                     "Attempt to replace previously set %s with %s",
                     instance.prefs, prefs));
         }
-        instance = new ToDoPreferences(prefs, null);
+        // When running instrumented tests, make sure we have a
+        // handler to run observer callbacks on the UI thread.
+        Handler handler = null;
+        try {
+            Class<?> looperClass = Class.forName("android.os.Looper");
+            Method getMainLooper = looperClass.getDeclaredMethod("getMainLooper");
+            Object looper = getMainLooper.invoke(looperClass);
+            Class<?> handlerClass = Class.forName("android.os.Handler");
+            Constructor<?> cons = handlerClass.getDeclaredConstructor(Looper.class);
+            handler = (Handler) cons.newInstance(looper);
+        } catch (Exception e) {
+            // We must not be running on Android; ignore
+        }
+        instance = new ToDoPreferences(prefs, handler);
     }
 
     /**

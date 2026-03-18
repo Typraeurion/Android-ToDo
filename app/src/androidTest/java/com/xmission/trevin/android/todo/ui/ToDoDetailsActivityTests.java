@@ -211,7 +211,8 @@ public class ToDoDetailsActivityTests {
         intent.putExtra(ToDoListActivity.EXTRA_CATEGORY_ID,
                 ToDoCategory.UNFILED);
         final int dueDaysOffset = RAND.nextInt(8);
-        LocalDate expectedDue = LocalDate.now().plusDays(dueDaysOffset);
+        LocalDate expectedDue = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(dueDaysOffset);
         final int expectedHide = RAND.nextInt(100);
         final int expectedAlarmAdvance = RAND.nextInt(100);
         final LocalTime expectedAlarmTime = LocalTime.of(
@@ -293,7 +294,7 @@ public class ToDoDetailsActivityTests {
             pressDialogButton(dialogRef[0], R.id.HideButtonOK);
             pressButton(wrapper.getScenario(), R.id.DetailButtonAlarm);
             assertDialogShown(wrapper.getScenario(),
-                    testContext.getString(R.string.AlarmTextAlarm));
+                    testContext.getString(R.string.AlarmTextNextAlarm));
             dialogRef[0] = null;
             wrapper.onActivity(activity -> {
                 dialogRef[0] = activity.alarmDialog;
@@ -302,9 +303,6 @@ public class ToDoDetailsActivityTests {
             assertNotNull("The activity did not set alarmDialog",
                     dialogRef[0]);
             pressDialogButton(dialogRef[0], R.id.AlarmCheckBox);
-            assertDialogShown(wrapper.getScenario(),
-                    testContext.getString(R.string.AlarmTextAlarm));
-            hideKeyboard(wrapper.getScenario());
             setEditText(dialogRef[0], "Alarm days earlier",
                     R.id.AlarmEditDaysEarlier,
                     Integer.toString(expectedAlarmAdvance));

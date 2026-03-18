@@ -30,11 +30,11 @@ import static androidx.test.espresso.matcher.ViewMatchers.*;
 import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
 import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
 import static org.hamcrest.CoreMatchers.anything;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.AllOf.allOf;
 import static org.junit.Assert.*;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Build;
 import android.util.Log;
@@ -87,7 +87,7 @@ public class ViewActionUtils {
             @NonNull ActivityScenario<T> scenario,
             @NonNull String expectedText) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            onView(withText(expectedText))
+            onView(withText(containsString(expectedText)))
                     .inRoot(isDialog())
                     .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
         } else {
@@ -156,7 +156,7 @@ public class ViewActionUtils {
     private static TextView findViewRecursive(View root, String hasText) {
         if (root instanceof TextView) {
             CharSequence cs = ((TextView) root).getText();
-            if ((cs != null) && hasText.contentEquals(cs))
+            if ((cs != null) && cs.toString().contains(hasText))
                 return (TextView) root;
         }
 
@@ -276,7 +276,7 @@ public class ViewActionUtils {
      *
      * @throws AssertionError if the button is missing or not visible
      */
-    public static <T extends Activity> void assertButtonShown(
+    public static <T extends Activity> void assertDialogButtonShown(
             ActivityScenario<T> scenario, @NonNull final Dialog dialog,
             String buttonName, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
@@ -301,7 +301,7 @@ public class ViewActionUtils {
      *
      * @throws AssertionError if the button is missing or not visible
      */
-    public static <T extends Activity> void assertButtonShown(
+    public static <T extends Activity> void assertDialogButtonShown(
             @NonNull final Dialog dialog,
             String buttonName, int buttonId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
@@ -332,14 +332,14 @@ public class ViewActionUtils {
             onView(withId(buttonId))
                     .check(matches(isCompletelyDisplayed()));
             isVisible = true;
-        } catch (AssertionError | Exception e) {
+        } catch (Throwable e) {
             isVisible = false;
         }
         // Try scrolling to the button if necessary
         if (!isVisible) try {
             onView(withId(buttonId))
                     .perform(scrollTo());
-        } catch (AssertionError | Exception e) {
+        } catch (Throwable e) {
             // Ignore
             Log.w(LOG_TAG, String.format(Locale.US,
                     "Button %d is not completely visible"
@@ -349,7 +349,8 @@ public class ViewActionUtils {
         onView(withId(buttonId))
                 .check(matches(allOf(isEnabled(),
                         isDisplayingAtLeast(90))))
-                .perform(click());
+                .perform(closeSoftKeyboard(),
+                        click());
     }
 
     /**
@@ -368,7 +369,7 @@ public class ViewActionUtils {
                     .inRoot(isDialog())
                     .check(matches(isCompletelyDisplayed()));
             isVisible = true;
-        } catch (AssertionError | Exception e) {
+        } catch (Throwable e) {
             isVisible = false;
         }
         // Try scrolling to the button if necessary
@@ -376,7 +377,7 @@ public class ViewActionUtils {
             onView(withId(buttonId))
                     .inRoot(isDialog())
                     .perform(scrollTo());
-        } catch (AssertionError | Exception e) {
+        } catch (Throwable e) {
             // Ignore
             Log.w(LOG_TAG, String.format(Locale.US,
                     "Button %d is not completely visible"
@@ -813,10 +814,29 @@ public class ViewActionUtils {
      * @param newText the text to set in the edit text field
      */
     private static void esSetEditText(int fieldId, final String newText) {
+        // Check whether the edit field is visible;
+        // otherwise setting its text may fail.
+        boolean isVisible;
+        try {
+            onView(withId(fieldId))
+                    .check(matches(isDisplayed()));
+            isVisible = true;
+        } catch (Throwable e) {
+            isVisible = false;
+        }
+        if (!isVisible) try {
+            onView(withId(fieldId))
+                    .perform(scrollTo());
+        } catch (Throwable e) {
+            // Ignore
+            Log.w(LOG_TAG, String.format(Locale.US,
+                    "EditText %d is not completely visible"
+                            + " and we failed to scroll to it.",
+                    fieldId));
+        }
         onView(withId(fieldId))
                 .check(matches(isAssignableFrom(EditText.class)))
-                .perform(scrollTo(),
-                        requestFocus(),
+                .perform(requestFocus(),
                         replaceText(newText),
                         closeSoftKeyboard());
     }

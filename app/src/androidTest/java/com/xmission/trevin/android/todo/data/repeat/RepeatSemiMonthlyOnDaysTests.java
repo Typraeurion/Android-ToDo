@@ -121,7 +121,7 @@ public class RepeatSemiMonthlyOnDaysTests {
     @Test
     public void testRepeatSemiMonthlyOnDaysFourthWeek() {
         LocalDate startDate = LocalDate.now()
-                .withDayOfMonth(RAND.nextInt(7) + 21);
+                .withDayOfMonth(RAND.nextInt(7) + 22);
         WeekDays[] days = new WeekDays[2];
         int[] weeks = new int[2];
         days[0] = WeekDays.fromJavaDay(startDate.getDayOfWeek());

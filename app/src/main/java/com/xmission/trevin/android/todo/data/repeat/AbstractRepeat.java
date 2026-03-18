@@ -201,7 +201,9 @@ public abstract class AbstractRepeat implements RepeatInterval {
 
     @Override
     public int hashCode() {
-        int hash = Integer.hashCode(increment) * 31;
+        int hash = type.hashCode() * 31;
+        hash += Integer.hashCode(increment);
+        hash *= 31;
         if (end != null)
             hash += end.hashCode();
         return hash;
@@ -212,6 +214,8 @@ public abstract class AbstractRepeat implements RepeatInterval {
         if (!(o instanceof AbstractRepeat))
             return false;
         AbstractRepeat other = (AbstractRepeat) o;
+        if (type != other.type)
+            return false;
         if (increment != other.increment)
             return false;
         if ((end == null) != (other.end == null))

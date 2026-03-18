@@ -129,7 +129,7 @@ public class ToDoListActivityTests {
             assertActivityLaunched(ToDoDetailsActivity.class);
             //     ... that it was provided a category ID,
             assertIntentHasLongExtra(ToDoDetailsActivity.class,
-                    ToDoListActivity.EXTRA_CATEGORY_ID, ToDoCategory.UNFILED);
+                    ToDoListActivity.EXTRA_CATEGORY_ID, testCategory.getId());
             //     ... and that it was NOT given an item ID.
             assertIntentDoesNotHaveExtra(ToDoDetailsActivity.class,
                     ToDoListActivity.EXTRA_ITEM_ID);
@@ -177,6 +177,9 @@ public class ToDoListActivityTests {
             else
                 publicToDos.add(todo);
         }
+        // For this test to work, we need to be showing
+        // all completed and hidden items.
+        mockPrefs.initializePreference(ToDoPreferences.TPREF_SHOW_CHECKED, true);
         ToDoPreferences prefs = ToDoPreferences.getInstance(testContext);
         try (ActivityScenarioResultsWrapper<ToDoListActivity> wrapper =
                      ActivityScenarioResultsWrapper.launch(ToDoListActivity.class)) {

@@ -28,6 +28,14 @@ import java.util.*;
 
 /**
  * Tests for the semimonthly by date repeating interval.
+ * <p>
+ * <b>Warning:</b> Some of these tests are known to fail intermittently
+ * on conditions where the two selected dates are within a week of each
+ * other (including wrapping around between months) and the set of allowed
+ * week days is small, thus forcing the adjust dates to collide.  This is
+ * an inherent limitation of the semi-monthly interval and is documented
+ * as such; it&rsquo;s not fixable.
+ * </p>
  *
  * @author Trevin Beattie
  */

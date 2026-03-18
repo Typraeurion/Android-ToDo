@@ -19,6 +19,12 @@ package com.xmission.trevin.android.todo.data;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.*;
 import static org.junit.Assert.*;
 
+import android.content.Context;
+
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import com.xmission.trevin.android.todo.provider.TestPreferencesObserver;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -36,31 +42,29 @@ import java.util.function.Supplier;
  *
  * @author Trevin Beattie
  */
-public class ToDoPreferencesTests
-        implements ToDoPreferences.OnToDoPreferenceChangeListener {
+public class ToDoPreferencesTests {
 
     /** Random number generator for some tests */
     final Random RAND = new Random();
 
+    private static Context testContext;
     static MockSharedPreferences mockPrefs;
     static ToDoPreferences toDoPrefs;
 
-    boolean listenerWasCalled;
-
     @BeforeClass
     public static void initializeMock() {
+        testContext = InstrumentationRegistry
+                .getInstrumentation().getTargetContext();
         mockPrefs = MockSharedPreferences.getInstance();
         ToDoPreferences.setSharedPreferences(mockPrefs);
         // ToDoPreferences doesn't actually use the Context if we
         // set a custom SharedPreferences first, so it can be null.
-        toDoPrefs = ToDoPreferences.getInstance(null);
+        toDoPrefs = ToDoPreferences.getInstance(testContext);
     }
 
     @Before
     public void resetMock() {
         mockPrefs.resetMock();
-        toDoPrefs.unregisterOnToDoPreferenceChangeListener(this);
-        listenerWasCalled = false;
     }
 
     /** Test getting the current sort order */
@@ -618,15 +622,6 @@ public class ToDoPreferencesTests
                 false, (b) -> toDoPrefs.setImportPrivate(b));
     }
 
-    /**
-     * Called when a preference has been changed
-     * (if we register this test class as a listener)
-     */
-    @Override
-    public void onToDoPreferenceChanged(ToDoPreferences prefs) {
-        listenerWasCalled = true;
-    }
-
     /** The set of preference keys managed by ToDoPreferences */
     private static final String[] TPREF_KEYS = {
             TPREF_EXPORT_FILE, TPREF_EXPORT_PRIVATE,
@@ -650,10 +645,11 @@ public class ToDoPreferencesTests
      */
     private void runListenerCalledTest(
             String prefKey, String methodName, Runnable setter) {
-        toDoPrefs.registerOnToDoPreferenceChangeListener(this, prefKey);
-        setter.run();
-        assertTrue("Listener was not called for " + methodName,
-                listenerWasCalled);
+        try (TestPreferencesObserver observer =
+                new TestPreferencesObserver(testContext, prefKey)) {
+            setter.run();
+            observer.assertChanged("Listener was not called for " + methodName);
+        }
     }
 
     /**
@@ -674,11 +670,13 @@ public class ToDoPreferencesTests
             if (!key.equals(prefKey))
                 otherPrefs.add(key);
         }
-        toDoPrefs.registerOnToDoPreferenceChangeListener(this,
-                otherPrefs.toArray(new String[otherPrefs.size()]));
-        setter.run();
-        assertFalse("Unassociated listener was called for " + methodName,
-                listenerWasCalled);
+        try (TestPreferencesObserver observer =
+                new TestPreferencesObserver(testContext, 1,
+                        otherPrefs.toArray(new String[0]))) {
+            setter.run();
+            observer.assertNotChanged("Unassociated listener was called for "
+                    + methodName);
+        }
     }
 
     @Test
@@ -814,11 +812,12 @@ public class ToDoPreferencesTests
                     !key.equals(TPREF_FIXED_TIME_ZONE))
                 otherPrefs.add(key);
         }
-        toDoPrefs.registerOnToDoPreferenceChangeListener(this,
-                otherPrefs.toArray(new String[otherPrefs.size()]));
-        toDoPrefs.setTimeZone(ZoneId.of("Canada/Central"));
-        assertFalse("Unassociated listener was called for setTimeZone",
-                listenerWasCalled);
+        try (TestPreferencesObserver observer =
+                new TestPreferencesObserver(testContext, 1,
+                otherPrefs.toArray(new String[0]))) {
+            toDoPrefs.setTimeZone(ZoneId.of("Canada/Central"));
+            observer.assertNotChanged("Unassociated listener was called for setTimeZone");
+        }
     }
 
     @Test
