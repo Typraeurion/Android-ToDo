@@ -30,10 +30,15 @@ import android.app.*;
 import android.content.*;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.Layout;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 
 import androidx.annotation.Nullable;
 
@@ -86,7 +91,24 @@ public class ToDoNoteActivity extends Activity {
             Executors.newSingleThreadExecutor();
 
     /** The note */
-    EditText toDoNote = null;
+    ObservableEditText toDoNote = null;
+
+    /** Vertical scroll bar */
+    ScrollBar scrollBar = null;
+
+    /**
+     * Flag indicating we are programmatically scrolling the edit box.
+     * This is to prevent unnecessary callback loops since we also
+     * listen for scroll events on the edit view.
+     */
+    boolean isScrolling = false;
+
+    /**
+     * Current threshold ratio between the view size and note content size
+     * for showing the scroll bar, taken from preferences on starting.
+     * 0 = always hidden, {@link Double#POSITIVE_INFINITY} = always shown.
+     */
+    double scrollBarThreshold = 0;
 
     /** The &ldquoOK&rdquo; button for saving the note */
     Button okButton = null;
@@ -150,6 +172,25 @@ public class ToDoNoteActivity extends Activity {
         // Inflate our view so we can find our field
         setContentView(R.layout.note);
         toDoNote = findViewById(R.id.NoteEditText);
+        scrollBar = findViewById(R.id.NoteScrollBar);
+
+        ToDoPreferences prefs = ToDoPreferences.getInstance(this);
+        scrollBarThreshold = prefs.getScrollBarThreshold();
+        if (scrollBarThreshold <= 0.0)
+            scrollBar.setVisibility(View.GONE);
+        else {
+            if (scrollBarThreshold >= Double.POSITIVE_INFINITY)
+                scrollBar.setVisibility(View.VISIBLE);
+            // Otherwise leave it until we have loaded our content
+            toDoNote.addOnLayoutChangeListener(
+                    new NoteLayoutChangeListener());
+            toDoNote.addTextChangedListener(
+                    new NoteTextChangeListener());
+            toDoNote.setOnScrollChangedListener(
+                    new NoteScrollListener());
+            scrollBar.registerOnScrollChangeListener(
+                    new ScrollBarChangeListener());
+        }
 
         if (hasSavedState) {
             restoreState((NoteFormData) savedData);
@@ -301,6 +342,162 @@ public class ToDoNoteActivity extends Activity {
         outState.putSerializable("noteFormData",
                 onRetainNonConfigurationInstance());
         super.onSaveInstanceState(outState);
+    }
+
+    /**
+     * Check whether we need to change the visibility of the scroll bar.
+     */
+    private void checkScrollBarVisibility() {
+        if (scrollBarThreshold == Double.POSITIVE_INFINITY)
+            // Always visible
+            return;
+
+        double viewRatio = (scrollBar.getContentSize() == 0.0)
+                ? Double.POSITIVE_INFINITY
+                : (scrollBar.getViewSize() / scrollBar.getContentSize());
+        if (scrollBar.getVisibility() == View.VISIBLE) {
+            if (viewRatio > scrollBarThreshold)
+                scrollBar.setVisibility(View.GONE);
+        } else {
+            if (viewRatio < scrollBarThreshold)
+                scrollBar.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * Called when the layout of the note edit box changes.
+     */
+    private class NoteLayoutChangeListener
+            implements View.OnLayoutChangeListener {
+        @Override
+        public void onLayoutChange(View box, int left, int top,
+                                   int right, int bottom,
+                                   int oldLeft, int oldTop,
+                                   int oldRight, int oldBottom) {
+            int oldHeight = oldBottom - oldTop;
+            int newHeight = bottom - top;
+            int oldWidth = oldRight - oldLeft;
+            int newWidth = right - left;
+            if ((newHeight != oldHeight) || (newWidth != oldWidth)) {
+                Log.d(TAG, String.format(Locale.US,
+                        "NoteLayoutChangeListener.onLayoutChange(): "
+                        + "dimensions changed from %d \u00d7 %d to %d \u00d7 %d",
+                        oldHeight, oldWidth, newHeight, newWidth));
+                scrollBar.setViewSize(newHeight);
+                Layout textLayout = toDoNote.getLayout();
+                if (textLayout != null)
+                    scrollBar.setContentSize(textLayout.getHeight());
+                checkScrollBarVisibility();
+            }
+        }
+    }
+
+    /**
+     * Called when the user scrolls the note apart from using the scroll bar.
+     * Also called when we explicitly call {@code toDoNote.scrollTo(0,y)},
+     * so we guard against unnecessary {@code scrollBar} updates using the
+     * {@code isScrolling} flag.
+     */
+    private class NoteScrollListener
+            implements ViewTreeObserver.OnScrollChangedListener {
+        @Override
+        public void onScrollChanged() {
+            if (isScrolling)
+                return;
+            int scrollY = toDoNote.getScrollY();
+            scrollBar.setPosition(scrollY);
+        }
+    }
+
+    /**
+     * Called when the user updates the text in the note edit box.
+     */
+    private class NoteTextChangeListener implements TextWatcher {
+        @Override
+        public void beforeTextChanged(
+                CharSequence s, int start, int count, int after) {}
+
+        @Override
+        public void onTextChanged(CharSequence s,
+                                  int start, int before, int count) {
+            // The layout might not be updated immediately,
+            // so defer this to the next available UI slot.
+            toDoNote.post(TEXT_CHANGED_RUNNER);
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {}
+    }
+
+    /**
+     * Called by the {@link NoteTextChangeListener} when the text changes.
+     */
+    private final Runnable TEXT_CHANGED_RUNNER = new Runnable() {
+        @Override
+        public void run() {
+            Layout textLayout = toDoNote.getLayout();
+            if (textLayout == null)
+                return;
+            scrollBar.setContentSize(textLayout.getHeight());
+            checkScrollBarVisibility();
+        }
+    };
+
+    /**
+     * Called when the user moves the scroll bar.
+     */
+    private class ScrollBarChangeListener
+            implements ScrollBar.OnScrollBarChangeListener {
+
+        long lastSyncTime = 0;
+        int lastScrollY = -1;
+        final float DISPLAY_PIXEL_SIZE = 1.0f /
+                getResources().getDisplayMetrics().density;
+
+        @Override
+        public void onScrollBarChange(
+                ScrollBar scrollBar, float position, boolean isInFlux) {
+
+            // Ignore rapid successive calls; 24 fps should be sufficient.
+            long nowTime = System.nanoTime();
+            if (nowTime - lastSyncTime < 41666667)
+                return;
+            lastSyncTime = nowTime;
+
+            if (Math.abs(position - lastScrollY) <= DISPLAY_PIXEL_SIZE)
+                return;
+            lastScrollY = (int) position;
+
+            isScrolling = true;
+            toDoNote.scrollTo(0, lastScrollY);
+
+            // The edit box may stall if the cursor would go out of view.
+            // Try to keep it within the visible area.
+            Layout textLayout = toDoNote.getLayout();
+            if (textLayout == null)
+                return;
+            int line = textLayout.getLineForOffset(
+                    toDoNote.getSelectionStart());
+            int topY = textLayout.getLineTop(line);
+            int bottomY = textLayout.getLineBottom(line);
+            int viewHeight = toDoNote.getHeight()
+                    - toDoNote.getCompoundPaddingTop()
+                    - toDoNote.getCompoundPaddingBottom();
+
+            int newLine = line;
+            final int JITTER_BUFFER = 10;
+            if (bottomY < lastScrollY) {
+                newLine = textLayout.getLineForVertical(
+                        lastScrollY + JITTER_BUFFER);
+            } else if (topY > lastScrollY + viewHeight) {
+                newLine = textLayout.getLineForVertical(
+                        lastScrollY + viewHeight - JITTER_BUFFER);
+            }
+            if (newLine != line)
+                toDoNote.setSelection(textLayout.getLineStart(newLine));
+            if (!isInFlux)
+                isScrolling = false;
+        }
     }
 
     // This alert dialog is made available at the package level for testing

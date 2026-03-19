@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.5.1 (2026.03.17)\n
+version 1.5.2 (2026.03.19)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -322,6 +322,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="PrefTextShowPrivate">Show private records</string>
     <string name="PrefTextShowCategory">Show categories</string>
     <string name="PrefTextSound">Sound:</string>
+    <string name="PrefTextScrollbarAlways">Always show the scrollbar</string>
+    <string name="PrefTextScrollbarNever">Never show the scrollbar</string>
+    <string name="PrefTextScrollbarShow">Threshold to show scrollbar in the note editor:</string>
+    <plurals name="PrefTextScrollbarPages">
+        <item quantity="one">%s page</item>
+        <item quantity="other">%s pages</item>
+    </plurals>
     <string name="PrefTextTimeZone">Time zone:</string>
     <string name="PrefTextUseLocalTimeZone">Use system time zone</string>
     <string name="ProgressMessageDecrypting">Decrypting private records with the old password&#8230;</string>

@@ -20,7 +20,10 @@ import java.io.IOException;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Locale;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import android.Manifest;
 import android.app.*;
@@ -57,10 +60,18 @@ public class PreferencesActivity extends Activity {
     /** ID of the time zone dialog */
     private static final int TIMEZONE_LIST_DIALOG_ID = 20;
 
+    // Constants for converting between view ratio and thumb position,
+    // rounded to 8 bits after the decimal.
+    /** ln(1/100) &mdash; the smallest supported ratio */
+    public static final double LOG_HUNDREDTH = - 4.60546875;
+    /** ln(2) &mdash; the largest supported ratio */
+    public static final double LOG_TWO = 0.6953125;
+
     private ToDoPreferences prefs;
 
     CheckBox privateCheckBox = null;
     Button timeZoneButton = null;
+    TextView scrollThresholdText = null;
 
     /** Adapter which provides the grouped list of time zones */
     TimeZoneSelectAdapter timeZoneAdapter = null;
@@ -157,6 +168,24 @@ public class PreferencesActivity extends Activity {
                 TextStyle.FULL, Locale.getDefault()));
         timeZoneButton.setEnabled(!prefs.useLocalTimeZone());
         timeZoneButton.setOnClickListener(TIME_ZONE_CLICK_LISTENER);
+
+        ScrollBar scrollThresholdScrollBar = findViewById(R.id.PrefsScrollBar);
+        // Compute the inverse of the exponential
+        // used in the ScrollBarChangeListener
+        double ratio = prefs.getScrollBarThreshold();
+        double position;
+        if (ratio < 0.01)
+            position = 0.0;
+        else if (ratio > 2.0)
+            position = 1.0;
+        else
+            position = Math.max(0, Math.min(1.0,
+                    (Math.log(ratio) - LOG_HUNDREDTH) / (LOG_TWO - LOG_HUNDREDTH)));
+        scrollThresholdScrollBar.setPosition(position);
+        scrollThresholdScrollBar.registerOnScrollChangeListener(
+                SCROLL_BAR_CHANGE_LISTENER);
+        scrollThresholdText = findViewById(R.id.PrefsTextScrollbarPages);
+        updateScrollThreshold(ratio);
 
     }
 
@@ -409,6 +438,117 @@ public class PreferencesActivity extends Activity {
                     TextStyle.FULL, Locale.getDefault()));
             timeZoneDialog.dismiss();
             return true;
+        }
+    };
+
+    /**
+     * Fraction characters.  The n/5 and n/6 characters were not supported
+     * in the default font until Lollipop (API 21); on Ice Cream Sandwich
+     * (API <= 15) nothing was rendered for them at all, while on Jelly
+     * Bean through Kit Kat (API 16-20) there were substituted with
+     * full-size "n", "/", and "d" characters.
+     */
+    private static final SortedMap<Float,String> FRACTION_CHARS;
+    static {
+        SortedMap<Float,String> m = new TreeMap<>();
+        m.put(0.125f, "\u215b");  // 1/8
+        m.put(0.25f, "\u00bc");   // 1/4
+        m.put(1/3.0f, "\u2153");  // 1/3
+        m.put(0.375f,  "\u215c"); // 3/8
+        m.put(0.5f, "\u00bd");    // 1/2
+        m.put(0.625f, "\u215d");  // 5/8
+        m.put(2/3.0f, "\u2154");  // 2/3
+        m.put(0.75f, "\u00be");   // 3/4
+        m.put(0.875f, "\u215e");  // 7/8
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            m.put(1/6.0f, "\u2159"); // 1/6
+            m.put(0.2f, "\u2155");   // 1/5
+            m.put(0.4f, "\u2156");   // 2/5
+            m.put(0.6f, "\u2157");   // 3/5
+            m.put(0.8f, "\u2158");   // 4/5
+            m.put(5/6.0f, "\u215a"); // 5/6
+        }
+        FRACTION_CHARS = Collections.unmodifiableSortedMap(m);
+    }
+
+    /**
+     * Set the text of the scrollbar threshold according to the
+     * ratio between the view size and content size.  We try to
+     * use rational fractions where practical.
+     *
+     * @param ratio the ratio between the view size and content size
+     */
+    private void updateScrollThreshold(double ratio) {
+        if (ratio <= 0.0) {
+            scrollThresholdText.setText(R.string.PrefTextScrollbarNever);
+            return;
+        }
+        if (ratio > Integer.MAX_VALUE) {
+            scrollThresholdText.setText(R.string.PrefTextScrollbarAlways);
+            return;
+        }
+        double pages = 1.0 / ratio;
+        int pagesInt = (int) pages;
+        float pagesFrac = (float) (pages - pagesInt);
+        String rationalCount = (pagesInt == 0) ? ""
+                : Integer.toString(pagesInt);
+        if (pagesInt < 10) {
+            if (pagesFrac < FRACTION_CHARS.firstKey() / 2) {
+                if (pagesInt == 0)
+                    rationalCount = String.format(
+                            Locale.getDefault(), "%.4f", pages);
+            } else if (pagesFrac >= (FRACTION_CHARS.lastKey() + 1) / 2) {
+                rationalCount = Integer.toString(++pagesInt);
+            } else {
+                float closestKey = pagesFrac;
+                if (!FRACTION_CHARS.containsKey(closestKey)) {
+                    if (pagesFrac <= FRACTION_CHARS.firstKey()) {
+                        closestKey = FRACTION_CHARS.firstKey();
+                    } else if (pagesFrac > FRACTION_CHARS.lastKey()) {
+                        closestKey = FRACTION_CHARS.lastKey();
+                    } else {
+                        float minBound = FRACTION_CHARS.subMap(
+                                0.0f, pagesFrac).lastKey();
+                        float maxBound = FRACTION_CHARS.subMap(
+                                pagesFrac, 1.0f).firstKey();
+                        if (pagesFrac - minBound < maxBound - pagesFrac)
+                            closestKey = minBound;
+                        else
+                            closestKey = maxBound;
+                    }
+                }
+                rationalCount += FRACTION_CHARS.get(closestKey);
+            }
+        }
+        String text = getResources().getQuantityString(
+                R.plurals.PrefTextScrollbarPages,
+                (pages < 1.0625) ? 1 : 2, rationalCount);
+        scrollThresholdText.setText(text);
+    }
+
+    /**
+     * Called when the user moves the scrollbar threshold
+     */
+    private final ScrollBar.OnScrollBarChangeListener SCROLL_BAR_CHANGE_LISTENER
+            = new ScrollBar.OnScrollBarChangeListener() {
+        @Override
+        public void onScrollBarChange(
+                ScrollBar scrollBar, float position, boolean isInFlux) {
+//            Log.d(LOG_TAG, String.format(Locale.US,
+//                    "ScrollBarChangListener.onScrollBarChange(%f,%s)",
+//                    position, isInFlux));
+            // Map the position to a view:content ratio
+            double ratio = Math.exp(position * (LOG_TWO - LOG_HUNDREDTH)
+                    + LOG_HUNDREDTH);
+            if (ratio < 0.01)
+                // Clip to "Never"
+                ratio = 0;
+            else if (ratio > 2.0)
+                // Clip to "Always"
+                ratio = Double.POSITIVE_INFINITY;
+            if (!isInFlux)
+                prefs.setScrollBarThreshold((float) ratio);
+            updateScrollThreshold(ratio);
         }
     };
 

@@ -2,4 +2,16 @@
 <resources>
 	<declare-styleable name="CalendarDatePicker"/>
 	<declare-styleable name="RepeatEditor"/>
+	<declare-styleable name="ScrollBar">
+		<attr name="android:orientation"/>
+		<attr name="android:enabled"/>
+		<attr name="contentSize" format="float"/>
+		<attr name="thumbType">
+			<enum name="fixed" value="0"/>
+			<enum name="scaled" value="1"/>
+		</attr>
+		<attr name="viewSize" format="float"/>
+		<attr name="minLength" format="float"/>
+		<attr name="thumbPosition" format="float"/>
+	</declare-styleable>
 </resources>

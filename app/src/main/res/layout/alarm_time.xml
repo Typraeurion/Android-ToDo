@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:background="@color/white"
     android:scrollbars="vertical"
     android:scrollbarAlwaysDrawVerticalTrack="false">
     <LinearLayout android:id="@+id/LinearLayout00"
-        android:layout_width="fill_parent"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@color/white">
         <CheckBox android:id="@+id/AlarmCheckBox"
             android:layout_height="wrap_content"
             android:text="@string/AlarmTextAlarm"
-            android:layout_width="fill_parent"
+            android:layout_width="match_parent"
             android:textColor="@color/black"/>
 
         <LinearLayout android:id="@+id/LinearLayout01"
@@ -50,7 +50,7 @@
 
         <LinearLayout android:id="@+id/LinearLayout02"
             android:layout_height="wrap_content"
-            android:layout_width="fill_parent">
+            android:layout_width="match_parent">
             <Button android:id="@+id/AlarmButtonOK"
                 android:layout_height="wrap_content"
                 android:text="@string/AlarmButtonOK"

@@ -731,6 +731,11 @@ public class ToDoListActivity extends AppCompatActivity {
             return true;
         }
 
+        if (item.getItemId() == R.id.menuSettings) {
+            // Already handled by the attached intent when the menu was created
+            return false;
+        }
+
         Log.w(TAG, "onOptionsItemSelected(" + item.getItemId()
                 + "): Not handled");
         return false;

@@ -87,6 +87,11 @@ public class ToDoPreferences
     /** Label for the currently selected category */
     public static final String TPREF_SELECTED_CATEGORY = "SelectedCategory";
 
+    /**
+     * Label for the preferences option "Threshold to show scrollbar in the note editor"
+     */
+    public static final String TPREF_SCROLL_THRESHOLD = "ScrollBarThreshold";
+
     /** Label for the last exported file name */
     public static final String TPREF_EXPORT_FILE = "ExportFile";
 
@@ -337,6 +342,23 @@ public class ToDoPreferences
         }
 
         /**
+         * Change the threshold at which to show the scrollbar in the note editor.
+         *
+         * @param threshold the threshold as a ratio of the view size
+         * to the content size.  Use 0 to disable the scrollbar,
+         * {@link Float#POSITIVE_INFINITY} to always show the scrollbar.
+         *
+         * @return this Editor for chaining
+         */
+        public Editor setScrollBarThreshold(float threshold) {
+            if (threshold < 0.0f)
+                throw new IllegalStateException(
+                        "Scrollbar threshold cannot be negative");
+            actualEditor.putFloat(TPREF_SCROLL_THRESHOLD, threshold);
+            return this;
+        }
+
+        /**
          * Change the name of the export file.
          *
          * @param fileName the name of the export file
@@ -442,6 +464,7 @@ public class ToDoPreferences
         listeners.put(TPREF_NOTIFICATION_VIBRATE, new LinkedList<>());
         listeners.put(TPREF_NOTIFICATION_SOUND, new LinkedList<>());
         listeners.put(TPREF_SELECTED_CATEGORY, new LinkedList<>());
+        listeners.put(TPREF_SCROLL_THRESHOLD, new LinkedList<>());
         listeners.put(TPREF_EXPORT_FILE, new LinkedList<>());
         listeners.put(TPREF_EXPORT_PRIVATE, new LinkedList<>());
         listeners.put(TPREF_IMPORT_FILE, new LinkedList<>());
@@ -731,6 +754,33 @@ public class ToDoPreferences
      */
     public void setSelectedCategory(long newCategory) {
         edit().setSelectedCategory(newCategory).finish();
+    }
+
+    /**
+     * Get the threshold at which to show the scrollbar in the note editor.
+     * This is a ratio of the view size to the content size.
+     * A value of 0 disables showing the scrollbar, while
+     * {@link Float#POSITIVE_INFINITY} means the scrollbar should
+     * always be shown even when there is no content.
+     *
+     * @return the threshold (default 0)
+     */
+    public float getScrollBarThreshold() {
+        return prefs.getFloat(TPREF_SCROLL_THRESHOLD, 0.0f);
+    }
+
+    /**
+     * Change the threshold at which to show the scrollbar in the note editor.
+     *
+     * @param threshold the threshold as a ratio of the view size
+     * to the content size.  Use 0 to disable the scrollbar,
+     * {@link Float#POSITIVE_INFINITY} to always show the scrollbar.
+     */
+    public void setScrollBarThreshold(float threshold) {
+        if (threshold < 0.0f)
+            throw new IllegalStateException(
+                    "Scrollbar threshold cannot be negative");
+        edit().setScrollBarThreshold(threshold).finish();
     }
 
     /**

@@ -466,6 +466,33 @@ public class ToDoPreferencesTests {
                 mockPrefs.getPreference(TPREF_SELECTED_CATEGORY));
     }
 
+    /** Test getting the scroll bar threshold */
+    @Test
+    public void testGetScrollBarThreshold() {
+        float expectedThreshold = RAND.nextFloat() * 2.0f;
+        mockPrefs.initializePreference(TPREF_SCROLL_THRESHOLD, expectedThreshold);
+        assertEquals("Scroll bar threshold", expectedThreshold,
+                toDoPrefs.getScrollBarThreshold(), 0.0f);
+    }
+
+    /** Test getting the default scroll bar threshold */
+    @Test
+    public void testGetDefaultScrollBarThreshold() {
+        assertEquals("Default scroll bar threshold", 0.0f,
+                toDoPrefs.getScrollBarThreshold(), 0.0f);
+    }
+
+    /** Test setting the scroll bar threshold */
+    @Test
+    public void testSetScrollBarThreshold() {
+        float expectedThreshold = RAND.nextFloat() * 2.0f;
+        toDoPrefs.setScrollBarThreshold(expectedThreshold);
+        assertFalse("setScrollBarThreshold did not close the editor!",
+                mockPrefs.isEditorOpen());
+        assertEquals("Scroll bar threshold", expectedThreshold,
+                mockPrefs.getPreference(TPREF_SCROLL_THRESHOLD));
+    }
+
     /** Test getting the export file name */
     @Test
     public void testGetExportFile() {
@@ -627,8 +654,8 @@ public class ToDoPreferencesTests {
             TPREF_EXPORT_FILE, TPREF_EXPORT_PRIVATE,
             TPREF_IMPORT_FILE, TPREF_IMPORT_PRIVATE, TPREF_IMPORT_TYPE,
             TPREF_NOTIFICATION_SOUND, TPREF_NOTIFICATION_VIBRATE,
-            TPREF_SELECTED_CATEGORY, TPREF_SHOW_CATEGORY,
-            TPREF_SHOW_CHECKED, TPREF_SHOW_DUE_DATE,
+            TPREF_SCROLL_THRESHOLD, TPREF_SELECTED_CATEGORY,
+            TPREF_SHOW_CATEGORY, TPREF_SHOW_CHECKED, TPREF_SHOW_DUE_DATE,
             TPREF_SHOW_ENCRYPTED, TPREF_SHOW_PRIORITY,
             TPREF_SHOW_PRIVATE, TPREF_SORT_ORDER
     };
@@ -854,6 +881,18 @@ public class ToDoPreferencesTests {
     public void testSelectedCategoryIgnored() {
         runListenerNotCalledTest(TPREF_SELECTED_CATEGORY, "setSelectedCategory",
                 () -> toDoPrefs.setSelectedCategory(RAND.nextInt(100)));
+    }
+
+    @Test
+    public void testScrollBarThresholdListener() {
+        runListenerCalledTest(TPREF_SCROLL_THRESHOLD, "setScrollBarThreshold",
+                () -> toDoPrefs.setScrollBarThreshold(RAND.nextFloat() * 2.0f));
+    }
+
+    @Test
+    public void testScrollBarThresholdIgnored() {
+        runListenerNotCalledTest(TPREF_SCROLL_THRESHOLD, "setScrollBarThreshold",
+                () -> toDoPrefs.setScrollBarThreshold(RAND.nextFloat() * 2.0f));
     }
 
     @Test
