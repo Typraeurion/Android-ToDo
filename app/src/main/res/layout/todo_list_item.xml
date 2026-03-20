@@ -7,7 +7,8 @@
     android:background="@color/white"
     android:orientation="horizontal">
     <CheckBox style="@style/ListCheckbox"
-        android:id="@+id/ToDoItemChecked">
+        android:id="@+id/ToDoItemChecked"
+        android:button="@drawable/btn_check">
     </CheckBox>
     <TextView style="@style/ListText.Centered.Bold"
         android:id="@+id/ToDoTextPriority"

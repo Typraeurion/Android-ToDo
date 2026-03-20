@@ -1,2 +1,0 @@
-* Version 1.5.2 (tentative)
-* Added an optional scroll bar to the note editor.

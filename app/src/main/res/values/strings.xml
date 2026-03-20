@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.5.2 (2026.03.19)\n
+version 1.6.0 (2026.03.20)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -193,6 +193,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="MenuLock">Lock Encrypted Records</string>
     <string name="MenuPasswordChange">Change Password</string>
     <string name="MenuPasswordSet">Set Password</string>
+    <string name="MenuSearch">Search</string>
     <string name="MenuSettings">Settings</string>
     <string name="MenuUnlock">Unlock Encrypted Records</string>
     <string name="MenuShowCompleted">Toggle Show Completed</string>

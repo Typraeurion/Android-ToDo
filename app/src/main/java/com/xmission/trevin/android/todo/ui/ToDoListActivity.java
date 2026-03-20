@@ -50,9 +50,11 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
 import android.view.*;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.work.Data;
@@ -684,6 +686,46 @@ public class ToDoListActivity extends AppCompatActivity {
                 new Intent(this, PreferencesActivity.class));
         menu.findItem(R.id.menuShowCompleted).setShowAsAction(
                 MenuItem.SHOW_AS_ACTION_IF_ROOM);
+
+        MenuItem searchItem = menu.findItem(R.id.menuSearch);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                itemAdapter.setSearchFilter(newText);
+                return true;
+            }
+        });
+        searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
+            @Override
+            public boolean onMenuItemActionExpand(MenuItem item) {
+                // Post so the view is fully laid out before we request focus
+                searchView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        searchView.requestFocus();
+                        InputMethodManager imm = (InputMethodManager)
+                                getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.showSoftInput(searchView,
+                                InputMethodManager.SHOW_IMPLICIT);
+                    }
+                });
+                return true;
+            }
+            @Override
+            public boolean onMenuItemActionCollapse(MenuItem item) {
+                itemAdapter.setSearchFilter(null);
+                InputMethodManager imm = (InputMethodManager)
+                        getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(searchView.getWindowToken(), 0);
+                return true;
+            }
+        });
+
         this.menu = menu;
         return true;
     }
@@ -728,6 +770,11 @@ public class ToDoListActivity extends AppCompatActivity {
 
         if (item.getItemId() == R.id.menuPassword) {
             showDialog(PASSWORD_DIALOG_ID);
+            return true;
+        }
+
+        if (item.getItemId() == R.id.menuSearch) {
+            // Handled via the action view expand/collapse listener
             return true;
         }
 

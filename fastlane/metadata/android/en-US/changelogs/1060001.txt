@@ -1,0 +1,5 @@
+* Version 1.6.0
+* Added an optional scroll bar to the note editor.
+* Added a Search item/icon to the action bar.  Modified
+  the list adapter to filter To Do items by searching for
+  the given text within item descriptions and notes.

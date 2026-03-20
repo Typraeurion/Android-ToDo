@@ -788,8 +788,8 @@ same password if you wish.)}
 @node Known Bugs, , Exporting and Importing, Top
 @chapter Known Bugs
 
-The following bugs are known to exist in version 1.5.1 (build date
-2026.03.17) of To Do.  If you encounter any other bugs, please go to
+The following bugs are known to exist in version 1.6.0 (build date
+2026.03.20) of To Do.  If you encounter any other bugs, please go to
 my project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}

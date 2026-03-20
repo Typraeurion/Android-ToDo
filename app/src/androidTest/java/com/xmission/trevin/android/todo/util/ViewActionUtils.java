@@ -50,6 +50,7 @@ import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
+import android.widget.ToggleButton;
 
 import com.xmission.trevin.android.todo.ui.ScrollBar;
 
@@ -1073,7 +1074,7 @@ public class ViewActionUtils {
      * @param viewName the name of the check box to use for any assertion error
      * @param fieldId the resource ID of the check box
      *
-     * @return the text of the UI element
+     * @return whether the box is checked
      *
      * @throws AssertionError if the given field is missing
      */
@@ -1100,7 +1101,7 @@ public class ViewActionUtils {
      * @param viewName the name of the check box to use for any assertion error
      * @param fieldId the resource ID of the check box
      *
-     * @return the text of the UI element
+     * @return whether the box is checked
      *
      * @throws AssertionError if the given field is missing
      */
@@ -1128,7 +1129,7 @@ public class ViewActionUtils {
      * @param viewName the name of the check box to use for any assertion error
      * @param fieldId the resource ID of the check box
      *
-     * @return the text of the UI element
+     * @return whether the box is checked
      *
      * @throws AssertionError if the given field is missing
      */
@@ -1145,6 +1146,143 @@ public class ViewActionUtils {
             });
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             return getCheckboxState(viewRef[0], viewName, fieldId);
+        }
+    }
+
+    /**
+     * Return the state of a toggle button.  The button must exist
+     * within the activity context.  This is the Espresso-only version.
+     *
+     * @param buttonId the resource ID of the button
+     *
+     * @return whether the button is pressed
+     *
+     * @throws AssertionError if the given button is missing or is not
+     * a {@link ToggleButton}
+     */
+    private static boolean esGetToggleButtonState(int buttonId) {
+        final boolean[] state = new boolean[1];
+        onView(withId(buttonId))
+                .check(matches(isAssignableFrom(ToggleButton.class)))
+                .check((view, noViewFoundException) -> {
+                    state[0] = ((ToggleButton) view).isChecked();
+                });
+        return state[0];
+    }
+
+    /**
+     * Return the state of a toggle button.  The button must exist
+     * within the activity context.  This is the non-Espresso version;
+     * the caller is responsible for obtaining the toggle button&rsquo;s
+     * {@link View}.
+     *
+     * @param view the view of the toggle button (will be checked
+     * for {@code null}
+     * @param viewName the name of the toggle button to use
+     * for any assertion error
+     * @param buttonId the resource ID of the button
+     *
+     * @return whether the button is pressed
+     *
+     * @throws AssertionError if the given button is missing or is not
+     * a {@link ToggleButton}
+     */
+    private static boolean getToggleButtonState(
+            View view, String viewName, int buttonId) {
+        assertNotNull(String.format(Locale.US,
+                "Button %s with resource ID %d was not found",
+                viewName, buttonId), view);
+        assertTrue(String.format(Locale.US,
+                "%s with ID %d is not a ToggleButton",
+                viewName, buttonId), view instanceof ToggleButton);
+        return ((ToggleButton) view).isChecked();
+    }
+
+    /**
+     * Return the state of a toggle button.  The button must exist
+     * within the activity context.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param viewName the name of the toggle button to use
+     * for any assertion error
+     * @param buttonId the resource ID of the button
+     *
+     * @return whether the button is pressed
+     *
+     * @throws AssertionError if the given button is missing or is not
+     * a {@link ToggleButton}
+     */
+    public static <T extends Activity> boolean getToggleButtonState(
+            ActivityScenario<T> scenario,
+            String viewName, int buttonId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            return esGetToggleButtonState(buttonId);
+        } else {
+            final View[] viewRef = new View[1];
+            scenario.onActivity(activity -> {
+                viewRef[0] = activity.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getToggleButtonState(viewRef[0], viewName, buttonId);
+        }
+    }
+
+    /**
+     * Return the state of a toggle button in the currently running activity.
+     * The toggle button must exist within the activity content.
+     *
+     * @param viewName the name of the toggle button to use
+     * for any assertion error
+     * @param buttonId the resource ID of the button
+     *
+     * @return whether the button is pressed
+     *
+     * @throws AssertionError if the given button is missing or is not
+     * a {@link ToggleButton}
+     */
+    public static boolean getToggleButtonState(
+            String viewName, int buttonId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            return esGetToggleButtonState(buttonId);
+        } else {
+            final Activity activity = getCurrentActivity();
+            assertNotNull("No activity is running", activity);
+            final View[] viewRef = new View[1];
+            activity.runOnUiThread(() -> {
+                viewRef[0] = activity.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getToggleButtonState(viewRef[0], viewName, buttonId);
+        }
+    }
+
+    /**
+     * Return the state of a toggle button within a dialog.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the {@link Dialog} containing the check box.
+     * @param viewName the name of the toggle button to use
+     * for any assertion error
+     * @param buttonId the resource ID of the button
+     *
+     * @return whether the button is pressed
+     *
+     * @throws AssertionError if the given button is missing or is not
+     * a {@link ToggleButton}
+     */
+    public static <T extends Activity> boolean getToggleButtonState(
+            ActivityScenario<T> scenario,
+            @NonNull final Dialog dialog,
+            String viewName, int buttonId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            return esGetToggleButtonState(buttonId);
+        } else {
+            final View[] viewRef = new View[1];
+            scenario.onActivity(activity -> {
+                viewRef[0] = dialog.findViewById(buttonId);
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            return getToggleButtonState(viewRef[0], viewName, buttonId);
         }
     }
 

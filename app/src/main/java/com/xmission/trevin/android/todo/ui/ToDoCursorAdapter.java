@@ -36,9 +36,11 @@ import android.app.Activity;
 import android.app.LoaderManager;
 import android.app.NotificationManager;
 import android.content.*;
+import android.os.Build;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+import androidx.core.widget.CompoundButtonCompat;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -75,6 +77,27 @@ public class ToDoCursorAdapter extends BaseAdapter {
     /** An executor for running repository operations on a non-UI thread */
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
+
+    /**
+     * The current search text, lower-cased, or {@code null} if no filter
+     * is active.  Only accessed on the UI thread.
+     */
+    private String searchText = null;
+
+    /**
+     * Positions within the cursor that match the current search filter,
+     * or {@code null} if no filter is active.  Only assigned on the UI
+     * thread (inside {@code runOnUiThread}), so reads in {@code getCount},
+     * {@code getItem}, etc. are also safe on the UI thread.
+     */
+    private List<Integer> filteredPositions = null;
+
+    /**
+     * Incremented each time a new filter build is started so that a
+     * stale background result can be discarded.  Only accessed on the
+     * UI thread.
+     */
+    private int filterGeneration = 0;
 
     /** The item whose due date is currently selected */
     long selectedItemId = -1;
@@ -123,7 +146,12 @@ public class ToDoCursorAdapter extends BaseAdapter {
         if (cursor != null)
             cursor.close();
         cursor = newCursor;
-        notifyDataSetChanged();
+        if (searchText != null) {
+            // Re-evaluate the filter against the new cursor contents.
+            rebuildFilter();
+        } else {
+            notifyDataSetChanged();
+        }
     }
 
     /**
@@ -138,6 +166,8 @@ public class ToDoCursorAdapter extends BaseAdapter {
             return 0;
         }
         Log.d(TAG, ".getCount()");
+        if (filteredPositions != null)
+            return filteredPositions.size();
         return cursor.getCount();
     }
 
@@ -162,7 +192,9 @@ public class ToDoCursorAdapter extends BaseAdapter {
             return null;
         }
         Log.d(TAG, String.format(Locale.US, ".getItem(%d)", position));
-        cursor.moveToPosition(position);
+        int cursorPos = (filteredPositions != null)
+                ? filteredPositions.get(position) : position;
+        cursor.moveToPosition(cursorPos);
         return cursor.getItem();
     }
 
@@ -181,7 +213,9 @@ public class ToDoCursorAdapter extends BaseAdapter {
             return -1;
         }
         Log.d(TAG, String.format(Locale.US, ".getItemId(%d)", position));
-        cursor.moveToPosition(position);
+        int cursorPos = (filteredPositions != null)
+                ? filteredPositions.get(position) : position;
+        cursor.moveToPosition(cursorPos);
         return cursor.getItem().getId();
     }
 
@@ -198,8 +232,12 @@ public class ToDoCursorAdapter extends BaseAdapter {
             Log.w(TAG, ".getItemPosition: The cursor has not been set!");
             return 0;
         }
-        for (int i = 0; i < cursor.getCount(); i++) {
-            if (cursor.moveToPosition(i)) {
+        int count = (filteredPositions != null)
+                ? filteredPositions.size() : cursor.getCount();
+        for (int i = 0; i < count; i++) {
+            int cursorPos = (filteredPositions != null)
+                    ? filteredPositions.get(i) : i;
+            if (cursor.moveToPosition(cursorPos)) {
                 if (cursor.getItem().getId() == itemId)
                     return i;
             }
@@ -240,6 +278,17 @@ public class ToDoCursorAdapter extends BaseAdapter {
         if (itemView == null) {
             Log.d(TAG, "Creating a new list item view");
             itemView = inflater.inflate(R.layout.todo_list_item, parent, false);
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                // AppCompat 1.1+ replaces the button drawable and applies a tint
+                // on pre-Lollipop devices, overriding custom drawables set via
+                // style attributes.  Clear the tint first (so the subsequent
+                // setButtonDrawable call does not re-apply it), then restore
+                // our custom drawable.
+                CheckBox newCheckBox =
+                        (CheckBox) itemView.findViewById(R.id.ToDoItemChecked);
+                CompoundButtonCompat.setButtonTintList(newCheckBox, null);
+                newCheckBox.setButtonDrawable(R.drawable.btn_check);
+            }
         }
 
         // Remove any existing callbacks to avoid spurious database changes
@@ -307,6 +356,129 @@ public class ToDoCursorAdapter extends BaseAdapter {
         installListeners(itemView, todo.getId());
 
         return itemView;
+    }
+
+    /**
+     * Set or clear the text filter applied to the item list.
+     * The match is case-insensitive and checks both the item description
+     * and its note (decrypting both if the encryptor is unlocked).
+     * The filtered position list is built on a background thread;
+     * the list view is notified on the UI thread when the build completes.
+     *
+     * @param text the search string, or {@code null} / empty to clear
+     *             the filter
+     */
+    public void setSearchFilter(@Nullable String text) {
+        searchText = (text == null || text.isEmpty())
+                ? null : text.toLowerCase(Locale.getDefault());
+        rebuildFilter();
+    }
+
+    /**
+     * Rebuild the filtered position list for the current cursor and
+     * search text.  Must be called on the UI thread.  If no search text
+     * is set, clears the filter and notifies immediately.  Otherwise,
+     * takes a snapshot of the cursor items on the UI thread, dispatches
+     * the decryption and matching work to the background executor, and
+     * notifies the list on the UI thread when done.
+     */
+    private void rebuildFilter() {
+        if (searchText == null) {
+            filteredPositions = null;
+            notifyDataSetChanged();
+            return;
+        }
+
+        // Snapshot cursor items on the UI thread to avoid concurrent
+        // cursor navigation while the background thread is matching.
+        final int count = (cursor != null) ? cursor.getCount() : 0;
+        final List<ToDoItem> snapshot = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            if (cursor.moveToPosition(i))
+                snapshot.add(cursor.getItem());
+        }
+
+        final int generation = ++filterGeneration;
+        final String lowerSearch = searchText;
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                final List<Integer> positions = new ArrayList<>();
+                for (int i = 0; i < snapshot.size(); i++) {
+                    if (itemMatchesSearch(snapshot.get(i), lowerSearch))
+                        positions.add(i);
+                }
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Discard if a newer build has been started
+                        if (filterGeneration != generation)
+                            return;
+                        filteredPositions = positions;
+                        notifyDataSetChanged();
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Check whether a To Do item matches the search text.
+     * Tests the description first; if that does not match and the item
+     * has a note, tests the note.  Encrypted fields are decrypted for
+     * comparison if the encryptor is unlocked; locked encrypted items
+     * are never considered a match.
+     *
+     * @param item        the item to test
+     * @param lowerSearch the search text, already lower-cased
+     * @return {@code true} if either the description or the note
+     * contains the search text
+     */
+    private boolean itemMatchesSearch(ToDoItem item, String lowerSearch) {
+        // --- description ---
+        String desc;
+        if (item.isEncrypted()) {
+            if (!encryptor.hasKey())
+                return false; // locked; skip entirely
+            try {
+                desc = encryptor.decrypt(item.getEncryptedDescription());
+            } catch (EncryptionException e) {
+                Log.w(TAG, String.format(Locale.US,
+                        "itemMatchesSearch: could not decrypt description"
+                                + " for item %d", item.getId()), e);
+                return false;
+            }
+        } else {
+            desc = item.getDescription();
+        }
+        if (desc != null
+                && desc.toLowerCase(Locale.getDefault()).contains(lowerSearch))
+            return true;
+
+        // --- note ---
+        boolean hasEncryptedNote = item.isEncrypted()
+                && item.getEncryptedNote() != null;
+        boolean hasPlainNote = !item.isEncrypted() && item.getNote() != null;
+        if (!hasEncryptedNote && !hasPlainNote)
+            return false;
+
+        String note;
+        if (item.isEncrypted()) {
+            // encryptor.hasKey() already confirmed above
+            try {
+                note = encryptor.decrypt(item.getEncryptedNote());
+            } catch (EncryptionException e) {
+                Log.w(TAG, String.format(Locale.US,
+                        "itemMatchesSearch: could not decrypt note"
+                                + " for item %d", item.getId()), e);
+                return false;
+            }
+        } else {
+            note = item.getNote();
+        }
+        return note != null
+                && note.toLowerCase(Locale.getDefault()).contains(lowerSearch);
     }
 
     /**
