@@ -1,0 +1,2 @@
+# Ignore images generated from PoV-Ray scene files prior to scaling.
+*.png

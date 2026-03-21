@@ -427,6 +427,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="RepeatEveryOtherYear">Every other year</string>
     <string name="RepeatEveryWeek">Every week</string>
     <string name="RepeatEveryYear">Every year</string>
+    <string name="RepeatLabelDirectionFromTarget">From actual date:</string>
     <string name="RepeatMonthly">Monthly</string>
     <string name="RepeatMonthlyDots">Monthly&#8230;</string>
     <string name="RepeatNone">None</string>
@@ -434,6 +435,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="RepeatOptionByDay">Day</string>
     <string name="RepeatOptionByDate">Date</string>
     <string name="RepeatOptionFixedSchedule">Fixed Schedule</string>
+    <string name="RepeatOptionNearest">Nearest, or:</string>
+    <string name="RepeatOptionNext">Next</string>
+    <string name="RepeatOptionPrevious">Previous</string>
     <string name="RepeatOther">Other&#8230;</string>
     <string name="RepeatSemiMonthly">Semi-monthly</string>
     <string name="RepeatSemiMonthlyDots">Semi-monthly&#8230;</string>

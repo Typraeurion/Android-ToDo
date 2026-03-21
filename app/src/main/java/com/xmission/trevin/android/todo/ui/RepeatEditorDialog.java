@@ -40,7 +40,11 @@ import java.util.Locale;
 public class RepeatEditorDialog extends AlertDialog implements OnClickListener {
     private static final String LOG_TAG = "RepeatEditorDialog";
 
-    private final RepeatEditor repeatEditor;
+    /**
+     * The repeat editor widget.
+     * This is granted package-level access for UI test code.
+     */
+    final RepeatEditor repeatEditor;
     private final OnRepeatSetListener callback;
 
     /**

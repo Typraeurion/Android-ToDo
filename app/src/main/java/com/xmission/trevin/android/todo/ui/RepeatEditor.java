@@ -431,7 +431,7 @@ public class RepeatEditor extends FrameLayout
         if (d == null) {
             endDateButton.setText(R.string.RepeatButtonNoEndDate);
         } else {
-            LocalDate today = LocalDate.now();
+            LocalDate today = LocalDate.now(timeZone);
             long daysFromNow = ChronoUnit.DAYS.between(today, d);
             DateTimeFormatter format;
             // If the end date is within -1 to 2 weeks,

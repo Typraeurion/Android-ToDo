@@ -74,7 +74,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:text="@string/RepeatTextEvery"
-                            android:gravity="right|center_vertical"
+                            android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
                             android:layout_weight="1"/>
@@ -86,7 +86,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:inputType="number"
-                                android:text="1"
+                                android:hint="1"
                                 android:width="50sp"/>
                             <TextView android:id="@+id/RepeatTextPeriod"
                                 android:layout_width="wrap_content"
@@ -95,7 +95,7 @@
                                 android:padding="5dip"
                                 android:textColor="@color/black"
                                 android:layout_weight="1"
-                                android:gravity="left|center_vertical"/>
+                                android:gravity="start|center_vertical"/>
                         </LinearLayout>
                     </TableRow>
 
@@ -106,7 +106,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:text="@string/RepeatTextEndOn"
-                            android:gravity="right|center_vertical"
+                            android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
                             android:layout_weight="1"/>
@@ -124,7 +124,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:text="@string/RepeatTextRepeatOn"
-                            android:gravity="right|center_vertical"
+                            android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
                             android:layout_weight="1"/>
@@ -184,8 +184,8 @@
                         <TextView android:id="@+id/RepeatTextAlternate"
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
-                            android:text="From actual date:"
-                            android:gravity="right|center_vertical"
+                            android:text="@string/RepeatLabelDirectionFromTarget"
+                            android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
                             android:layout_weight="1"/>
@@ -196,18 +196,18 @@
                             android:orientation="horizontal">
                             <ToggleButton android:id="@+id/RepeatToggleNearest"
                                 style="@style/RepeatEditor.Button.Alternate"
-                                android:text="Nearest, or:"
-                                android:textOff="Nearest, or:"
-                                android:textOn="Nearest, or:"/>
+                                android:text="@string/RepeatOptionNearest"
+                                android:textOff="@string/RepeatOptionNearest"
+                                android:textOn="@string/RepeatOptionNearest"/>
                             <RadioButton android:id="@+id/RepeatRadioButtonPrevious"
                                 style="@style/RepeatEditor.Button.Alternate"
                                 android:background="@drawable/btn_radio_small"
-                                android:text="Previous"
+                                android:text="@string/RepeatOptionPrevious"
                                 android:checked="true"/>
                             <RadioButton android:id="@+id/RepeatRadioButtonNext"
                                 style="@style/RepeatEditor.Button.Alternate"
                                 android:background="@drawable/btn_radio_small"
-                                android:text="Next"/>
+                                android:text="@string/RepeatOptionNext"/>
                         </RadioGroup>
                     </TableRow>
 
@@ -218,7 +218,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:text="@string/RepeatTextRepeatBy"
-                            android:gravity="right|center_vertical"
+                            android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
                             android:layout_weight="1"/>
@@ -251,7 +251,7 @@
                 android:layout_margin="1px"
                 android:background="@color/white"
                 android:padding="8dip"
-                android:text="No Repeat"
+                android:text="@string/RepeatDescriptionNone"
                 android:textColor="@color/black"
                 android:lines="2"/>
         </LinearLayout>
