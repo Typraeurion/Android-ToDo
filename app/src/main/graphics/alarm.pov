@@ -1,4 +1,3 @@
-// $Id: alarm.pov,v 1.1 2014/02/08 04:51:00 trevin Exp trevin $
 //
 // Persistence Of Vision version 3.6 scene description
 // Alarm icon

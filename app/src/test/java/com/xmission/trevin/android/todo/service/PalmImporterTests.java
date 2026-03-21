@@ -1565,6 +1565,10 @@ public class PalmImporterTests {
         ToDoItem alreadyImportedItem = null;
         while (alreadyImportedItem == null) {
             alreadyImportedItem = TEST_TODOS_1.get(RAND.nextInt(TEST_TODOS_1.size()));
+            if (alreadyImportedItem.getCategoryId() == ToDoCategory.UNFILED) {
+                alreadyImportedItem = null;
+                continue;
+            }
             for (ToDoItem todo : oldItems) {
                 if (todo.getId().equals(alreadyImportedItem.getId())) {
                     alreadyImportedItem = null;

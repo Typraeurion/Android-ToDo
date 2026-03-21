@@ -5,7 +5,7 @@
     tools:context="com.xmission.trevin.android.todo.ui.ToDoListActivity">
     <item android:id="@+id/menuSearch"
         android:title="@string/MenuSearch"
-        android:icon="@android:drawable/ic_menu_search"
+        android:icon="@drawable/magnify"
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
     <item android:id="@+id/menuShowCompleted"

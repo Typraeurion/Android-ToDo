@@ -1,4 +1,3 @@
-// $Id: repeat.pov,v 1.1 2011/10/23 04:32:10 trevin Exp trevin $
 //
 // Persistence Of Vision version 3.6 scene description
 // Repeat icon

@@ -1,4 +1,3 @@
-// $Id: postit.pov,v 1.2 2014/02/05 03:40:15 trevin Exp trevin $
 //
 // Persistence Of Vision version 3.6 scene description
 // Post-It note icon

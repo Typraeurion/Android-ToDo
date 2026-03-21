@@ -96,8 +96,8 @@
     </style>
 
     <style name="MenuSearchViewStyle" parent="Widget.AppCompat.SearchView">
-        <item name="searchIcon">@android:drawable/ic_menu_search</item>
-        <item name="searchHintIcon">@android:drawable/ic_menu_search</item>
+        <item name="searchIcon">@drawable/magnify</item>
+        <item name="searchHintIcon">@drawable/magnify</item>
     </style>
 
     <style name="MiniDropDownItem" parent="@android:style/Widget.DropDownItem">
