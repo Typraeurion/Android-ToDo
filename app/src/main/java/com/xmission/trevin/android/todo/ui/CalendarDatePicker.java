@@ -29,6 +29,7 @@ import android.view.View;
 import android.widget.*;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.xmission.trevin.android.todo.R;
 
@@ -116,9 +117,9 @@ public class CalendarDatePicker extends FrameLayout {
     public interface OnDateSetListener {
         /**
          * @param view The view associated with this listener.
-         * @param date The date that was set.
+         * @param date The date that was set, or {@code null} to clear the date.
          */
-        void onDateSet(CalendarDatePicker view, LocalDate date);
+        void onDateSet(CalendarDatePicker view, @Nullable LocalDate date);
     }
 
     /**

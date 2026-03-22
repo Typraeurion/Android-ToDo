@@ -53,6 +53,7 @@ import android.view.*;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.*;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.lifecycle.LiveData;
@@ -1124,11 +1125,11 @@ public class ToDoListActivity extends AppCompatActivity {
     class CalendarPickerDateSetListener
             implements CalendarDatePicker.OnDateSetListener {
         @Override
-        public void onDateSet(CalendarDatePicker dp, final LocalDate date) {
+        public void onDateSet(CalendarDatePicker dp, @Nullable final LocalDate date) {
             final long todoItemId = itemAdapter.getSelectedItemId();
             Log.d(TAG, String.format(Locale.US,
                     "dueDateDialog.onDateSet(%s); item=%d",
-                    date.toString(), todoItemId));
+                    date, todoItemId));
             executor.submit(new Runnable() {
                 @Override
                 public void run() {

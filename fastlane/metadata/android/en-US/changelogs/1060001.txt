@@ -3,3 +3,5 @@
 * Added a Search item/icon to the action bar.  Modified
   the list adapter to filter To Do items by searching for
   the given text within item descriptions and notes.
+* Fixed an issue where the end date of a repeating interval
+  could not be cleared after one had been set.

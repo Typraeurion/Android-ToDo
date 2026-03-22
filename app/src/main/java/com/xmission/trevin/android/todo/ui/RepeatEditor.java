@@ -888,10 +888,7 @@ public class RepeatEditor extends FrameLayout
         }
     }
 
-    /**
-     * This callback handles setting the end date.
-     * To do: This needs to be a drop-down list that includes "No Date".
-     */
+    /** This callback handles setting the end date. */
     class EndDateOnClickListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
@@ -901,6 +898,8 @@ public class RepeatEditor extends FrameLayout
                         v.getResources().getString(
                                 R.string.DatePickerTitleEndingOn),
                         new EndDateOnDateSetListener());
+                endDateDialog.setNoDateButton(
+                        v.getResources().getString(R.string.DueDateNoDate));
             }
             LocalDate today = LocalDate.now(timeZone);
             endDateDialog.setToday(today);
@@ -914,9 +913,8 @@ public class RepeatEditor extends FrameLayout
             implements CalendarDatePicker.OnDateSetListener {
         @Override
         public void onDateSet(CalendarDatePicker picker,
-                              LocalDate date) {
+                              @Nullable LocalDate date) {
             repeatSettings.setEndDate(date);
-            //    updateEndDateButton();
         }
     }
 

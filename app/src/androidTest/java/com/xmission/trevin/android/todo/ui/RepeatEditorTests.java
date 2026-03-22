@@ -2561,6 +2561,63 @@ public class RepeatEditorTests
     }
 
     /**
+     * Check that pressing the end date button opens the date picker
+     * and that selecting a date updates the end date button.
+     */
+    @Test
+    public void testSetRepeatEndDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(7) + 1);
+        RepeatDaily repeat = new RepeatDaily(due);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertEndDateButton(wrapper.getScenario(), widget, null);
+            pressButton(wrapper.getScenario(), R.id.RepeatButtonEndDate);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.DatePickerTitleEndingOn));
+            final CalendarDatePickerDialog[] endDialogRef =
+                    new CalendarDatePickerDialog[1];
+            wrapper.getScenario().onActivity(activity ->
+                    endDialogRef[0] = widget.endDateDialog);
+            assertNotNull("End date dialog was not created", endDialogRef[0]);
+            LocalDate today = LocalDate.now(ZoneOffset.UTC);
+            pressDialogButton(wrapper.getScenario(), endDialogRef[0],
+                    android.R.id.button2);
+            assertEndDateButton(wrapper.getScenario(), widget, today);
+        }
+    }
+
+    /**
+     * Check that pressing the &ldquo;No Date&rdquo; button in the end
+     * date picker clears the end date and resets the end date button.
+     */
+    @Test
+    public void testClearRepeatEndDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(7) + 1);
+        LocalDate endDate = due.plusDays(RAND.nextInt(30) + 30);
+        RepeatDaily repeat = new RepeatDaily(due);
+        repeat.setEnd(endDate);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertEndDateButton(wrapper.getScenario(), widget, endDate);
+            pressButton(wrapper.getScenario(), R.id.RepeatButtonEndDate);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.DatePickerTitleEndingOn));
+            final CalendarDatePickerDialog[] endDialogRef =
+                    new CalendarDatePickerDialog[1];
+            wrapper.getScenario().onActivity(activity ->
+                    endDialogRef[0] = widget.endDateDialog);
+            assertNotNull("End date dialog was not created", endDialogRef[0]);
+            pressDialogButton(wrapper.getScenario(), endDialogRef[0],
+                    android.R.id.button3);
+            assertEndDateButton(wrapper.getScenario(), widget, null);
+        }
+    }
+
+    /**
      * Check that when the only day of the week toggle that is set is
      * turned off, the toggle for the due date&rsquo;s day of the week
      * automatically turns back on.

@@ -104,16 +104,31 @@ public class CalendarDatePickerDialog extends AlertDialog
         zone = zoneId;
     }
 
-    /** Called when the user clicks either the Cancel or the Today button */
+    /**
+     * Add a &ldquo;No Date&rdquo; neutral button to this dialog.
+     * When pressed, {@link OnDateSetListener#onDateSet} will be called
+     * with a {@code null} date, indicating the date should be cleared.
+     * This method must be called before {@link #show()}.
+     *
+     * @param label the label for the button
+     */
+    public void setNoDateButton(@NonNull CharSequence label) {
+        setButton(DialogInterface.BUTTON_NEUTRAL, label, this);
+    }
+
+    /** Called when the user clicks a dialog button */
     @Override
     public void onClick(DialogInterface dialog, int which) {
         Log.d(LOG_TAG, String.format(Locale.US,
                 ".onClick(dialog,%s)",
                 ((which == DialogInterface.BUTTON1) ? "Cancel"
                         : ((which == DialogInterface.BUTTON2) ? "Today"
-                        : Integer.toString(which)))));
+                        : ((which == DialogInterface.BUTTON3) ? "No Date"
+                        : Integer.toString(which))))));
         if ((which == DialogInterface.BUTTON2) && (callback != null)) {
             callback.onDateSet(datePicker, LocalDate.now(zone));
+        } else if ((which == DialogInterface.BUTTON3) && (callback != null)) {
+            callback.onDateSet(datePicker, null);
         }
         dismiss();
     }

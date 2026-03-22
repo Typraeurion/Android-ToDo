@@ -57,6 +57,7 @@ import android.view.*;
 import android.widget.*;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Displays the details of a To Do item.  Will display the item from the
@@ -1115,7 +1116,7 @@ public class ToDoDetailsActivity extends Activity {
     class RepeatEndPickListener
             implements CalendarDatePicker.OnDateSetListener {
         @Override
-        public void onDateSet(CalendarDatePicker dp, LocalDate day) {
+        public void onDateSet(CalendarDatePicker dp, @Nullable LocalDate day) {
             if (repeatSettings != null)
                 repeatSettings.setEndDate(day);
             if (todo.getRepeatInterval() instanceof AbstractRepeat)
@@ -1286,9 +1287,9 @@ public class ToDoDetailsActivity extends Activity {
     class DueDateCalendarSelectionListener
             implements CalendarDatePicker.OnDateSetListener {
         @Override
-        public void onDateSet(CalendarDatePicker dp, LocalDate day) {
+        public void onDateSet(CalendarDatePicker dp, @Nullable LocalDate day) {
             todo.setDue(day);
-            if (repeatSettings != null)
+            if ((day != null) && (repeatSettings != null))
                 repeatSettings.setDueDate(todo.getDue());
             updateDueDateButton();
         }
