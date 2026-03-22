@@ -469,7 +469,8 @@ public class ToDoDetailsActivity extends Activity {
                 updateAlarmButton();
                 if (todo.getRepeatInterval() != null)
                     repeatSettings = new RepeatSettings(
-                            todo.getRepeatInterval(), todo.getDue());
+                            todo.getRepeatInterval(), todo.getDue(),
+                            prefs.getTimeZone());
                 updateRepeatButton();
             }
 
@@ -897,8 +898,8 @@ public class ToDoDetailsActivity extends Activity {
 
             case REPEAT_DIALOG_ID:
                 // Update the repeat settings
-                repeatDialog.setTimeZone(zone);
-                repeatDialog.setRepeat(todo.getRepeatInterval(), todo.getDue());
+                repeatDialog.setRepeat(todo.getRepeatInterval(),
+                        todo.getDue(), zone);
                 break;
 
             case ENDDATE_DIALOG_ID:

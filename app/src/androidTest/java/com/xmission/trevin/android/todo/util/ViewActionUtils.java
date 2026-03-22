@@ -393,7 +393,7 @@ public class ViewActionUtils {
                 .inRoot(isDialog())
                 .check(matches(allOf(isEnabled(),
                         isDisplayingAtLeast(90))))
-                .perform(click());
+                .perform(closeSoftKeyboard(), click());
     }
 
     /**

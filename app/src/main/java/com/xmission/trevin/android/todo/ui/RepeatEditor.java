@@ -18,6 +18,7 @@ package com.xmission.trevin.android.todo.ui;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -84,7 +85,7 @@ public class RepeatEditor extends FrameLayout
     private final String[] monthNames;
     private final String[] weekdayNames;
 
-    private ZoneId timeZone;
+    private ZoneId timeZone = ZoneOffset.UTC;
 
     /**
      * Create a new repeat editor set to the current date
@@ -163,22 +164,19 @@ public class RepeatEditor extends FrameLayout
      */
     RepeatSettings getSettings() { return repeatSettings; }
 
-    /** Set the time zone this editor uses to determine date boundaries */
-    public void setTimeZone(ZoneId zone) {
-        timeZone = zone;
-    }
-
     /**
      * Populate this widget for the given repeat interval.
      *
      * @param repeat the repeat interval to use
+     * @param dueDate the date on which the repeat interval is based
+     * @param timeZone the time zone to use in formatting the end date
      */
-    public void setRepeat(RepeatInterval repeat, LocalDate dueDate) {
+    public void setRepeat(RepeatInterval repeat, LocalDate dueDate, ZoneId timeZone) {
         isUpdating = true;
         if (repeatSettings != null)
             repeatSettings.removeOnRepeatChangeListener(this);
 
-        repeatSettings = new RepeatSettings(repeat, dueDate);
+        repeatSettings = new RepeatSettings(repeat, dueDate, timeZone);
         updateWidgets();
 
         // Add callbacks to the settings
@@ -344,6 +342,7 @@ public class RepeatEditor extends FrameLayout
 
             case YEARLY_ON_DATE:
             case YEARLY_ON_DAY:
+            case YEAR_AFTER:
                 periodText.setText(getResources().getString(R.string.RepeatTextYears));
                 break;
         }

@@ -83,18 +83,10 @@ public class RepeatEditorDialog extends AlertDialog implements OnClickListener {
      *
      * @param repeat the repeat interval from which to populate the dialog
      * @param dueDate the due date on which to base the repeat settings
+     * @param timeZone the time zone to use in formatting the end date
      */
-    public void setRepeat(RepeatInterval repeat, LocalDate dueDate) {
-        repeatEditor.setRepeat(repeat, dueDate);
-    }
-
-    /**
-     * Update the time zone used by the editor.
-     *
-     * @param zoneId the time zone to use
-     */
-    public void setTimeZone(ZoneId zoneId) {
-        repeatEditor.setTimeZone(zoneId);
+    public void setRepeat(RepeatInterval repeat, LocalDate dueDate, ZoneId timeZone) {
+        repeatEditor.setRepeat(repeat, dueDate, timeZone);
     }
 
     /**

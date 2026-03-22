@@ -23,6 +23,8 @@ import com.xmission.trevin.android.todo.data.repeat.*;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.*;
@@ -71,6 +73,9 @@ public class RepeatSettings implements Serializable {
 
     @Nullable
     private LocalDate endDate;
+
+    @NonNull
+    private ZoneId timeZone = ZoneOffset.UTC;
 
     /**
      * Interface for listeners interested in changes to repeat settings.
@@ -177,10 +182,13 @@ public class RepeatSettings implements Serializable {
      * @param repeat the repeat interval to use
      * @param dueDate the initial due date which the
      * repeat interval is based on
+     * @param timeZone the time zone to use for formatting the end date
      */
     public RepeatSettings(@Nullable RepeatInterval repeat,
-                          @Nullable LocalDate dueDate) {
+                          @Nullable LocalDate dueDate,
+                          @NonNull ZoneId timeZone) {
         this.dueDate = dueDate;
+        this.timeZone = timeZone;
         setRepeat(repeat);
     }
 
@@ -447,12 +455,13 @@ public class RepeatSettings implements Serializable {
                 WeekDays targetDay = (dueDate == null) ? day
                         : WeekDays.fromJavaDay(dueDate.getDayOfWeek());
                 weekDays.add(targetDay);
-                if (targetDay != day) {
-                    for (OnRepeatChangeListener listener : listeners) {
-                        listener.onWeekdaysChanged(this,
-                                Collections.singleton(targetDay),
-                                Collections.singleton(day));
-                    }
+                Set<WeekDays> removedDays = (targetDay != day)
+                        ? Collections.singleton(day)
+                        : Collections.emptySet();
+                for (OnRepeatChangeListener listener : listeners) {
+                    listener.onWeekdaysChanged(this,
+                            Collections.singleton(targetDay),
+                            removedDays);
                 }
                 return;
             }
@@ -624,6 +633,23 @@ public class RepeatSettings implements Serializable {
         for (OnRepeatChangeListener listener : listeners) {
             listener.onEndDateChanged(this, newDate);
         }
+    }
+
+    /**
+     * @return the time zone saved in these settings.
+     */
+    @NonNull
+    public ZoneId getTimeZone() {
+        return timeZone;
+    }
+
+    /**
+     * Change the time zone
+     *
+     * @param newZone the new time zone
+     */
+    public void setTimeZone(@NonNull ZoneId newZone) {
+        timeZone = newZone;
     }
 
     /**

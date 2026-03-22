@@ -23,7 +23,6 @@ import static org.junit.Assert.*;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
-import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -57,8 +56,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
+import java.time.temporal.ChronoField;
 import java.util.*;
 
 /**
@@ -77,6 +78,7 @@ public class RepeatEditorTests
 
     static Context testContext = null;
 
+    private boolean onRepeatSetCalled;
     private RepeatInterval setRepeat;
 
     @BeforeClass
@@ -98,12 +100,14 @@ public class RepeatEditorTests
 
     @Before
     public void resetRepeat() {
+        onRepeatSetCalled = false;
         setRepeat = null;
     }
 
     /** Called when the repeat interval is set in the dialog */
     @Override
     public void onRepeatSet(RepeatEditor editor, RepeatInterval repeat) {
+        onRepeatSetCalled = true;
         setRepeat = repeat;
     }
 
@@ -126,8 +130,7 @@ public class RepeatEditorTests
         final RepeatEditor[] editor = new RepeatEditor[1];
         scenario.onActivity(activity -> {
             editor[0] = new RepeatEditor(activity);
-            editor[0].setRepeat(repeat, dueDate);
-            editor[0].setTimeZone(zone);
+            editor[0].setRepeat(repeat, dueDate, zone);
             activity.setContentView(editor[0]);
         });
         return editor[0];
@@ -140,19 +143,16 @@ public class RepeatEditorTests
      *
      * @param scenario the scenario in which the test is running
      * @param settings the repeat settings to set in the widget
-     * @param zone the time zone to use in determining the end date boundary
      *
      * @return the repeat editor widget
      */
     private <T extends Activity> RepeatEditor showRepeatEditorWidget(
-            ActivityScenario<T> scenario,
-            RepeatSettings settings, ZoneId zone) {
+            ActivityScenario<T> scenario, RepeatSettings settings) {
         hideKeyboard(scenario);
         final RepeatEditor[] editor = new RepeatEditor[1];
         scenario.onActivity(activity -> {
             editor[0] = new RepeatEditor(activity);
             editor[0].restoreSettings(settings);
-            editor[0].setTimeZone(zone);
             activity.setContentView(editor[0]);
         });
         return editor[0];
@@ -177,8 +177,7 @@ public class RepeatEditorTests
         final RepeatEditorDialog[] dialog = new RepeatEditorDialog[1];
         scenario.onActivity(activity -> {
             dialog[0] = new RepeatEditorDialog(activity, this);
-            dialog[0].setRepeat(repeat, dueDate);
-            dialog[0].setTimeZone(zone);
+            dialog[0].setRepeat(repeat, dueDate, zone);
             dialog[0].show();
         });
         /*
@@ -485,21 +484,33 @@ public class RepeatEditorTests
                     // The following three are actually used;
                     // the selection depends on how far out the date is.
                     // They really should have a localized form.
-                    DateTimeFormatter.ofPattern("EEEE, MMM, d"),
-                    DateTimeFormatter.ofPattern("EEE, MMMM, d"),
+                    new DateTimeFormatterBuilder()
+                            .appendPattern("EEEE, MMM d")
+                            .parseDefaulting(ChronoField.YEAR,
+                                    expectedDate.getYear())
+                            .parseDefaulting(ChronoField.YEAR_OF_ERA,
+                                    expectedDate.getYear())
+                            .toFormatter(),
+                    new DateTimeFormatterBuilder()
+                            .appendPattern("EEE, MMMM d")
+                            .parseDefaulting(ChronoField.YEAR,
+                                    expectedDate.getYear())
+                            .parseDefaulting(ChronoField.YEAR_OF_ERA,
+                            expectedDate.getYear())
+                            .toFormatter(),
                     DateTimeFormatter.ofPattern("MMMM d, yyyy"),
             };
             LocalDate parsedDate = null;
             String buttonText = endButton.getText().toString();
             for (DateTimeFormatter format : formats) try {
-                parsedDate = LocalDate.parse(buttonText);
+                parsedDate = LocalDate.from(format.parse(buttonText));
                 break;
             } catch (DateTimeParseException dpe) {
                 // Continue to the next format
             }
             assertNotNull(String.format(Locale.US,
                     "Could not parse the end date button: \"%s\"",
-                    buttonText));
+                    buttonText), parsedDate);
             assertEquals("End date shown on the button",
                     expectedDate, parsedDate);
         }
@@ -743,7 +754,7 @@ public class RepeatEditorTests
                 "Repeat type-specific settings",
                 R.id.RepeatLayout, ViewGroup.class, false);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, true);
+                R.id.RepeatTextNone, TextView.class, true);
     }
 
     /**
@@ -788,6 +799,28 @@ public class RepeatEditorTests
         }
     }
 
+    /**
+     * Generate a set of random days of the week for use in tests.
+     * The set will contain at least one element.
+     */
+    private Set<WeekDays> randomDays() {
+        Set<WeekDays> weekDays = new HashSet<>();
+        for (int i = RAND.nextInt(7); i >= 0; --i) {
+            weekDays.add(WeekDays.values()[RAND.nextInt(7)]);
+        }
+        return weekDays;
+    }
+
+    /**
+     * Give the provided adjustable repeat interval a randomized set
+     * of allowed days of the week and a random direction.
+     */
+    private void setRandomAdjustment(AbstractAdjustableRepeat repeat) {
+        repeat.setAllowedWeekDays(randomDays());
+        repeat.setDirection(WeekdayDirection.values()[RAND.nextInt(
+                WeekdayDirection.values().length)]);
+    }
+
     private <T extends Activity> void runRepeatDailyChecks(
             ActivityScenario<T> scenario, RepeatEditor widget,
             RepeatDaily repeat) {
@@ -801,24 +834,24 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, null);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
     }
 
+    /**
+     * When opening the editor for {@link RepeatDaily}, verify that
+     * the &ldquo;Day&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, and the rest of the
+     * fields match the daily repeat settings.
+     */
     @Test
-    private void testOpenRepeatWidgetDaily() {
+    public void testOpenRepeatWidgetDaily() {
         LocalDate due = LocalDate.now(ZoneOffset.UTC)
                 .plusDays(RAND.nextInt(30));
         RepeatDaily repeat = new RepeatDaily();
         repeat.setIncrement(RAND.nextInt(100) + 1);
         repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
                 : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
-        Set<WeekDays> weekDays = new HashSet<>();
-        for (int i = RAND.nextInt(7); i >= 0; --i) {
-            weekDays.add(WeekDays.values()[RAND.nextInt(7)]);
-        }
-        repeat.setAllowedWeekDays(weekDays);
-        repeat.setDirection(WeekdayDirection.values()[RAND.nextInt(
-                WeekdayDirection.values().length)]);
+        setRandomAdjustment(repeat);
         try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
                      ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
             RepeatEditor widget = showRepeatEditorWidget(
@@ -829,21 +862,21 @@ public class RepeatEditorTests
         }
     }
 
+    /**
+     * When opening the dialog for {@link RepeatDaily}, verify that
+     * the &ldquo;Day&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, and the rest of the
+     * fields match the daily repeat settings.
+     */
     @Test
-    private void testOpenRepeatDialogDaily() {
+    public void testOpenRepeatDialogDaily() {
         LocalDate due = LocalDate.now(ZoneOffset.UTC)
                 .plusDays(RAND.nextInt(30));
         RepeatDaily repeat = new RepeatDaily();
         repeat.setIncrement(RAND.nextInt(100) + 1);
         repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
                 : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
-        Set<WeekDays> weekDays = new HashSet<>();
-        for (int i = RAND.nextInt(7); i >= 0; --i) {
-            weekDays.add(WeekDays.values()[RAND.nextInt(7)]);
-        }
-        repeat.setAllowedWeekDays(weekDays);
-        repeat.setDirection(WeekdayDirection.values()[RAND.nextInt(
-                WeekdayDirection.values().length)]);
+        setRandomAdjustment(repeat);
         try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
                      ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
             RepeatEditorDialog dialog = showRepeatEditorDialog(
@@ -870,7 +903,56 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, null);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatDayAfter}, verify that
+     * the &ldquo;Day&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, and the rest of the
+     * fields match the daily repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetDayAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatDayAfter repeat = new RepeatDayAfter();
+        repeat.setIncrement(RAND.nextInt(100) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatDayAfterChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatDayAfter}, verify that
+     * the &ldquo;Day&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, and the rest of the
+     * fields match the daily repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogDayAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatDayAfter repeat = new RepeatDayAfter();
+        repeat.setIncrement(RAND.nextInt(100) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatDayAfterChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatWeeklyChecks(
@@ -886,7 +968,56 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, null);
         assertDayDateButtons(scenario, widget, null);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatWeekly}, verify that
+     * the &ldquo;Week&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, and the rest of the
+     * fields match the weekly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetWeekly() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekly repeat = new RepeatWeekly();
+        repeat.setIncrement(RAND.nextInt(52) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        repeat.setWeekDays(randomDays());
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatWeeklyChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatWeekly}, verify that
+     * the &ldquo;Week&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, and the rest of the
+     * fields match the weekly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogWeekly() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekly repeat = new RepeatWeekly();
+        repeat.setIncrement(RAND.nextInt(52) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        repeat.setWeekDays(randomDays());
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatWeeklyChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatWeekAfterChecks(
@@ -902,7 +1033,56 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, null);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatWeekAfter}, verify that
+     * the &ldquo;Week&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, and the rest of the
+     * fields match the weekly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetWeekAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekAfter repeat = new RepeatWeekAfter();
+        repeat.setIncrement(RAND.nextInt(52) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatWeekAfterChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatWeekAfter}, verify that
+     * the &ldquo;Week&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, and the rest of the
+     * fields match the weekly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogWeekAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekAfter repeat = new RepeatWeekAfter();
+        repeat.setIncrement(RAND.nextInt(52) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatWeekAfterChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatSemiMonthlyOnDaysChecks(
@@ -918,7 +1098,64 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, null);
         assertDayDateButtons(scenario, widget, DayDate.DAY);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatSemiMonthlyOnDays},
+     * verify that the &ldquo;Semi&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; / &ldquo;After Completed&rdquo; group is hidden,
+     * the Repeat by &ldquo;Day&rdquo; option is selected, and the rest
+     * of the fields match the semi-monthly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetSemiMonthlyOnDays() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDays repeat = new RepeatSemiMonthlyOnDays(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(RAND.nextInt(3) + 1);
+        repeat.setDay2(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek2(RAND.nextBoolean() ? 4 : -1);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatSemiMonthlyOnDaysChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatSemiMonthlyOnDays},
+     * verify that the &ldquo;Semi&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; / &ldquo;After Completed&rdquo; group is hidden,
+     * the Repeat by &ldquo;Day&rdquo; option is selected, and the rest
+     * of the fields match the semi-monthly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogSemiMonthlyOnDays() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDays repeat = new RepeatSemiMonthlyOnDays(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(RAND.nextInt(3) + 1);
+        repeat.setDay2(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek2(RAND.nextBoolean() ? 4 : -1);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatSemiMonthlyOnDaysChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatSemiMonthlyOnDatesChecks(
@@ -934,7 +1171,62 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, DayDate.DATE);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatSemiMonthlyOnDates},
+     * verify that the &ldquo;Semi&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; / &ldquo;After Completed&rdquo; group is hidden,
+     * the Repeat by &ldquo;Date&rdquo; option is selected, and the rest
+     * of the fields match the semi-monthly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetSemiMonthlyOnDates() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDates repeat = new RepeatSemiMonthlyOnDates(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDate(RAND.nextInt(15) + 1);
+        repeat.setDate2(RAND.nextInt(16) + 16);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatSemiMonthlyOnDatesChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatSemiMonthlyOnDates},
+     * verify that the &ldquo;Semi&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; / &ldquo;After Completed&rdquo; group is hidden,
+     * the Repeat by &ldquo;Date&rdquo; option is selected, and the rest
+     * of the fields match the semi-monthly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogSemiMonthlyOnDates() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDates repeat = new RepeatSemiMonthlyOnDates(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDate(RAND.nextInt(15) + 1);
+        repeat.setDate2(RAND.nextInt(16) + 16);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatSemiMonthlyOnDatesChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatMonthlyOnDayChecks(
@@ -951,7 +1243,62 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, null);
         assertDayDateButtons(scenario, widget, DayDate.DAY);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatMonthlyOnDay},
+     * verify that the &ldquo;Month&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Day&rdquo;
+     * option is selected, and the rest of the fields match the monthly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetMonthlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatMonthlyOnDayChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatMonthlyOnDay},
+     * verify that the &ldquo;Month&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Day&rdquo;
+     * option is selected, and the rest of the fields match the monthly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogMonthlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatMonthlyOnDayChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatMonthlyOnDateChecks(
@@ -968,7 +1315,60 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, DayDate.DATE);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatMonthlyOnDate},
+     * verify that the &ldquo;Month&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Date&rdquo;
+     * option is selected, and the rest of the fields match the monthly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetMonthlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDate repeat = new RepeatMonthlyOnDate(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatMonthlyOnDateChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatMonthlyOnDate},
+     * verify that the &ldquo;Month&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Date&rdquo;
+     * option is selected, and the rest of the fields match the monthly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogMonthlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDate repeat = new RepeatMonthlyOnDate(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatMonthlyOnDateChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatMonthAfterChecks(
@@ -985,7 +1385,56 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, null);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatMonthAfter},
+     * verify that the &ldquo;Month&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, the Repeat by group is not
+     * shown, and the rest of the fields match the monthly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetMonthAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthAfter repeat = new RepeatMonthAfter();
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatMonthAfterChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatMonthAfter},
+     * verify that the &ldquo;Month&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, the Repeat by group is not
+     * shown, and the rest of the fields match the monthly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogMonthAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthAfter repeat = new RepeatMonthAfter();
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatMonthAfterChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatYearlyOnDayChecks(
@@ -1002,7 +1451,64 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, null);
         assertDayDateButtons(scenario, widget, DayDate.DAY);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatYearlyOnDay},
+     * verify that the &ldquo;Year&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Day&rdquo;
+     * option is selected, and the rest of the fields match the yearly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetYearlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDay repeat = new RepeatYearlyOnDay(due);
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatYearlyOnDayChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatYearlyOnDay},
+     * verify that the &ldquo;Year&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Day&rdquo;
+     * option is selected, and the rest of the fields match the yearly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogYearlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDay repeat = new RepeatYearlyOnDay(due);
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatYearlyOnDayChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatYearlyOnDateChecks(
@@ -1019,7 +1525,62 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, DayDate.DATE);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatYearlyOnDate},
+     * verify that the &ldquo;Year&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Date&rdquo;
+     * option is selected, and the rest of the fields match the yearly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetYearlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDate repeat = new RepeatYearlyOnDate(due);
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+        repeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatYearlyOnDateChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatYearlyOnDate},
+     * verify that the &ldquo;Year&rdquo; tab is selected, the &ldquo;Fixed
+     * Schedule&rdquo; option is selected, the Repeat by &ldquo;Date&rdquo;
+     * option is selected, and the rest of the fields match the yearly
+     * repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogYearlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDate repeat = new RepeatYearlyOnDate(due);
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+        repeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatYearlyOnDateChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
     }
 
     private <T extends Activity> void runRepeatYearAfterChecks(
@@ -1036,7 +1597,1033 @@ public class RepeatEditorTests
         assertDirectionButtons(scenario, widget, repeat.getDirection());
         assertDayDateButtons(scenario, widget, null);
         assertViewVisibility(scenario, widget, "Instructional text",
-                R.id.RepeatTextNone, TextureView.class, false);
+                R.id.RepeatTextNone, TextView.class, false);
+    }
+
+    /**
+     * When opening the editor for {@link RepeatYearAfter},
+     * verify that the &ldquo;Year&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, the Repeat by group is not
+     * shown, and the rest of the fields match the yearly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatWidgetYearAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearAfter repeat = new RepeatYearAfter();
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            runRepeatYearAfterChecks(wrapper.getScenario(), widget, repeat);
+        }
+    }
+
+    /**
+     * When opening the dialog for {@link RepeatYearAfter},
+     * verify that the &ldquo;Year&rdquo; tab is selected, the &ldquo;After
+     * Completed&rdquo; option is selected, the Repeat by group is not
+     * shown, and the rest of the fields match the yearly repeat settings.
+     */
+    @Test
+    public void testOpenRepeatDialogYearAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearAfter repeat = new RepeatYearAfter();
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            assertDialogShown(wrapper.getScenario(),
+                    testContext.getString(R.string.RepeatTitle));
+            runRepeatYearAfterChecks(wrapper.getScenario(),
+                    dialog.repeatEditor, repeat);
+        }
+    }
+
+    /**
+     * Common method for settings save tests: create an editor
+     * with the given repeat interval, retrieve the settings,
+     * create a new editor, restore the saved settings to it,
+     * get a repeat interval from it and check that it matches.
+     *
+     * @param expectedRepeat the repeat settings to initialize and compare
+     * @param dueDate the due date on which the repeat is based
+     */
+    private void runSaveAndRestoreSettingsTest(
+            RepeatInterval expectedRepeat, LocalDate dueDate) {
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor oldWidget = showRepeatEditorWidget(
+                    wrapper.getScenario(), expectedRepeat,
+                    dueDate, ZoneOffset.UTC);
+            RepeatSettings savedSettings = oldWidget.getSettings();
+            RepeatEditor newWidget = showRepeatEditorWidget(
+                    wrapper.getScenario(), savedSettings);
+            RepeatInterval actualRepeat = newWidget.getSettings().getRepeat();
+            // In this particular case, the returned repeat may be null;
+            // treat this as equivalant to RepeatNone.
+            if (actualRepeat != null)
+                assertEquals("Restored repeat", expectedRepeat, actualRepeat);
+        }
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatNone}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatNone() {
+        runSaveAndRestoreSettingsTest(new RepeatNone(),
+                LocalDate.now(ZoneOffset.UTC));
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatDaily}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatDaily() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatDaily repeat = new RepeatDaily();
+        repeat.setIncrement(RAND.nextInt(100) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatDayAfter}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatDayAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatDayAfter repeat = new RepeatDayAfter();
+        repeat.setIncrement(RAND.nextInt(100) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatWeekly}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatWeekly() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekly repeat = new RepeatWeekly();
+        repeat.setIncrement(RAND.nextInt(52) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        repeat.setWeekDays(randomDays());
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatWeekAfter}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatWeekAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekAfter repeat = new RepeatWeekAfter();
+        repeat.setIncrement(RAND.nextInt(52) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatSemiMonthlyOnDays}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatSemiMonthlyOnDays() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDays repeat = new RepeatSemiMonthlyOnDays(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(RAND.nextInt(3) + 1);
+        repeat.setDay2(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek2(RAND.nextBoolean() ? 4 : -1);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatSemiMonthlyOnDates}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatSemiMonthlyOnDates() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDates repeat = new RepeatSemiMonthlyOnDates(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDate(RAND.nextInt(15) + 1);
+        repeat.setDate2(RAND.nextInt(16) + 16);
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatMonthlyOnDay}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatMonthlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDay repeat = new RepeatMonthlyOnDay(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatMonthlyOnDate}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatMonthlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDate repeat = new RepeatMonthlyOnDate(due);
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        repeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatMonthAfter}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatMonthAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthAfter repeat = new RepeatMonthAfter();
+        repeat.setIncrement(RAND.nextInt(12) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatYearlyOnDay}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatYearlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDay repeat = new RepeatYearlyOnDay(due);
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        repeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        repeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatYearlyOnDate}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatYearlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDate repeat = new RepeatYearlyOnDate(due);
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        repeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+        repeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test saving and restoring the settings for {@link RepeatYearAfter}
+     */
+    @Test
+    public void testSaveAndRestoreRepeatYearAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearAfter repeat = new RepeatYearAfter();
+        repeat.setIncrement(RAND.nextInt(10) + 1);
+        repeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        setRandomAdjustment(repeat);
+        runSaveAndRestoreSettingsTest(repeat, due);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to &ldquo;None&rdquo;.
+     */
+    @Test
+    public void testChangeRepeatToNone() {
+        // We need an initial non-none repeat interval
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDate initialRepeat = new RepeatMonthlyOnDate(due);
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        initialRepeat.setDate(RAND.nextInt(31) + 1);
+        setRandomAdjustment(initialRepeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(), dialog.repeatEditor,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonNone);
+            // Make sure the editor layout has changed
+            runRepeatNoneChecks(wrapper.getScenario(), dialog.repeatEditor);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        // For no repeat, the dialog may return null
+        // which we'll consider the same as RepeatNone.
+        if (setRepeat != null)
+            assertEquals("Repeat set by the dialog",
+                    new RepeatNone(), setRepeat);
+    }
+
+    /**
+     * Press the week day and direction buttons until they are
+     * configured to match a given state.  Assumes the widget
+     * has been set as the activity&rsquo;s content view.
+     * Turning off the last weekday button <i>should</i> automatically
+     * turn on one of the other buttons since at least one is required,
+     * so this will turn on all buttons that should be set before
+     * turning any of the others off.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param weekDays the week days that should be turned on
+     * @param direction the direction that should be configured,
+     * or {@code null} to ignore the direction buttons.
+     */
+    private <T extends Activity> void setWeekdayButtons(
+            @NonNull ActivityScenario<T> scenario,
+            @NonNull Set<WeekDays> weekDays,
+            @Nullable WeekdayDirection direction) {
+        for (WeekDays day : weekDays) {
+            int buttonId = DAY_BUTTON_IDS[day.getValue()
+                    - WeekDays.SUNDAY.getValue()];
+            if (!getToggleButtonState(scenario, day.toString(), buttonId))
+                pressButton(scenario, buttonId);
+        }
+        for (WeekDays offDay : WeekDays.values()) {
+            if (weekDays.contains(offDay))
+                continue;
+            int buttonId = DAY_BUTTON_IDS[offDay.getValue()
+                    - WeekDays.SUNDAY.getValue()];
+            if (getToggleButtonState(scenario, offDay.toString(), buttonId))
+                pressButton(scenario, buttonId);
+        }
+        if (direction != null)
+            setDirectionButtons(scenario, direction);
+    }
+
+    private <T extends Activity> void setDirectionButtons(
+            @NonNull ActivityScenario<T> scenario,
+            @NonNull WeekdayDirection direction) {
+        boolean nearest = (direction == WeekdayDirection.CLOSEST_OR_NEXT) ||
+                (direction == WeekdayDirection.CLOSEST_OR_PREVIOUS);
+        boolean isNext = (direction == WeekdayDirection.CLOSEST_OR_NEXT) ||
+                (direction == WeekdayDirection.NEXT);
+        if (getToggleButtonState(scenario,
+                "Nearest", R.id.RepeatToggleNearest) != nearest)
+            pressButton(scenario, R.id.RepeatToggleNearest);
+        pressButton(scenario, isNext ? R.id.RepeatRadioButtonNext
+                : R.id.RepeatRadioButtonPrevious);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to daily with a fixed schedule.
+     */
+    @Test
+    public void testChangeRepeatToDaily() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthAfter initialRepeat = new RepeatMonthAfter();
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        setRandomAdjustment(initialRepeat);
+
+        RepeatDaily expectedRepeat = new RepeatDaily();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        expectedRepeat.setAllowedWeekDays(initialRepeat.getAllowedWeekDays());
+        expectedRepeat.setDirection(initialRepeat.getDirection());
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(), dialog.repeatEditor,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonDaily);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonFixedSchedule);
+            assertDayDateButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to day-after.
+     */
+    @Test
+    public void testChangeRepeatToDayAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDays initialRepeat = new RepeatSemiMonthlyOnDays(due);
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        initialRepeat.setDay(WeekDays.values()[RAND.nextInt(
+                WeekDays.values().length)]);
+        initialRepeat.setWeek(RAND.nextInt(3) + 1);
+        initialRepeat.setDay2(WeekDays.values()[RAND.nextInt(
+                WeekDays.values().length)]);
+        initialRepeat.setWeek2(RAND.nextBoolean() ? 4 : -1);
+
+        RepeatDayAfter expectedRepeat = new RepeatDayAfter();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        // The repeat-on-days interval doesn't initialize the week days;
+        // it should default to all days, but we'll want to set these explicitly.
+        // Ditto for direction; the default is "Next"
+        setRandomAdjustment(expectedRepeat);
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(), dialog.repeatEditor,
+                    R.id.RepeatRadioButtonSemiMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonDaily);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonAfterCompleted);
+            assertDayDateButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            setWeekdayButtons(wrapper.getScenario(),
+                    expectedRepeat.getAllowedWeekDays(),
+                    expectedRepeat.getDirection());
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to weekly.
+     */
+    @Test
+    public void testChangeRepeatToWeekly() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearAfter initialRepeat = new RepeatYearAfter();
+        initialRepeat.setIncrement(RAND.nextInt(10) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        setRandomAdjustment(initialRepeat);
+
+        RepeatWeekly expectedRepeat = new RepeatWeekly();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        expectedRepeat.setWeekDays(initialRepeat.getAllowedWeekDays());
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(), dialog.repeatEditor,
+                    R.id.RepeatRadioButtonYearly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonWeekly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonFixedSchedule);
+            assertDayDateButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to week-after.
+     */
+    @Test
+    public void testChangeRepeatToWeekAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDay initialRepeat = new RepeatMonthlyOnDay(due);
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        initialRepeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+
+        RepeatWeekAfter expectedRepeat = new RepeatWeekAfter();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        // The repeat-on-day interval doesn't initialize the week days;
+        // it should default to all days, but we'll want to set these explicitly.
+        // Ditto for direction; the default is "Next"
+        setRandomAdjustment(expectedRepeat);
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(), dialog.repeatEditor,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonWeekly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonAfterCompleted);
+            assertDayDateButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            setWeekdayButtons(wrapper.getScenario(),
+                    expectedRepeat.getAllowedWeekDays(),
+                    expectedRepeat.getDirection());
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to semi-monthly on days.
+     */
+    @Test
+    public void testChangeRepeatToSemiMonthlyOnDays() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatDayAfter initialRepeat = new RepeatDayAfter();
+        initialRepeat.setIncrement(RAND.nextInt(100) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
+        setRandomAdjustment(initialRepeat);
+
+        RepeatSemiMonthlyOnDays expectedRepeat = new RepeatSemiMonthlyOnDays();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        /*
+         * The day-after interval doesn't initialize the days or weeks
+         * of the month; the default in uncertain (could either be
+         * fixed days/weeks or set according to the due date.)
+         * Moreover the editor currently doesn't have any way to
+         * change these settings!  So we won't have any concrete
+         * expectation about them.
+         */
+        RepeatSettings settings;
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonDaily);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonSemiMonthly);
+            assertResetTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, -1);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonByDay);
+            assertWeekDayToggles(wrapper.getScenario(),
+                    dialog.repeatEditor,null);
+            assertDirectionButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            settings = dialog.getRepeatSettings();
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        expectedRepeat.setDay(settings.getDayOfWeek(0));
+        expectedRepeat.setWeek(settings.getWeek(0));
+        expectedRepeat.setDay2(settings.getDayOfWeek(1));
+        expectedRepeat.setWeek2(settings.getWeek(1));
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to semi-monthly on dates.
+     */
+    @Test
+    public void testChangeRepeatToSemiMonthlyOnDates() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatYearlyOnDay initialRepeat = new RepeatYearlyOnDay(due);
+        initialRepeat.setIncrement(RAND.nextInt(10) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusYears(RAND.nextInt(4)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        initialRepeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+        initialRepeat.setMonth(Months.values()[RAND.nextInt(Months.values().length)]);
+
+        RepeatSemiMonthlyOnDates expectedRepeat = new RepeatSemiMonthlyOnDates();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        // The repeat-on-day interval doesn't initialize the week days;
+        // it should default to all days, but we'll want to set these explicitly.
+        // Ditto for direction; the default is "Next"
+        setRandomAdjustment(expectedRepeat);
+        /*
+         * Ditto for the dates; the default is uncertain.
+         * Moreover the editor currently doesn't have any way to
+         * change these settings!  So we won't have any concrete
+         * expectation about them.
+         */
+        RepeatSettings settings;
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonYearly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonSemiMonthly);
+            assertResetTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, -1);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonByDate);
+            setWeekdayButtons(wrapper.getScenario(),
+                    expectedRepeat.getAllowedWeekDays(),
+                    expectedRepeat.getDirection());
+            settings = dialog.getRepeatSettings();
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        expectedRepeat.setDate(settings.getDate(0));
+        expectedRepeat.setDate2(settings.getDate(1));
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to monthly on day.
+     */
+    @Test
+    public void testChangeRepeatToMonthlyOnDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekAfter initialRepeat = new RepeatWeekAfter();
+        initialRepeat.setIncrement(RAND.nextInt(52) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        setRandomAdjustment(initialRepeat);
+
+        RepeatMonthlyOnDay expectedRepeat = new RepeatMonthlyOnDay();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        /*
+         * The week-after interval doesn't initialize the day or week
+         * of the month; the default in uncertain (could either be
+         * a fixed day/week or set according to the due date.)
+         * Moreover the editor currently doesn't have any way to
+         * change these settings!  So we won't have any concrete
+         * expectation about them.
+         */
+        RepeatSettings settings;
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonWeekly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonFixedSchedule);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonByDay);
+            assertWeekDayToggles(wrapper.getScenario(),
+                    dialog.repeatEditor,null);
+            settings = dialog.getRepeatSettings();
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        expectedRepeat.setDay(settings.getDayOfWeek(0));
+        expectedRepeat.setWeek(settings.getWeek(0));
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to monthly on date.
+     */
+    @Test
+    public void testChangeRepeatToMonthlyOnDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDays initialRepeat = new RepeatSemiMonthlyOnDays(due);
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        initialRepeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek(RAND.nextInt(3) + 1);
+        initialRepeat.setDay2(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek2(RAND.nextBoolean() ? 4 : -1);
+
+        RepeatMonthlyOnDate expectedRepeat = new RepeatMonthlyOnDate();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        // The repeat-on-days interval doesn't initialize the week days;
+        // it should default to all days, but we'll want to set these explicitly.
+        // Ditto for direction; the default is "Next"
+        setRandomAdjustment(expectedRepeat);
+        /*
+         * Ditto for the date; the default is uncertain.
+         * Moreover the editor currently doesn't have any way to
+         * change this setting!  So we won't have any concrete
+         * expectation about it.
+         */
+        RepeatSettings settings;
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonSemiMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonFixedSchedule);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonByDate);
+            setWeekdayButtons(wrapper.getScenario(),
+                    expectedRepeat.getAllowedWeekDays(),
+                    expectedRepeat.getDirection());
+            settings = dialog.getRepeatSettings();
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        expectedRepeat.setDate(settings.getDate(0));
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to month-after.
+     */
+    @Test
+    public void testChangeRepeatToMonthAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatSemiMonthlyOnDays initialRepeat = new RepeatSemiMonthlyOnDays(due);
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        initialRepeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek(RAND.nextInt(3) + 1);
+        initialRepeat.setDay2(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek2(RAND.nextBoolean() ? 4 : -1);
+
+        RepeatMonthAfter expectedRepeat = new RepeatMonthAfter();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        setRandomAdjustment(expectedRepeat);
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonSemiMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonAfterCompleted);
+            assertDayDateButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            setWeekdayButtons(wrapper.getScenario(),
+                    expectedRepeat.getAllowedWeekDays(),
+                    expectedRepeat.getDirection());
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to yearly by day.
+     */
+    @Test
+    public void testChangeRepeatToYearlyByDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatDayAfter initialRepeat = new RepeatDayAfter();
+        initialRepeat.setIncrement(RAND.nextInt(100) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(384)));
+        setRandomAdjustment(initialRepeat);
+
+        RepeatYearlyOnDay expectedRepeat = new RepeatYearlyOnDay();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        /*
+         * The day-after interval doesn't initialize the day or week
+         * of the month or the month; the default in uncertain (could
+         * either be a fixed day/week or set according to the due date.)
+         * Moreover the editor currently doesn't have any way to
+         * change these settings!  So we won't have any concrete
+         * expectation about them.
+         */
+        RepeatSettings settings;
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonDaily);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonYearly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonFixedSchedule);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonByDay);
+            assertWeekDayToggles(wrapper.getScenario(),
+                    dialog.repeatEditor,null);
+            settings = dialog.getRepeatSettings();
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        expectedRepeat.setDay(settings.getDayOfWeek(0));
+        expectedRepeat.setWeek(settings.getWeek(0));
+        expectedRepeat.setMonth(settings.getMonth());
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to yearly by date.
+     */
+    @Test
+    public void testChangeRepeatToYearlyByDate() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatWeekly initialRepeat = new RepeatWeekly();
+        initialRepeat.setIncrement(RAND.nextInt(52) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusWeeks(RAND.nextInt(64)));
+        initialRepeat.setWeekDays(randomDays());
+
+        RepeatYearlyOnDate expectedRepeat = new RepeatYearlyOnDate();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        expectedRepeat.setAllowedWeekDays(initialRepeat.getWeekDays());
+        expectedRepeat.setDirection(WeekdayDirection.values()[RAND.nextInt(
+                WeekdayDirection.values().length)]);
+        /*
+         * The weekly interval doesn't initialize the date or month;
+         * the default in uncertain (could either be a fixed date and
+         * month or set according to the due date.)  Moreover the editor
+         * currently doesn't have any way to change these settings!  So
+         * we won't have any concrete expectation about them.
+         */
+        RepeatSettings settings;
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, R.id.RepeatRadioButtonWeekly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonYearly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonFixedSchedule);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonByDate);
+            setDirectionButtons(wrapper.getScenario(),
+                    expectedRepeat.getDirection());
+            settings = dialog.getRepeatSettings();
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        expectedRepeat.setDate(settings.getDate(0));
+        expectedRepeat.setMonth(settings.getMonth());
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Test switching the editor from another repeat interval type
+     * to year-after.
+     */
+    @Test
+    public void testChangeRepeatToYearAfter() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(30));
+        RepeatMonthlyOnDay initialRepeat = new RepeatMonthlyOnDay(due);
+        initialRepeat.setIncrement(RAND.nextInt(12) + 1);
+        initialRepeat.setEnd((RAND.nextFloat() < 0.215f) ? null
+                : LocalDate.now(ZoneOffset.UTC).plusMonths(RAND.nextInt(16)));
+        int[] weekNums = {1, 2, 3, 4, -1};
+        initialRepeat.setDay(WeekDays.values()[RAND.nextInt(WeekDays.values().length)]);
+        initialRepeat.setWeek(weekNums[RAND.nextInt(weekNums.length)]);
+
+        RepeatYearAfter expectedRepeat = new RepeatYearAfter();
+        expectedRepeat.setIncrement(initialRepeat.getIncrement());
+        expectedRepeat.setEnd(initialRepeat.getEnd());
+        setRandomAdjustment(expectedRepeat);
+
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditorDialog dialog = showRepeatEditorDialog(
+                    wrapper.getScenario(), initialRepeat, due, ZoneOffset.UTC);
+            assertRepeatTypeButtons(wrapper.getScenario(), dialog.repeatEditor,
+                    R.id.RepeatRadioButtonMonthly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonYearly);
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    R.id.RepeatRadioButtonAfterCompleted);
+            assertDayDateButtons(wrapper.getScenario(),
+                    dialog.repeatEditor, null);
+            setWeekdayButtons(wrapper.getScenario(),
+                    expectedRepeat.getAllowedWeekDays(),
+                    expectedRepeat.getDirection());
+            pressDialogButton(wrapper.getScenario(), dialog,
+                    android.R.id.button1);
+        }
+        assertTrue("The dialog did not call the onRepeatSet callback",
+                onRepeatSetCalled);
+        assertEquals("Repeat set by the dialog", expectedRepeat, setRepeat);
+    }
+
+    /**
+     * Check that when the only day of the week toggle that is set is
+     * turned off, the toggle for the due date&rsquo;s day of the week
+     * automatically turns back on.
+     */
+    @Test
+    public void testClearLastWeekDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(7));
+        WeekDays targetDay = WeekDays.fromJavaDay(due.getDayOfWeek());
+        RepeatDayAfter repeat = new RepeatDayAfter(due);
+        setRandomAdjustment(repeat);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            // First, randomly set the weekday buttons
+            // except for the target day which should be turned off.
+            Set<WeekDays> initialSet = randomDays();
+            initialSet.remove(targetDay);
+            if (initialSet.isEmpty()) {
+                WeekDays alternate;
+                do {
+                    alternate = WeekDays.values()[RAND.nextInt(
+                        WeekDays.values().length)];
+                } while (alternate == targetDay);
+                initialSet.add(alternate);
+            }
+            setWeekdayButtons(wrapper.getScenario(), initialSet, null);
+            // Now try turning all the days off
+            setWeekdayButtons(wrapper.getScenario(),
+                    Collections.emptySet(), null);
+            // Check that the target day is turned back on
+            assertWeekDayToggles(wrapper.getScenario(), widget,
+                    Collections.singleton(targetDay));
+        }
+    }
+
+    /**
+     * Check that when the only day of the week toggle that is set is
+     * turned off and that is the due date&rsquo;s day of the week,
+     * is is automatically turned back on.
+     */
+    @Test
+    public void testDontClearSoleTargetWeekDay() {
+        LocalDate due = LocalDate.now(ZoneOffset.UTC)
+                .plusDays(RAND.nextInt(7));
+        WeekDays targetDay = WeekDays.fromJavaDay(due.getDayOfWeek());
+        RepeatDayAfter repeat = new RepeatDayAfter(due);
+        Set<WeekDays> singleDaySet = Collections.singleton(targetDay);
+        repeat.setAllowedWeekDays(singleDaySet);
+        try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
+                     ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
+            RepeatEditor widget = showRepeatEditorWidget(
+                    wrapper.getScenario(), repeat, due, ZoneOffset.UTC);
+            // Check the pre-condition that the target is the only day set
+            assertWeekDayToggles(wrapper.getScenario(), widget, singleDaySet);
+            int buttonId = DAY_BUTTON_IDS[targetDay.getValue()
+                    - WeekDays.SUNDAY.getValue()];
+            // Try turning it off
+            pressButton(wrapper.getScenario(), buttonId);
+            // Check the post-condition that the target is still set
+            assertWeekDayToggles(wrapper.getScenario(), widget, singleDaySet);
+        }
     }
 
 }
