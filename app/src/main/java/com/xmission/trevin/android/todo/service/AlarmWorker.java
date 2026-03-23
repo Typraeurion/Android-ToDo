@@ -335,10 +335,10 @@ public class AlarmWorker extends Worker {
         // Configure acknowledgements to be sent to the ToDoListActivity
         // along with the associated item's ID and category.
         Intent mainIntent = new Intent(context, ToDoListActivity.class);
-       	mainIntent.setAction(ACTION_NOTIFICATION_ACK);
+        mainIntent.setAction(ACTION_NOTIFICATION_ACK);
         mainIntent.setData(ToDoItemColumns.CONTENT_URI);
         mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-       	mainIntent.putExtra(EXTRA_NOTIFICATION_DATE, now.toEpochMilli());
+        mainIntent.putExtra(EXTRA_NOTIFICATION_DATE, now.toEpochMilli());
         mainIntent.putExtra(EXTRA_CATEGORY_ID, alarm.getCategoryId());
         mainIntent.putExtra(EXTRA_ITEM_ID, alarm.getId());
 

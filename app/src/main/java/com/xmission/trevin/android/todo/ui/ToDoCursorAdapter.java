@@ -284,10 +284,10 @@ public class ToDoCursorAdapter extends BaseAdapter {
                 // style attributes.  Clear the tint first (so the subsequent
                 // setButtonDrawable call does not re-apply it), then restore
                 // our custom drawable.
-                CheckBox newCheckBox =
-                        (CheckBox) itemView.findViewById(R.id.ToDoItemChecked);
-                CompoundButtonCompat.setButtonTintList(newCheckBox, null);
-                newCheckBox.setButtonDrawable(R.drawable.btn_check);
+                CheckBox checkBox =
+                        itemView.findViewById(R.id.ToDoItemChecked);
+                CompoundButtonCompat.setButtonTintList(checkBox, null);
+                checkBox.setButtonDrawable(R.drawable.btn_check);
             }
         }
 

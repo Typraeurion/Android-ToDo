@@ -16,7 +16,8 @@
             android:enabled="false"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="text|textCapSentences|textMultiLine">
+            android:inputType="text|textCapSentences|textMultiLine"
+            android:autofillHints="no">
             <requestFocus/>
         </EditText>
 
@@ -29,12 +30,15 @@
                 android:padding="3sp">
                 <TextView android:text="@string/DetailTextPriority"
                     android:id="@+id/DetailTextPriority"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:inputType="number"
+                    android:autofillHints="no"
+                    android:labelFor="@id/DetailEditTextPriority">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout01"
@@ -52,12 +56,13 @@
 
                 <TextView android:text="@string/DetailTextCategory"
                     android:id="@+id/DetailTextCategory"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:labelFor="@id/DetailSpinnerCategory">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout02"
@@ -78,7 +83,7 @@
                 android:padding="3sp">
                 <TextView android:text="@string/DetailTextCompleted"
                     android:id="@+id/DetailTextCompleted"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
@@ -99,12 +104,13 @@
 
                 <TextView android:text="@string/DetailTextDueDate"
                     android:id="@+id/DetailTextDueDate"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:labelFor="@id/DetailButtonDueDate">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout04"
@@ -125,12 +131,13 @@
                 android:padding="3sp">
                 <TextView android:text="@string/DetailTextHideUntil"
                     android:id="@+id/DetailTextHideUntil"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:labelFor="@id/DetailButtonHideUntil">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout05"
@@ -138,7 +145,7 @@
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_weight="1">
-                    <Button android:text="7 days earlier"
+                    <Button android:text=""
                         android:id="@+id/DetailButtonHideUntil"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
@@ -147,12 +154,13 @@
 
                 <TextView android:text="@string/DetailTextAlarm"
                     android:id="@+id/DetailTextAlarm"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:labelFor="@id/DetailButtonAlarm">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout06"
@@ -160,7 +168,7 @@
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_weight="1">
-                    <Button android:text="2 days earlier"
+                    <Button android:text=""
                         android:id="@+id/DetailButtonAlarm"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
@@ -174,12 +182,13 @@
                 android:padding="3sp">
                 <TextView android:text="@string/DetailTextRepeat"
                     android:id="@+id/DetailTextRepeat"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:labelFor="@id/DetailButtonRepeat">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout07"
@@ -187,7 +196,7 @@
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_weight="1">
-                    <Button android:text="None"
+                    <Button android:text="@string/RepeatNone"
                         android:id="@+id/DetailButtonRepeat"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
@@ -196,12 +205,13 @@
 
                 <TextView android:text="@string/DetailTextPrivate"
                     android:id="@+id/DetailTextPrivate"
-                    android:gravity="center_vertical|right"
+                    android:gravity="center_vertical|end"
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
-                    android:paddingRight="8sp">
+                    android:paddingRight="8sp"
+                    android:labelFor="@id/DetailCheckBoxPrivate">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout08"

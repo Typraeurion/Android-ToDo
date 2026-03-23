@@ -16,6 +16,7 @@
  */
 package com.xmission.trevin.android.todo.ui;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.*;
 import android.content.DialogInterface.OnClickListener;
@@ -59,14 +60,17 @@ public class RepeatEditorDialog extends AlertDialog implements OnClickListener {
     }
 
     /** Create a new repeat editor dialog */
+    @SuppressLint("InflateParams")
     public RepeatEditorDialog(Context context, OnRepeatSetListener callback) {
         super(context);
         this.callback = callback;
         Log.d(LOG_TAG, "creating");
         setTitle(context.getResources().getString(R.string.RepeatTitle));
 
-        setButton(context.getText(R.string.ConfirmationButtonOK), this);
-        setButton2(context.getText(R.string.ConfirmationButtonCancel), this);
+        setButton(BUTTON_POSITIVE, context.getText(
+                R.string.ConfirmationButtonOK), this);
+        setButton(BUTTON_NEGATIVE, context.getText(
+                R.string.ConfirmationButtonCancel), this);
         setIcon(R.drawable.ic_dialog_time);
 
         LayoutInflater inflater = (LayoutInflater)
@@ -111,10 +115,10 @@ public class RepeatEditorDialog extends AlertDialog implements OnClickListener {
     public void onClick(DialogInterface dialog, int which) {
         Log.d(LOG_TAG, String.format(Locale.US,
                 ".onClick(dialog,%s)",
-                ((which == DialogInterface.BUTTON1) ? "OK"
-                        : ((which == DialogInterface.BUTTON2) ? "Cancel"
+                ((which == DialogInterface.BUTTON_POSITIVE) ? "OK"
+                        : ((which == DialogInterface.BUTTON_NEGATIVE) ? "Cancel"
                         : Integer.toString(which)))));
-        if ((which == DialogInterface.BUTTON1) && (callback != null)) {
+        if ((which == DialogInterface.BUTTON_POSITIVE) && (callback != null)) {
             callback.onRepeatSet(repeatEditor,
                     repeatEditor.getSettings().getRepeat());
         }

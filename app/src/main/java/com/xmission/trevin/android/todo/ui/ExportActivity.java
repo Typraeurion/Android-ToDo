@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 
 
 import android.Manifest;
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.app.*;
 import android.content.*;
 import android.content.pm.PackageManager;
@@ -280,7 +280,7 @@ public class ExportActivity extends Activity {
      * the Storage Access Framework (KitKat and above)
      */
     @Override
-    @TargetApi(19)
+    @SuppressLint("NewApi") // Only used on Nougat or higher
     public void onActivityResult(
             int requestCode, int resultCode, Intent resultData) {
         Log.d(TAG, String.format(Locale.US, ".onActivityResult(%d,%d,%s)",

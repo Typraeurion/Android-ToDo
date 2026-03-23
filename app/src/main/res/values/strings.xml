@@ -250,6 +250,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="MonthSeptember">September</string>
     <string name="NoteButtonDelete">Delete&#8230;</string>
     <string name="NoteButtonOK">Done</string>
+    <string name="NotePlaceholder">Your note here&#8230;</string>
     <string name="NotificationChannelDueName">Items Due</string>
     <string name="NotificationChannelDueDescription">Notifications for items which are due today or which have advance alarms</string>
     <string name="NotificationChannelOverdueName">Items Overdue</string>

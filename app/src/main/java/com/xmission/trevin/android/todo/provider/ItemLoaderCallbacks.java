@@ -16,7 +16,6 @@
  */
 package com.xmission.trevin.android.todo.provider;
 
-import android.annotation.TargetApi;
 import android.app.LoaderManager;
 import android.content.Context;
 import android.content.Loader;
@@ -36,7 +35,6 @@ import com.xmission.trevin.android.todo.ui.ToDoCursorAdapter;
  *
  * @author Trevin Beattie
  */
-@TargetApi(11)
 public class ItemLoaderCallbacks
         implements LoaderManager.LoaderCallbacks<ToDoCursor> {
 

@@ -18,6 +18,7 @@ package com.xmission.trevin.android.todo.ui;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.ObjectsCompat;
 
 import com.xmission.trevin.android.todo.data.repeat.*;
 
@@ -307,7 +308,7 @@ public class RepeatSettings implements Serializable {
      * @param newDue the new due date
      */
     public void setDueDate(@NonNull LocalDate newDue) {
-        if (dueDate.equals(newDue))
+        if (ObjectsCompat.equals(dueDate, newDue))
             return;
         dueDate = newDue;
 

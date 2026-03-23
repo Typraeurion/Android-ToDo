@@ -26,6 +26,7 @@ import android.app.AlertDialog;
 import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityResult;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.widget.EditText;
 
@@ -158,7 +159,9 @@ public class ToDoNoteActivityTests {
         });
         assertNotNull("Note activity did not set its discardConfirmationDialog",
                 dialogRef[0]);
-        pressDialogButton(scenario, dialogRef[0], android.R.id.button1);
+        int okButtonId = dialogRef[0].getButton(
+                DialogInterface.BUTTON_POSITIVE).getId();
+        pressDialogButton(scenario, dialogRef[0], okButtonId);
     }
 
     /**
@@ -298,8 +301,9 @@ public class ToDoNoteActivityTests {
             });
             assertNotNull("Note activity did not set its deleteConfirmationDialog",
                     dialogRef[0]);
-            pressDialogButton(wrapper.getScenario(),
-                    dialogRef[0], android.R.id.button1);
+            int okButtonId = dialogRef[0].getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialogRef[0], okButtonId);
 
             ActivityResult result = wrapper.getResult();
             assertEquals("Activity return status", Activity.RESULT_OK,
@@ -348,8 +352,9 @@ public class ToDoNoteActivityTests {
             });
             assertNotNull("Note activity did not set its deleteConfirmationDialog",
                     dialogRef[0]);
-            pressDialogButton(wrapper.getScenario(),
-                    dialogRef[0], android.R.id.button1);
+            int okButtonId = dialogRef[0].getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialogRef[0], okButtonId);
 
             ActivityResult result = wrapper.getResult();
             assertEquals("Activity return status", Activity.RESULT_CANCELED,
@@ -453,8 +458,9 @@ public class ToDoNoteActivityTests {
             });
             assertNotNull("Note activity did not set its deleteConfirmationDialog",
                     dialogRef[0]);
-            pressDialogButton(wrapper.getScenario(),
-                    dialogRef[0], android.R.id.button1);
+            int okButtonId = dialogRef[0].getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialogRef[0], okButtonId);
             observer.assertChanged("Note was not deleted from the repository");
         }
         ToDoItem updatedItem = mockRepo.getItemById(item.getId());

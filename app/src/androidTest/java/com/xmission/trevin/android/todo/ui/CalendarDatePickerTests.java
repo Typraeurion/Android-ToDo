@@ -245,6 +245,31 @@ public class CalendarDatePickerTests {
             } catch (InterruptedException e) {
                 // Ignore
             }
+            assertNotEquals(message + "; latch count", 0, latch.getCount());
+            assertNull(message, setDate);
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify
+         * that {@link #onDateSet} was called with a {@code null}
+         * date using a default assertion message.
+         */
+        public void assertDateCleared() {
+            assertDateCleared("The date was not cleared");
+        }
+
+        /**
+         * Wait for this listener to be notified, then verify
+         * that {@link #onDateSet} was called with a {@code null}
+         * date using the given assertion message.
+         *
+         * @param message the message to show if {@link #onDateSet}
+         * was not called or was called with a non-{@code null} date.
+         */
+        public void assertDateCleared(String message) {
+            await();
+            assertEquals("The date set listener was not called; latch count",
+                    0, latch.getCount());
             assertNull(message, setDate);
         }
 
@@ -1031,10 +1056,11 @@ public class CalendarDatePickerTests {
             TestDateSetListener listener =
                     showDatePickerDialog(scenario,
                             LocalDate.of(2000, 1, 1), zone);
-            // "Today" is set as button 2 in the dialog constructor.
+            int buttonId = listener.dialog.getButton(
+                    CalendarDatePickerDialog.BUTTON_TODAY).getId();
             assertDialogButtonShown(scenario, listener.dialog,
-                    "Today", android.R.id.button2);
-            pressDialogButton(scenario, listener.dialog, android.R.id.button2);
+                    "Today", buttonId);
+            pressDialogButton(scenario, listener.dialog, buttonId);
             listener.assertDateSet(String.format(Locale.US,
                             "Date set for Today (in %s)", zone.toString()),
                     LocalDate.now(zone));
@@ -1052,10 +1078,11 @@ public class CalendarDatePickerTests {
             TestDateSetListener listener =
                     showDatePickerDialog(scenario,
                             LocalDate.of(2000, 1, 1), zone);
-            // "Today" is set as button 2 in the dialog constructor.
+            int buttonId = listener.dialog.getButton(
+                    CalendarDatePickerDialog.BUTTON_TODAY).getId();
             assertDialogButtonShown(scenario, listener.dialog,
-                    "Today", android.R.id.button2);
-            pressDialogButton(scenario, listener.dialog, android.R.id.button2);
+                    "Today", buttonId);
+            pressDialogButton(scenario, listener.dialog, buttonId);
             listener.assertDateSet(String.format(Locale.US,
                             "Date set for Today (in %s)", zone.toString()),
                     LocalDate.now(zone));
@@ -1071,11 +1098,30 @@ public class CalendarDatePickerTests {
                      ActivityScenario.launch(ToDoNoteActivity.class)) {
             TestDateSetListener listener = showDatePickerDialog(
                     scenario, LocalDate.now(), ZoneId.systemDefault());
-            // "Cancel" is set as button 1 in the dialog constructor.
+            int buttonId = listener.dialog.getButton(
+                    CalendarDatePickerDialog.BUTTON_CANCEL).getId();
             assertDialogButtonShown(scenario, listener.dialog,
-                    "Cancel", android.R.id.button1);
-            pressDialogButton(scenario, listener.dialog, android.R.id.button1);
+                    "Cancel", buttonId);
+            pressDialogButton(scenario, listener.dialog, buttonId);
             listener.assertDateNotSet();
+        }
+    }
+
+    /**
+     * Test the dialog&rsquo;s &ldquo;No Date&rdquo; button.
+     */
+    @Test
+    public void testDialogNoDate() {
+        try (ActivityScenario<ToDoNoteActivity> scenario =
+                     ActivityScenario.launch(ToDoNoteActivity.class)) {
+            TestDateSetListener listener = showDatePickerDialog(
+                    scenario, LocalDate.now(), ZoneId.systemDefault());
+            int buttonId = listener.dialog.getButton(
+                    CalendarDatePickerDialog.BUTTON_NO_DATE).getId();
+            assertDialogButtonShown(scenario, listener.dialog,
+                    "Cancel", buttonId);
+            pressDialogButton(scenario, listener.dialog, buttonId);
+            listener.assertDateCleared();
         }
     }
 

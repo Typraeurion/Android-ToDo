@@ -858,6 +858,7 @@ public class ToDoDetailsActivity extends Activity {
                 dueDateDialog.setToday(today);
                 dueDateDialog.setDate(tentativeDueDate);
                 dueDateDialog.setTimeZone(zone);
+                dueDateDialog.setNoDateShown(todo.getDue() != null);
                 break;
 
             case HIDEUNTIL_DIALOG_ID:
@@ -905,15 +906,19 @@ public class ToDoDetailsActivity extends Activity {
 
             case ENDDATE_DIALOG_ID:
                 LocalDate tentativeEndDate = null;
-                if (todo.getRepeatInterval() instanceof AbstractRepeat)
+                boolean hasEndDate = false;
+                if (todo.getRepeatInterval() instanceof AbstractRepeat) {
                     tentativeEndDate = ((AbstractRepeat)
                             todo.getRepeatInterval()).getEnd();
+                    hasEndDate = (tentativeEndDate != null);
+                }
                 if (tentativeEndDate == null)
                     tentativeEndDate = (todo.getDue() == null)
                             ? today : todo.getDue();
                 repeatEndDialog.setToday(today);
                 repeatEndDialog.setDate(tentativeEndDate);
                 repeatEndDialog.setTimeZone(prefs.getTimeZone());
+                repeatEndDialog.setNoDateShown(hasEndDate);
                 break;
 
             default: break;
@@ -1112,13 +1117,19 @@ public class ToDoDetailsActivity extends Activity {
         }
     }
 
-    /** Called when the user picks an end date for a repeating interval */
+    /**
+     * Called when the user picks an end date for a
+     * &ldquo;Daily until&hellip;&rdquo; repeating interval
+     */
     class RepeatEndPickListener
             implements CalendarDatePicker.OnDateSetListener {
         @Override
         public void onDateSet(CalendarDatePicker dp, @Nullable LocalDate day) {
             if (repeatSettings != null)
                 repeatSettings.setEndDate(day);
+            if ((todo.getRepeatInterval() == null) ||
+                    (todo.getRepeatInterval().getType() != RepeatType.DAILY))
+                todo.setRepeatInterval(new RepeatDaily());
             if (todo.getRepeatInterval() instanceof AbstractRepeat)
                 ((AbstractRepeat) todo.getRepeatInterval()).setEnd(day);
             updateRepeatButton();
@@ -1290,7 +1301,7 @@ public class ToDoDetailsActivity extends Activity {
         public void onDateSet(CalendarDatePicker dp, @Nullable LocalDate day) {
             todo.setDue(day);
             if ((day != null) && (repeatSettings != null))
-                repeatSettings.setDueDate(todo.getDue());
+                repeatSettings.setDueDate(day);
             updateDueDateButton();
         }
     }
@@ -1317,9 +1328,6 @@ public class ToDoDetailsActivity extends Activity {
                     break;
 
                 case 1:	// Daily until...
-                    todo.setRepeatInterval(new RepeatDaily());
-                    repeatButton.setText(
-                            getResources().getString(R.string.RepeatDaily));
                     showDialog(ENDDATE_DIALOG_ID);
                     break;
 

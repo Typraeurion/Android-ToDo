@@ -16,7 +16,8 @@
             android:enabled="false"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="text|textCapSentences|textMultiLine">
+            android:inputType="text|textCapSentences|textMultiLine"
+            android:autofillHints="no">
             <requestFocus/>
         </EditText>
 
@@ -32,7 +33,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:inputType="number"
+                    android:autofillHints="no"
+                    android:labelFor="@id/DetailEditTextPriority">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout01"
@@ -42,7 +46,6 @@
                     <EditText android:id="@+id/DetailEditTextPriority"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="8"
                         android:inputType="number">
                     </EditText>
                 </LinearLayout>
@@ -57,7 +60,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:labelFor="@id/DetailSpinnerCategory">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout02"
@@ -71,7 +75,12 @@
                 </LinearLayout>
             </TableRow>
 
-            <TableRow android:id="@+id/LastCompletedTableRow"
+            <!-- The resource ID of this row is not present in landscape
+                 because the Completed view shares space with the due
+                 date there.  So we tell lint to ignore this difference. -->
+            <TableRow xmlns:tools="http://schemas.android.com/tools"
+                android:id="@+id/LastCompletedTableRow"
+                tools:ignore="InconsistentLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="3sp">
@@ -98,13 +107,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="3sp"
-                android:clickable="true">
+                android:clickable="true"
+                android:focusable="true">
                 <TextView android:text="@string/DetailTextDueDate"
                     android:id="@+id/DetailTextDueDate"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:labelFor="@id/DetailButtonDueDate">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout04"
@@ -127,14 +138,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:labelFor="@id/DetailButtonHideUntil">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout05"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_width="match_parent">
-                    <Button android:text="7 days earlier"
+                    <Button android:text=""
                         android:id="@+id/DetailButtonHideUntil"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
@@ -151,14 +163,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:labelFor="@id/DetailButtonAlarm">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout06"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_width="match_parent">
-                    <Button android:text="2 days earlier"
+                    <Button android:text=""
                         android:id="@+id/DetailButtonAlarm"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
@@ -175,14 +188,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:labelFor="@id/DetailButtonRepeat">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout07"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_width="match_parent">
-                    <Button android:text="None"
+                    <Button android:text="@string/RepeatNone"
                         android:id="@+id/DetailButtonRepeat"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
@@ -199,7 +213,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textColor="@color/black">
+                    android:textColor="@color/black"
+                    android:labelFor="@id/DetailCheckBoxPrivate">
                 </TextView>
 
                 <LinearLayout android:id="@+id/LinearLayout08"

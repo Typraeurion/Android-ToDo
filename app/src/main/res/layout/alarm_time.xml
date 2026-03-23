@@ -26,14 +26,16 @@
                 android:background="@drawable/underline"
                 android:text="99"
                 android:inputType="number"
+                android:autofillHints="no"
                 android:ems="2"
-                android:gravity="right"/>
+                android:gravity="end"/>
             <TextView android:id="@+id/AlarmTextDaysEarlier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/AlarmTextDaysEarlier"
                 android:textColor="@color/black"
-                android:padding="4sp"/>
+                android:padding="4sp"
+                android:labelFor="@id/AlarmEditDaysEarlier"/>
         </LinearLayout>
 
         <TimePicker android:id="@+id/AlarmTimePicker"

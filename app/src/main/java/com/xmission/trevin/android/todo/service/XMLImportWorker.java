@@ -341,6 +341,7 @@ public class XMLImportWorker extends Worker implements ProgressBarUpdater {
                 .build();
         final ForegroundInfo info = new ForegroundInfo(
                 FG_NOTIFICATION_ID, busyNotification,
+                // noinspection NewApi - handled by AndroidX.work
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         return CallbackToFutureAdapter.getFuture(new CallbackToFutureAdapter
                 .Resolver<ForegroundInfo>() {

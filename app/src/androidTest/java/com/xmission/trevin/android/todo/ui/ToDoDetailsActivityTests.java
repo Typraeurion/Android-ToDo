@@ -31,6 +31,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.view.KeyEvent;
@@ -913,8 +914,9 @@ public class ToDoDetailsActivityTests {
                         currentActivity).deleteConfirmationDialog;
                 assertNotNull("Note activity did not set its"
                         + " deleteConfirmationDialog", dialog);
-                pressDialogButton(wrapper.getScenario(),
-                        dialog, android.R.id.button1);
+                int okButtonId = dialog.getButton(
+                        DialogInterface.BUTTON_POSITIVE).getId();
+                pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
                 saveObserver.assertNotChanged(
                         "Note was deleted before the item was saved!");
                 // we're going to wait for this change.

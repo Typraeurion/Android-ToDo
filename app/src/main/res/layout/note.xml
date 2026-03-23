@@ -50,9 +50,9 @@
         android:layout_toLeftOf="@id/NoteScrollBar"
         android:layout_height="match_parent"
         android:layout_width="match_parent"
-        android:gravity="top|left"
+        android:gravity="top|start"
         android:inputType="text|textCapSentences|textAutoCorrect|textAutoComplete|textMultiLine|textLongMessage"
-        android:text="Your text here."
+        android:hint="@string/NotePlaceholder"
         android:background="@color/invisible">
         <requestFocus/>
     </com.xmission.trevin.android.todo.ui.ObservableEditText>

@@ -77,7 +77,8 @@
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
-                            android:layout_weight="1"/>
+                            android:layout_weight="1"
+                            android:labelFor="@id/RepeatEditTextEvery"/>
                         <LinearLayout android:id="@+id/LinearLayout04"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -86,6 +87,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:inputType="number"
+                                android:autofillHints="no"
                                 android:hint="1"
                                 android:width="50sp"/>
                             <TextView android:id="@+id/RepeatTextPeriod"
@@ -109,7 +111,8 @@
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
                             android:textColor="@color/black"
-                            android:layout_weight="1"/>
+                            android:layout_weight="1"
+                            android:labelFor="@id/RepeatButtonEndDate"/>
                         <Button android:id="@+id/RepeatButtonEndDate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

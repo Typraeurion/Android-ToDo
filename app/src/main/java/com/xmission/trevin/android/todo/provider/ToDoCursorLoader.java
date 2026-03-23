@@ -18,7 +18,6 @@ package com.xmission.trevin.android.todo.provider;
 
 import static com.xmission.trevin.android.todo.provider.ToDoSchema.ToDoItemColumns.USER_SORT_ORDERS;
 
-import android.annotation.TargetApi;
 import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.database.DataSetObserver;
@@ -35,7 +34,6 @@ import java.time.LocalDate;
  * An asynchronous loader which provides a {@link ToDoCursor}
  * for use by {@link ToDoCursorAdapter}.
  */
-@TargetApi(11)
 public class ToDoCursorLoader extends AsyncTaskLoader<ToDoCursor> {
 
     private static final String TAG = "ToDoCursorLoader";

@@ -135,7 +135,7 @@ public class ToDoListActivity extends AppCompatActivity {
     Menu menu = null;
 
     /** &ldquo;Unlock Encrypted&rdquo; dialog */
-    Dialog unlockDialog = null;
+    AlertDialog unlockDialog = null;
 
     /** Text field of the unlock dialog */
     EditText unlockPasswordEditText = null;
@@ -944,6 +944,7 @@ public class ToDoListActivity extends AppCompatActivity {
                             public void run() {
                                 dueDateDialog.setToday(today);
                                 dueDateDialog.setDate(due);
+                                dueDateDialog.setNoDateShown(item.getDue() != null);
                             }
                         });
                     }

@@ -23,9 +23,10 @@ import static com.xmission.trevin.android.todo.util.ViewActionUtils.*;
 import static org.junit.Assert.*;
 
 import android.app.Activity;
-import android.app.Dialog;
+import android.app.AlertDialog;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -470,14 +471,15 @@ public class ToDoListActivityTests {
                 pressOptionsMenuItem(wrapper.getScenario(),
                         unlockText, R.id.menuUnlock);
                 assertDialogShown(wrapper.getScenario(), unlockText);
-                Dialog[] dialog = new Dialog[1];
+                AlertDialog[] dialog = new AlertDialog[1];
                 wrapper.onActivity(activity -> {
                     dialog[0] = activity.unlockDialog;
                 });
                 setEditText(wrapper.getScenario(), dialog[0], "Password",
                         R.id.EditTextPassword, password);
-                pressDialogButton(wrapper.getScenario(),
-                        dialog[0], android.R.id.button1);
+                int okButtonId = dialog[0].getButton(
+                        DialogInterface.BUTTON_POSITIVE).getId();
+                pressDialogButton(wrapper.getScenario(), dialog[0], okButtonId);
                 prefsObserver.assertChanged("The Show Encrypted preference was not changed");
                 adapterObserver.assertChanged("The To Do list was not updated");
             }

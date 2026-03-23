@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -1903,8 +1904,9 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonNone);
             // Make sure the editor layout has changed
             runRepeatNoneChecks(wrapper.getScenario(), dialog.repeatEditor);
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -1997,8 +1999,9 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonFixedSchedule);
             assertDayDateButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2047,8 +2050,9 @@ public class RepeatEditorTests
             setWeekdayButtons(wrapper.getScenario(),
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2086,8 +2090,9 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonFixedSchedule);
             assertDayDateButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2133,8 +2138,9 @@ public class RepeatEditorTests
             setWeekdayButtons(wrapper.getScenario(),
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2185,8 +2191,9 @@ public class RepeatEditorTests
             assertDirectionButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
             settings = dialog.getRepeatSettings();
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2245,8 +2252,9 @@ public class RepeatEditorTests
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             settings = dialog.getRepeatSettings();
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2297,8 +2305,9 @@ public class RepeatEditorTests
             assertWeekDayToggles(wrapper.getScenario(),
                     dialog.repeatEditor,null);
             settings = dialog.getRepeatSettings();
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2355,8 +2364,9 @@ public class RepeatEditorTests
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             settings = dialog.getRepeatSettings();
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2401,8 +2411,9 @@ public class RepeatEditorTests
             setWeekdayButtons(wrapper.getScenario(),
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2451,8 +2462,9 @@ public class RepeatEditorTests
             assertWeekDayToggles(wrapper.getScenario(),
                     dialog.repeatEditor,null);
             settings = dialog.getRepeatSettings();
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2506,8 +2518,9 @@ public class RepeatEditorTests
             setDirectionButtons(wrapper.getScenario(),
                     expectedRepeat.getDirection());
             settings = dialog.getRepeatSettings();
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2552,8 +2565,9 @@ public class RepeatEditorTests
             setWeekdayButtons(wrapper.getScenario(),
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
-            pressDialogButton(wrapper.getScenario(), dialog,
-                    android.R.id.button1);
+            int okButtonId = dialog.getButton(
+                    DialogInterface.BUTTON_POSITIVE).getId();
+            pressDialogButton(wrapper.getScenario(), dialog, okButtonId);
         }
         assertTrue("The dialog did not call the onRepeatSet callback",
                 onRepeatSetCalled);
@@ -2568,6 +2582,7 @@ public class RepeatEditorTests
     public void testSetRepeatEndDate() {
         LocalDate due = LocalDate.now(ZoneOffset.UTC).plusDays(RAND.nextInt(7) + 1);
         RepeatDaily repeat = new RepeatDaily(due);
+        repeat.setEnd(null);
         try (ActivityScenarioResultsWrapper<ToDoNoteActivity> wrapper =
                      ActivityScenarioResultsWrapper.launch(ToDoNoteActivity.class)) {
             RepeatEditor widget = showRepeatEditorWidget(
@@ -2581,9 +2596,12 @@ public class RepeatEditorTests
             wrapper.getScenario().onActivity(activity ->
                     endDialogRef[0] = widget.endDateDialog);
             assertNotNull("End date dialog was not created", endDialogRef[0]);
+            int buttonId = endDialogRef[0].getButton(
+                    CalendarDatePickerDialog.BUTTON_TODAY).getId();
+            assertDialogButtonShown(wrapper.getScenario(), endDialogRef[0],
+                    "Today", buttonId);
             LocalDate today = LocalDate.now(ZoneOffset.UTC);
-            pressDialogButton(wrapper.getScenario(), endDialogRef[0],
-                    android.R.id.button2);
+            pressDialogButton(wrapper.getScenario(), endDialogRef[0], buttonId);
             assertEndDateButton(wrapper.getScenario(), widget, today);
         }
     }
@@ -2611,8 +2629,11 @@ public class RepeatEditorTests
             wrapper.getScenario().onActivity(activity ->
                     endDialogRef[0] = widget.endDateDialog);
             assertNotNull("End date dialog was not created", endDialogRef[0]);
-            pressDialogButton(wrapper.getScenario(), endDialogRef[0],
-                    android.R.id.button3);
+            int buttonId = endDialogRef[0].getButton(
+                    CalendarDatePickerDialog.BUTTON_NO_DATE).getId();
+            assertDialogButtonShown(wrapper.getScenario(), endDialogRef[0],
+                    "No Date", buttonId);
+            pressDialogButton(wrapper.getScenario(), endDialogRef[0], buttonId);
             assertEndDateButton(wrapper.getScenario(), widget, null);
         }
     }

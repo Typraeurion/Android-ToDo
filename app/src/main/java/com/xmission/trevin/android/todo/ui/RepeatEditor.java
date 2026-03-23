@@ -898,14 +898,13 @@ public class RepeatEditor extends FrameLayout
                         v.getResources().getString(
                                 R.string.DatePickerTitleEndingOn),
                         new EndDateOnDateSetListener());
-                endDateDialog.setNoDateButton(
-                        v.getResources().getString(R.string.DueDateNoDate));
             }
             LocalDate today = LocalDate.now(timeZone);
             endDateDialog.setToday(today);
             endDateDialog.setDate((d == null) ? today : d);
             endDateDialog.setTimeZone(timeZone);
             endDateDialog.show();
+            endDateDialog.setNoDateShown(d != null);
         }
     }
 

@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Locale;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.*;
 import android.content.DialogInterface.OnClickListener;
@@ -28,6 +29,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.ui.CalendarDatePicker.OnDateSetListener;
@@ -41,6 +43,42 @@ public class CalendarDatePickerDialog extends AlertDialog
         implements OnClickListener, CalendarDatePicker.OnDateSetListener {
     private static final String LOG_TAG = "CalDatePickerDialog";
 
+    /**
+     * The &ldquo;Cancel&rdquo; button for this dialog.
+     * Historically this was AlertDialog button #1; we keep it
+     * in the {@code BUTTON_POSITIVE} spot which is positioned
+     * on the right side of the dialog.
+     * <p>
+     * This is <i>not</i> the button&rsquo;s resource ID; use
+     * {@link #getButton}{@code (BUTTON_CANCEL).getId()} for that.
+     * </p>
+     */
+    public static final int BUTTON_CANCEL = DialogInterface.BUTTON_POSITIVE;
+
+    /**
+     * The &ldquo;Today&rdquo; button for this dialog.
+     * Historically this was AlertDialog button #2; we keep it
+     * in the {@code BUTTON_NEGATIVE} spot which is positioned
+     * to the left of the &ldquo;Cancel&rdquo; button
+     * (just right of center.)
+     * <p>
+     * This is <i>not</i> the button&rsquo;s resource ID; use
+     * {@link #getButton}{@code (BUTTON_TODAY).getId()} for that.
+     * </p>
+     */
+    public static final int BUTTON_TODAY = DialogInterface.BUTTON_NEGATIVE;
+
+    /**
+     * The &ldquo;No Date&rdquo; button for this dialog, which is optional.
+     * Historically this was AlertDialog button #3; it is positioned
+     * on the left side of the dialog.
+     * <p>
+     * This is <i>not</i> the button&rsquo;s resource ID; use
+     * {@link #getButton}{@code (BUTTON_NO_DATE).getId()} for that.
+     * </p>
+     */
+    public static final int BUTTON_NO_DATE = DialogInterface.BUTTON_NEUTRAL;
+
     private ZoneId zone;
     private final CalendarDatePicker datePicker;
     private final OnDateSetListener callback;
@@ -52,15 +90,20 @@ public class CalendarDatePickerDialog extends AlertDialog
      * @param title the title of the dialog indicating which date is being set
      * @param callback the callback used when the user has selected a date
      */
+    @SuppressLint("InflateParams")
     public CalendarDatePickerDialog(
-            Context context, CharSequence title,
-            OnDateSetListener callback) {
+            @NonNull Context context, @NonNull CharSequence title,
+            @Nullable OnDateSetListener callback) {
         super(context);
         this.callback = callback;
         setTitle(title);
 
-        setButton(context.getText(R.string.DatePickerCancel), this);
-        setButton2(context.getText(R.string.DatePickerToday), this);
+        setButton(BUTTON_CANCEL, context.getText(
+                R.string.DatePickerCancel), this);
+        setButton(BUTTON_TODAY, context.getText(
+                R.string.DatePickerToday), this);
+        setButton(BUTTON_NO_DATE, context.getText(
+                R.string.DueDateNoDate), this);
         setIcon(R.drawable.ic_dialog_time);
 
         LayoutInflater inflater = (LayoutInflater)
@@ -105,15 +148,17 @@ public class CalendarDatePickerDialog extends AlertDialog
     }
 
     /**
-     * Add a &ldquo;No Date&rdquo; neutral button to this dialog.
-     * When pressed, {@link OnDateSetListener#onDateSet} will be called
-     * with a {@code null} date, indicating the date should be cleared.
-     * This method must be called before {@link #show()}.
+     * Show or hide the &ldquo;No Date&rdquo; button.
+     * This must only be called <i>after</i> the dialog
+     * has been {@link #show}n; otherwise the dialog may
+     * show it regardless.
      *
-     * @param label the label for the button
+     * @param show whether to show {@code true} or hide {@code false}
+     * the &ldquo;No Date&rdquo; button.
      */
-    public void setNoDateButton(@NonNull CharSequence label) {
-        setButton(DialogInterface.BUTTON_NEUTRAL, label, this);
+    public void setNoDateShown(boolean show) {
+        getButton(BUTTON_NO_DATE).setVisibility(
+                show ? View.VISIBLE : View.GONE);
     }
 
     /** Called when the user clicks a dialog button */
@@ -121,14 +166,21 @@ public class CalendarDatePickerDialog extends AlertDialog
     public void onClick(DialogInterface dialog, int which) {
         Log.d(LOG_TAG, String.format(Locale.US,
                 ".onClick(dialog,%s)",
-                ((which == DialogInterface.BUTTON1) ? "Cancel"
-                        : ((which == DialogInterface.BUTTON2) ? "Today"
-                        : ((which == DialogInterface.BUTTON3) ? "No Date"
+                ((which == BUTTON_CANCEL) ? "Cancel"
+                        : ((which == BUTTON_TODAY) ? "Today"
+                        : ((which == BUTTON_NO_DATE) ? "No Date"
                         : Integer.toString(which))))));
-        if ((which == DialogInterface.BUTTON2) && (callback != null)) {
-            callback.onDateSet(datePicker, LocalDate.now(zone));
-        } else if ((which == DialogInterface.BUTTON3) && (callback != null)) {
-            callback.onDateSet(datePicker, null);
+        if (callback != null) {
+            switch (which) {
+                case BUTTON_TODAY:
+                    callback.onDateSet(datePicker, LocalDate.now(zone));
+                    break;
+                case BUTTON_NO_DATE:
+                    callback.onDateSet(datePicker, null);
+                    break;
+                default:
+                    break;
+            }
         }
         dismiss();
     }
