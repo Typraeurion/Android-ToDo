@@ -232,9 +232,11 @@ public class AlarmWorker extends Worker {
             // FIXME: Replace the receiver
             Intent intent = new Intent(context, AlarmInitReceiver.class);
             intent.setAction(ACTION_TRIGGER_ALARM);
+            int intentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                intentFlags |= PendingIntent.FLAG_IMMUTABLE;
             PendingIntent sender = PendingIntent.getBroadcast(context, 0,
-                    intent, PendingIntent.FLAG_IMMUTABLE |
-                            PendingIntent.FLAG_UPDATE_CURRENT);
+                    intent, intentFlags);
             if (pendingAlarms.isEmpty()) {
                 Log.d(TAG, "No To Do alarms are pending;"
                         + " cancelling any intended alarm");
@@ -354,9 +356,11 @@ public class AlarmWorker extends Worker {
          * We still use FLAG_UPDATE_CURRENT in case we do raise an alarm
          * for an item where the user hasn't cleared the previous notice.
          */
+        int intentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            intentFlags |= PendingIntent.FLAG_IMMUTABLE;
         PendingIntent intent = PendingIntent.getActivity(context,
-                (int) alarm.getId(), mainIntent,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                (int) alarm.getId(), mainIntent, intentFlags);
         Notification notice;
 
         Log.d(TAG, String.format(".postNotification(\"%s\" (%d), \"%s\" (%d), \"%s\", %s)",
