@@ -498,6 +498,14 @@ descriptions is:
 povray +FN +AM3 +A0.3 +UA +W288 +H288 foo.pov
 @end example
 
+The alarm notification icon is a plain white vector drawing that was
+modeled after the checked box image, tweaked by hand in Inkscape, then
+translated to Android format in
+@dots@file{/res/drawable-anydpi-v23/stat_todo.xml}.  The source for
+this is in @dots@file{/graphics/stat_todo.svg}.  The image was then
+exported as PNG bitmaps in the @file{drawable-*dpi} folders for
+pre-Marshmallow versions of Android.
+
 The main application icon was drawn by hand in the GIMP, and can be
 found in @file{IconMaster.xcf}.  @emph{For Android Nougat and
 earlier,} this raster image is scaled down from
