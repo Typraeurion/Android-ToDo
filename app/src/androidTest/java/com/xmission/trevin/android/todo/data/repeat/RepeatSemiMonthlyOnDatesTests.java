@@ -276,31 +276,31 @@ public class RepeatSemiMonthlyOnDatesTests {
 
     /**
      * Test a semimonthly repeating interval targeting the last day of the
-     * month (and some other random day), allowed on the next instance of
-     * a subset of days of the week, no end date.  There should be instances
-     * where the next allowed date falls around the start of the next month,
-     * which should not preclude the next due date from occurring on the
-     * first <i>designated</i> day of that same month.
+     * month (and some other random day in the middle), allowed on the next
+     * instance of a subset of days of the week, no end date.  There should
+     * be instances where the next allowed date falls around the start of
+     * the next month, which should not preclude the next due date from
+     * occurring on the first <i>designated</i> day of that same month.
      */
     @Test
     public void testRepeatSemiMonthlyLastDayRestrictedByDaysNext() {
         testRepeatSemiMonthlyEveryNMonthsWithRestrictions(
-                new int[]{ 31, RAND.nextInt(21) + 1 },
+                new int[]{ 31, RAND.nextInt(15) + 7 },
                 WeekdayDirection.NEXT, 1, false);
     }
 
     /**
      * Test a semimonthly repeating interval targeting the first day of the
-     * month (and some other random day), allowed on the previous instance
-     * of a subset of days of the week, no end date.  There should be
-     * instances where the next allowed date falls around the end of the
+     * month (and some other random day in the middle), allowed on the previous
+     * instance of a subset of days of the week, no end date.  There should
+     * be instances where the next allowed date falls around the end of the
      * previous month; the next due date should still occur on the
      * <i>second</i> designated day of the original month.
      */
     @Test
     public void testRepeatSemiMonthlyFirstDayRestrictedByDaysPrevious() {
         testRepeatSemiMonthlyEveryNMonthsWithRestrictions(
-                new int[]{ 1, RAND.nextInt(21) + 8 },
+                new int[]{ 1, RAND.nextInt(15) + 8 },
                 WeekdayDirection.PREVIOUS, 1, false);
     }
 
@@ -331,12 +331,15 @@ public class RepeatSemiMonthlyOnDatesTests {
     /**
      * Test an every <i>N</i> months semimonthly repeating interval
      * targeting the first and last weeks of the month, allowed on the next
-     * instance of a subset of days of the week, with an end date.
+     * instance of a subset of days of the week, with an end date.  For
+     * consistent intervals in light of adjustments, the days should be
+     * a week apart.
      */
     @Test
     public void testRepeatSemiMonthlyEveryNMonthsRestrictedByDaysNextWithEnd() {
+        int day1 = RAND.nextInt(7) + 1;
         testRepeatSemiMonthlyEveryNMonthsWithRestrictions(
-                new int[]{ RAND.nextInt(7) + 1, RAND.nextInt(7) + 25 },
+                new int[]{ day1, day1 + 21 },
                 WeekdayDirection.NEXT, RAND.nextInt(6) + 2, true);
     }
 
@@ -344,11 +347,14 @@ public class RepeatSemiMonthlyOnDatesTests {
      * Test an every <i>N</i> months semimonthly repeating interval
      * targeting the first and last weeks of the month, allowed on the
      * previous instance of a subset of days of the week, with an end date.
+     * For consistent intervals in light of adjustments, the days should
+     * be a week apart.
      */
     @Test
     public void testRepeatSemiMonthlyEveryNMonthsRestrictedByDaysPreviousWithEnd() {
+        int day1 = RAND.nextInt(7) + 1;
         testRepeatSemiMonthlyEveryNMonthsWithRestrictions(
-                new int[]{ RAND.nextInt(7) + 1, RAND.nextInt(7) + 25 },
+                new int[]{ day1, day1 + 21 },
                 WeekdayDirection.PREVIOUS, RAND.nextInt(6) + 2, true);
     }
 

@@ -385,8 +385,11 @@ public class ToDoNoteActivity extends Activity {
                         oldHeight, oldWidth, newHeight, newWidth));
                 scrollBar.setViewSize(newHeight);
                 Layout textLayout = toDoNote.getLayout();
-                if (textLayout != null)
+                if (textLayout != null) {
                     scrollBar.setContentSize(textLayout.getHeight());
+                    int scrollY = toDoNote.getScrollY();
+                    scrollBar.setPosition(scrollY);
+                }
                 checkScrollBarVisibility();
             }
         }
@@ -439,6 +442,10 @@ public class ToDoNoteActivity extends Activity {
             if (textLayout == null)
                 return;
             scrollBar.setContentSize(textLayout.getHeight());
+            // As text is added to the bottom it may have also scrolled
+            // the view, so we need to update our position too.
+            int scrollY = toDoNote.getScrollY();
+            scrollBar.setPosition(scrollY);
             checkScrollBarVisibility();
         }
     };
@@ -459,9 +466,12 @@ public class ToDoNoteActivity extends Activity {
                 ScrollBar scrollBar, float position, boolean isInFlux) {
 
             // Ignore rapid successive calls; 24 fps should be sufficient.
+            // Even when rate-limiting, honour the final (non-in-flux) event
+            // so that isScrolling is never left stuck at true.
             long nowTime = System.nanoTime();
-            if (nowTime - lastSyncTime < 41666667)
+            if (isInFlux && (nowTime - lastSyncTime < 41666667)) {
                 return;
+            }
             lastSyncTime = nowTime;
 
             if (Math.abs(position - lastScrollY) <= DISPLAY_PIXEL_SIZE)
@@ -469,32 +479,44 @@ public class ToDoNoteActivity extends Activity {
             lastScrollY = (int) position;
 
             isScrolling = true;
-            toDoNote.scrollTo(0, lastScrollY);
 
             // The edit box may stall if the cursor would go out of view.
-            // Try to keep it within the visible area.
+            // Adjust the cursor first; on Jelly Bean, bringPointIntoView()
+            // is deferred to the next pre-draw pass rather than firing
+            // synchronously inside setSelection().  Posting our corrective
+            // scrollTo() after setSelection() ensures it queues behind any
+            // bringPointIntoView() runnable and always wins the final position.
             Layout textLayout = toDoNote.getLayout();
-            if (textLayout == null)
-                return;
-            int line = textLayout.getLineForOffset(
-                    toDoNote.getSelectionStart());
-            int topY = textLayout.getLineTop(line);
-            int bottomY = textLayout.getLineBottom(line);
-            int viewHeight = toDoNote.getHeight()
-                    - toDoNote.getCompoundPaddingTop()
-                    - toDoNote.getCompoundPaddingBottom();
+            if (textLayout != null) {
+                int line = textLayout.getLineForOffset(
+                        toDoNote.getSelectionStart());
+                int topY = textLayout.getLineTop(line);
+                int bottomY = textLayout.getLineBottom(line);
+                int viewHeight = toDoNote.getHeight()
+                        - toDoNote.getCompoundPaddingTop()
+                        - toDoNote.getCompoundPaddingBottom();
 
-            int newLine = line;
-            final int JITTER_BUFFER = 10;
-            if (bottomY < lastScrollY) {
-                newLine = textLayout.getLineForVertical(
-                        lastScrollY + JITTER_BUFFER);
-            } else if (topY > lastScrollY + viewHeight) {
-                newLine = textLayout.getLineForVertical(
-                        lastScrollY + viewHeight - JITTER_BUFFER);
+                int newLine = line;
+                final int JITTER_BUFFER = 10;
+                if (bottomY < lastScrollY) {
+                    newLine = textLayout.getLineForVertical(
+                            lastScrollY + JITTER_BUFFER);
+                } else if (topY > lastScrollY + viewHeight) {
+                    newLine = textLayout.getLineForVertical(
+                            lastScrollY + viewHeight - JITTER_BUFFER);
+                }
+                if (newLine != line)
+                    toDoNote.setSelection(textLayout.getLineStart(newLine));
             }
-            if (newLine != line)
-                toDoNote.setSelection(textLayout.getLineStart(newLine));
+
+            // Apply the scroll position synchronously (handles the case
+            // where bringPointIntoView() is synchronous), then also post a
+            // deferred repeat so it runs after any asynchronous
+            // bringPointIntoView() that setSelection() may have enqueued.
+            toDoNote.scrollTo(0, lastScrollY);
+            final int targetScrollY = lastScrollY;
+            toDoNote.post(() -> toDoNote.scrollTo(0, targetScrollY));
+
             if (!isInFlux)
                 isScrolling = false;
         }

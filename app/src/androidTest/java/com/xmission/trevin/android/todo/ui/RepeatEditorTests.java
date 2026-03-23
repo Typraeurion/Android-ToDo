@@ -1953,6 +1953,55 @@ public class RepeatEditorTests
             setDirectionButtons(scenario, direction);
     }
 
+    /**
+     * Press the week day and direction buttons until they are
+     * configured to match a given state.  This uses the
+     * {@link RepeatEditorDialog}.
+     * Turning off the last weekday button <i>should</i> automatically
+     * turn on one of the other buttons since at least one is required,
+     * so this will turn on all buttons that should be set before
+     * turning any of the others off.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the dialog containing the repeat editor
+     * @param weekDays the week days that should be turned on
+     * @param direction the direction that should be configured,
+     * or {@code null} to ignore the direction buttons.
+     */
+    private <T extends Activity> void setWeekdayButtons(
+            @NonNull ActivityScenario<T> scenario,
+            RepeatEditorDialog dialog,
+            @NonNull Set<WeekDays> weekDays,
+            @Nullable WeekdayDirection direction) {
+        for (WeekDays day : weekDays) {
+            int buttonId = DAY_BUTTON_IDS[day.getValue()
+                    - WeekDays.SUNDAY.getValue()];
+            if (!getToggleButtonState(scenario, dialog,
+                    day.toString(), buttonId))
+                pressDialogButton(scenario, dialog, buttonId);
+        }
+        for (WeekDays offDay : WeekDays.values()) {
+            if (weekDays.contains(offDay))
+                continue;
+            int buttonId = DAY_BUTTON_IDS[offDay.getValue()
+                    - WeekDays.SUNDAY.getValue()];
+            if (getToggleButtonState(scenario, dialog,
+                    offDay.toString(), buttonId))
+                pressDialogButton(scenario, dialog, buttonId);
+        }
+        if (direction != null)
+            setDirectionButtons(scenario, dialog, direction);
+    }
+
+    /**
+     * Press the direction buttons until they are configured
+     * to match a given state.  Assumes the widget has been set
+     * as the activity&rsquo;s content view.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param direction the direction that should be configured,
+     * or {@code null} to ignore the direction buttons.
+     */
     private <T extends Activity> void setDirectionButtons(
             @NonNull ActivityScenario<T> scenario,
             @NonNull WeekdayDirection direction) {
@@ -1965,6 +2014,31 @@ public class RepeatEditorTests
             pressButton(scenario, R.id.RepeatToggleNearest);
         pressButton(scenario, isNext ? R.id.RepeatRadioButtonNext
                 : R.id.RepeatRadioButtonPrevious);
+    }
+
+    /**
+     * Press the direction buttons until they are configured to match
+     * a given state.  This uses the {@link RepeatEditorDialog}.
+     *
+     * @param scenario the scenario in which the test is running
+     * @param dialog the dialog containing the repeat editor
+     * @param direction the direction that should be configured,
+     * or {@code null} to ignore the direction buttons.
+     */
+    private <T extends Activity> void setDirectionButtons(
+            @NonNull ActivityScenario<T> scenario,
+            @NonNull RepeatEditorDialog dialog,
+            @NonNull WeekdayDirection direction) {
+        boolean nearest = (direction == WeekdayDirection.CLOSEST_OR_NEXT) ||
+                (direction == WeekdayDirection.CLOSEST_OR_PREVIOUS);
+        boolean isNext = (direction == WeekdayDirection.CLOSEST_OR_NEXT) ||
+                (direction == WeekdayDirection.NEXT);
+        if (getToggleButtonState(scenario, dialog,
+                "Nearest", R.id.RepeatToggleNearest) != nearest)
+            pressDialogButton(scenario, dialog, R.id.RepeatToggleNearest);
+        pressDialogButton(scenario, dialog,
+                isNext ? R.id.RepeatRadioButtonNext
+                        : R.id.RepeatRadioButtonPrevious);
     }
 
     /**
@@ -2047,7 +2121,7 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonAfterCompleted);
             assertDayDateButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
-            setWeekdayButtons(wrapper.getScenario(),
+            setWeekdayButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             int okButtonId = dialog.getButton(
@@ -2135,7 +2209,7 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonAfterCompleted);
             assertDayDateButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
-            setWeekdayButtons(wrapper.getScenario(),
+            setWeekdayButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             int okButtonId = dialog.getButton(
@@ -2248,7 +2322,7 @@ public class RepeatEditorTests
                     dialog.repeatEditor, -1);
             pressDialogButton(wrapper.getScenario(), dialog,
                     R.id.RepeatRadioButtonByDate);
-            setWeekdayButtons(wrapper.getScenario(),
+            setWeekdayButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             settings = dialog.getRepeatSettings();
@@ -2360,7 +2434,7 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonFixedSchedule);
             pressDialogButton(wrapper.getScenario(), dialog,
                     R.id.RepeatRadioButtonByDate);
-            setWeekdayButtons(wrapper.getScenario(),
+            setWeekdayButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             settings = dialog.getRepeatSettings();
@@ -2408,7 +2482,7 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonAfterCompleted);
             assertDayDateButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
-            setWeekdayButtons(wrapper.getScenario(),
+            setWeekdayButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             int okButtonId = dialog.getButton(
@@ -2515,7 +2589,7 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonFixedSchedule);
             pressDialogButton(wrapper.getScenario(), dialog,
                     R.id.RepeatRadioButtonByDate);
-            setDirectionButtons(wrapper.getScenario(),
+            setDirectionButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getDirection());
             settings = dialog.getRepeatSettings();
             int okButtonId = dialog.getButton(
@@ -2562,7 +2636,7 @@ public class RepeatEditorTests
                     R.id.RepeatRadioButtonAfterCompleted);
             assertDayDateButtons(wrapper.getScenario(),
                     dialog.repeatEditor, null);
-            setWeekdayButtons(wrapper.getScenario(),
+            setWeekdayButtons(wrapper.getScenario(), dialog,
                     expectedRepeat.getAllowedWeekDays(),
                     expectedRepeat.getDirection());
             int okButtonId = dialog.getButton(

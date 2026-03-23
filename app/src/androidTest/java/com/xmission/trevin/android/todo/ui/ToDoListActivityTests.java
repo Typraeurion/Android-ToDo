@@ -563,13 +563,17 @@ public class ToDoListActivityTests {
                     todo.setNote(insertText(todo.getNote(), keyWord2));
             }
             testToDos.add(mockRepo.insertItem(todo));
-            if (todo.getDescription().contains(keyWord1) ||
+            if (todo.getDescription().toLowerCase()
+                    .contains(keyWord1.toLowerCase()) ||
                     ((todo.getNote() != null) &&
-                            (todo.getNote().contains(keyWord1))))
+                            (todo.getNote().toLowerCase()
+                                    .contains(keyWord1.toLowerCase()))))
                 word1ToDos.put(todo.getId(), todo.getDescription());
-            if (todo.getDescription().contains(keyWord2) ||
+            if (todo.getDescription().toLowerCase()
+                    .contains(keyWord2.toLowerCase()) ||
                     ((todo.getNote() != null) &&
-                            (todo.getNote().contains(keyWord2))))
+                            (todo.getNote().toLowerCase()
+                                    .contains(keyWord2.toLowerCase()))))
                 word2ToDos.put(todo.getId(), todo.getDescription());
         }
         // For this test to work, we need to be showing

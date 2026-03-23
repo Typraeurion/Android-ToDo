@@ -52,7 +52,7 @@ public class RepeatSemiMonthlyOnDaysTests {
      * @return true if week1 comes after week2, false otherwise
      */
     public static boolean isWeekAfter(int week1, int week2) {
-        return ((week1 < 0) ? 4 : week1) > ((week2 < 0) ? 4 : week2);
+        return ((week1 < 0) ? 5 : week1) > ((week2 < 0) ? 5 : week2);
     }
 
     /**
@@ -285,6 +285,14 @@ public class RepeatSemiMonthlyOnDaysTests {
             weeks[0] = -1;
         if (weeks[1] > 4)
             weeks[1] = -1;
+        /*
+         * On the rare chance we picked the same days of the week and the
+         * 4th and last weeks, the targets could turn out to be the same
+         * day in a month which would result in the interval not being
+         * able to tell where it was advancing from.  So avoid it.
+         */
+        if ((days[0] == days[1]) && (Math.abs(weeks[1] - weeks[0]) == 5))
+            weeks[1] = RAND.nextInt(3) + 1;
         String[] stndrd = new String[] {
                 ordinalWeek(weeks[0]), ordinalWeek(weeks[1])
         };

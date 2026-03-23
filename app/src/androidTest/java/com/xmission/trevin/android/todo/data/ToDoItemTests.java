@@ -922,8 +922,12 @@ public class ToDoItemTests {
         itemWithRepeat.setRepeatInterval(RepeatType.newInstance(
                 RAND.nextInt(RepeatType.values().length),
                 LocalDate.ofEpochDay(RAND.nextInt(100000))));
-        assertNotEquals("Item hash codes with or without a repeat",
-                EMPTY_ITEM.hashCode(), itemWithRepeat.hashCode());
+        if (itemWithRepeat.hashCode() == EMPTY_ITEM.hashCode())
+            // Issue a warning; hash collisions should not be fatal.
+            Log.w("testRepeatIntervalHashCode", String.format(
+                    "Items with or without a repeat have the same hash code:\n"
+                            + "Empty item: %s\nItem with repeat: %s",
+                    EMPTY_ITEM, itemWithRepeat));
         ToDoItem item2 = newEmptyItem();
         do {
             item2.setRepeatInterval(RepeatType.newInstance(
