@@ -14,7 +14,15 @@ are only requested if you save a To Do item with an alarm.</li>
 which are due and that you have set an alarm for, if you have “Alarm
 vibrate” enabled in the app settings for Nougat (Android 7) or
 earlier.  On Oreo (Android 8) and later, alarm vibration and sounds is
-managed in the system settings.
+managed in the system settings.</li>
+<li>The following permissions are added by WorkManager, a Google
+library used to run the export, import, and password re-encryption
+operations in the background when initiated by the user.  The core
+app does not use these on its own.
+<ul>
+<li>Permission to view network connections, used by WorkManager to
+determine the best time to schedule background tasks.</li>
+</ul></li>
 </ul></li>
 <li>Create any number of categories for different lists.</li>
 <li>Set alarms for items that are due or nearly due.</li>

@@ -1,0 +1,5 @@
+* Version 1.6.1
+* In the list view, constrain items to no more than 2 lines
+  and ellipsize if the description is longer than that.
+* Removed the `hasFragileUserData` flag to avoid a bug in
+  Android's package installer when uninstalling the app.

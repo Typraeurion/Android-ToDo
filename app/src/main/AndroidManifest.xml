@@ -4,8 +4,8 @@
     package="com.xmission.trevin.android.todo"
     android:installLocation="auto"
     android:targetSandboxVersion="1"
-    android:versionCode="1050101"
-    android:versionName="1.5.1">
+    android:versionCode="1060101"
+    android:versionName="1.6.1">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
@@ -55,7 +55,6 @@
         android:appCategory="productivity"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:hasFragileUserData="true"
         android:icon="@drawable/icon"
         android:roundIcon="@mipmap/icon"
         android:label="@string/app_name"

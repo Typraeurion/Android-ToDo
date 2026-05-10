@@ -21,9 +21,9 @@
         android:layout_width="match_parent">
         <TextView style="@style/ListText.Entry"
             android:id="@+id/ToDoEditDescription"
-            android:ellipsize="none"
+            android:ellipsize="end"
+            android:maxLines="2"
             android:layout_weight="10"
-            android:scrollbars="horizontal"
             android:width="1000sp">
         </TextView>
         <ImageView style="@style/ListImage"

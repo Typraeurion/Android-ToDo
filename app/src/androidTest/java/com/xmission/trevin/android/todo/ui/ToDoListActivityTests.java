@@ -260,6 +260,119 @@ public class ToDoListActivityTests {
     }
 
     /**
+     * Verify that the To Do list is filtered by the selected category,
+     * and that selecting a different category from the spinner updates
+     * the list to show only To Do items from that category.
+     */
+    @Test
+    public void testChangeCategoryUpdatesToDoList() {
+        // Create two categories with names that sort predictably before "Unfiled"
+        ToDoCategory category1 = mockRepo.insertCategory(
+                randomCategoryName('A', 'G'));
+        ToDoCategory category2 = mockRepo.insertCategory(
+                randomCategoryName('H', 'M'));
+        List<ToDoItem> todosInCategory1 = new ArrayList<>();
+        List<ToDoItem> todosInCategory2 = new ArrayList<>();
+        for (int i = RAND.nextInt(3) + 2; i >= 0; --i) {
+            ToDoItem todo = randomToDo();
+            todo.setCategoryId(category1.getId());
+            todosInCategory1.add(mockRepo.insertItem(todo));
+        }
+        for (int i = RAND.nextInt(3) + 2; (i >= 0) ||
+                (todosInCategory2.size() == todosInCategory1.size()); --i) {
+            ToDoItem todo = randomToDo();
+            todo.setCategoryId(category2.getId());
+            todosInCategory2.add(mockRepo.insertItem(todo));
+        }
+        // Initialize the selected category preference to category1
+        mockPrefs.initializePreference(
+                ToDoPreferences.TPREF_SELECTED_CATEGORY, category1.getId());
+
+        try (ActivityScenarioResultsWrapper<ToDoListActivity> wrapper =
+                ActivityScenarioResultsWrapper.launch(ToDoListActivity.class)) {
+            ToDoCursorAdapter[] itemAdapter = new ToDoCursorAdapter[1];
+            CategoryFilterAdapter[] categoryAdapter = new CategoryFilterAdapter[1];
+            wrapper.onActivity(activity -> {
+                itemAdapter[0] = activity.itemAdapter;
+                categoryAdapter[0] = activity.categoryAdapter;
+            });
+            assertNotNull("Item cursor adapter has not been set",
+                    itemAdapter[0]);
+            assertNotNull("Category filter adapter has not been set",
+                    categoryAdapter[0]);
+
+            // Wait for the category adapter to include both user categories
+            // (at minimum: All + category1 + category2 + Unfiled + Edit = 5)
+            long timeLimit = System.nanoTime() + 5000000000L;
+            while (categoryAdapter[0].getCount() < 5) {
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                assertFalse(
+                        "Timed out waiting for the category adapter to be populated",
+                        System.nanoTime() > timeLimit);
+                try {
+                    Thread.sleep(128);
+                } catch (InterruptedException ix) {
+                    // Ignore
+                }
+            }
+
+            // Wait for the item adapter to show the To Do items from category1
+            timeLimit = System.nanoTime() + 5000000000L;
+            while (itemAdapter[0].getCount() != todosInCategory1.size()) {
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                assertFalse(
+                        "Timed out waiting for the To Do list to show items from category1",
+                        System.nanoTime() > timeLimit);
+                try {
+                    Thread.sleep(128);
+                } catch (InterruptedException ix) {
+                    // Ignore
+                }
+            }
+            assertEquals("Number of items listed for category1",
+                    todosInCategory1.size(), itemAdapter[0].getCount());
+            ToDoItem sampleItem = itemAdapter[0].getItem(0);
+            assertNotNull("Failed to find the first item in the original list",
+                    sampleItem);
+            assertEquals("Category of the first item in the first category's list",
+                    category1, mockRepo.getCategoryById(sampleItem.getCategoryId()));
+
+            // Find the position of category2 in the category filter spinner
+            int category2Position = -1;
+            for (int i = 0; i < categoryAdapter[0].getCount(); i++) {
+                ToDoCategory category = categoryAdapter[0].getItem(i);
+                if ((category != null) && category2.getId().equals(category.getId())) {
+                    category2Position = i;
+                    break;
+                }
+            }
+            assertTrue("category2 was not found in the category filter spinner",
+                    category2Position >= 0);
+
+            // Select category2 from the spinner; verify the preference is saved
+            // and the note list is updated.
+            try (TestPreferencesObserver prefsObserver =
+                    new TestPreferencesObserver(testContext,
+                            ToDoPreferences.TPREF_SELECTED_CATEGORY);
+                 TestObserver adapterObserver = new TestObserver(itemAdapter[0])) {
+                selectFromSpinner(wrapper.getScenario(),
+                        R.id.ListSpinnerCategory, category2Position);
+                prefsObserver.assertChanged(
+                        "The selected category was not saved to preferences");
+                adapterObserver.assertChanged(
+                        "The To Do list was not updated when the category was changed");
+            }
+            assertEquals("Number of To Do items listed for category2",
+                    todosInCategory2.size(), itemAdapter[0].getCount());
+            sampleItem = itemAdapter[0].getItem(0);
+            assertNotNull("Failed to find the first item in the updated list",
+                    sampleItem);
+            assertEquals("Category of the first item in the second category's list",
+                    category2, mockRepo.getCategoryById(sampleItem.getCategoryId()));
+        }
+    }
+
+    /**
      * Verify that private records are hidden when the &ldquo;Show
      * private records&rdquo; preference is off, and then displayed
      * when this preference is turned on.
