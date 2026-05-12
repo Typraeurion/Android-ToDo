@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 
 import android.Manifest;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -54,20 +53,15 @@ public class FileUtils {
     public static String getDefaultStorageDirectory(Context context) {
         Log.d(TAG, ".getDefaultStorageDirectory");
         String dirName;
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+        File filesDir = context.getExternalFilesDir(null);
+        if (filesDir == null) {
+            Log.w(TAG, "External storage is unavailable!"
+                    + "  Cannot determine default storage path.");
+            // Fall back to the Jelly Bean path
             dirName = Environment.getExternalStorageDirectory().getAbsolutePath()
                     + "/Android/Data/com.xmission.trevin.android.todo";
         } else {
-            File filesDir = context.getExternalFilesDir(null);
-            if (filesDir == null) {
-                Log.w(TAG, "External storage is unavailable!"
-                        + "  Cannot determine default storage path.");
-                // Fall back to the Jelly Bean path
-                dirName = Environment.getExternalStorageDirectory().getAbsolutePath()
-                        + "/Android/Data/com.xmission.trevin.android.todo";
-            } else {
-                dirName = filesDir.getAbsolutePath();
-            }
+            dirName = filesDir.getAbsolutePath();
         }
         Log.d(TAG, "Default storage directory is " + dirName);
         return dirName;
@@ -203,23 +197,21 @@ public class FileUtils {
     }
 
     /**
-     * For content URI&rsquo;s returned from the Storage Access Framework
-     * (KitKat or higher), find the associated file name.  This might not
-     * be in the URI itself; the path may instead be a numeric file ID
-     * (inode number or link?).  If we are unable to retrieve it from
-     * the content resolver, fall back on the URI path.
+     * For content URI&rsquo;s returned from the Storage Access Framework,
+     * find the associated file name.  This might not  be in the URI itself;
+     * the path may instead be a numeric file ID (inode number or link?).
+     * If we are unable to retrieve it from the content resolver,
+     * fall back on the URI path.
      *
      * @param context the context in which the context resolver is found
      * @param uri the URI of the file to query
      */
-    @TargetApi(19)
     public static String getFileNameFromUri(Context context, Uri uri) {
         Log.d(TAG, String.format(".getFileNameFromUri(\"%s\")",
                 uri.toString()));
         String fileName = null;
-        Cursor cursor = context.getContentResolver().query(uri,
-                null, null, null, null, null);
-        try {
+        try (Cursor cursor = context.getContentResolver().query(uri,
+                null, null, null, null, null)) {
             if ((cursor != null) && cursor.moveToFirst()) {
                 int nameColumn = cursor.getColumnIndex(
                         OpenableColumns.DISPLAY_NAME);
@@ -231,9 +223,7 @@ public class FileUtils {
             }
         } catch (Exception e) {
             Log.e(TAG, String.format("Failed to query %s from URI \"%s\"",
-                    OpenableColumns.DISPLAY_NAME, uri.toString()), e);
-        } finally {
-            cursor.close();
+                    OpenableColumns.DISPLAY_NAME, uri), e);
         }
         if (fileName == null) {
             // Fall back on the URI path, stripping any scheme

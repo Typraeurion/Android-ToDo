@@ -38,11 +38,12 @@ import java.util.Random;
 public class RandomToDoUtils {
 
     private static final Random RAND = new Random();
+    private static final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     /** Random word generator.  Just a string of lower-case letters. */
     public static String randomWord() {
         int targetLen = RAND.nextInt(7) + 1;
-        return RandomStringUtils.randomAlphabetic(targetLen).toLowerCase();
+        return SRAND.nextAlphabetic(targetLen).toLowerCase();
     }
 
     /**

@@ -21,7 +21,6 @@ import static com.xmission.trevin.android.todo.util.RandomToDoUtils.randomWeek;
 import static org.junit.Assert.*;
 
 import android.content.Context;
-import android.database.DataSetObserver;
 import android.database.SQLException;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -54,8 +53,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Tests for the ToDoRepository implementation
@@ -70,6 +67,7 @@ public class ToDoRepositoryTests {
     static ToDoRepository repo = ToDoRepositoryImpl.getInstance();
 
     static final Random RAND = new Random();
+    static final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     @BeforeClass
     public static void openDatabase() {
@@ -135,9 +133,9 @@ public class ToDoRepositoryTests {
     @Test
     public void testCategoryCRUD() {
         int targetLen = RAND.nextInt(20) + 12;
-        String firstExpectedName = RandomStringUtils.randomAlphabetic(targetLen);
+        String firstExpectedName = SRAND.nextAlphabetic(targetLen);
         targetLen = RAND.nextInt(20) + 12;
-        String secondExpectedName = RandomStringUtils.randomAlphabetic(targetLen);
+        String secondExpectedName = SRAND.nextAlphabetic(targetLen);
         try (TestObserver observer = new TestObserver(repo)) {
             ToDoCategory newCategory = repo.insertCategory(firstExpectedName);
             assertNotNull("No ToDoCategory returned from insert",
@@ -191,7 +189,7 @@ public class ToDoRepositoryTests {
                 originalCategory.setId(originalCategory.getId() + 1);
             int targetLen = RAND.nextInt(20) + 12;
             originalCategory.setName(
-                    RandomStringUtils.randomAlphabetic(targetLen));
+                    SRAND.nextAlphabetic(targetLen));
             ToDoCategory insertedCategory =
                     repo.insertCategory(originalCategory.clone());
             assertNotNull("No NoteCategory returned from insert",
@@ -206,7 +204,7 @@ public class ToDoRepositoryTests {
                 conflictingCategory.setId(insertedCategory.getId());
                 targetLen = RAND.nextInt(20) + 12;
                 conflictingCategory.setName(
-                        RandomStringUtils.randomAlphabetic(targetLen));
+                        SRAND.nextAlphabetic(targetLen));
                 try {
                     ToDoCategory returnCategory =
                             repo.insertCategory(conflictingCategory);
@@ -269,7 +267,7 @@ public class ToDoRepositoryTests {
         try {
             for (int i = 0; i < target; i++) {
                 int targetLen = RAND.nextInt(20) + 12;
-                String name = RandomStringUtils.randomAlphabetic(targetLen);
+                String name = SRAND.nextAlphabetic(targetLen);
                 ToDoCategory newCategory = repo.insertCategory(name);
                 assertNotNull("Failed to insert new category " + name,
                         newCategory);
@@ -317,7 +315,7 @@ public class ToDoRepositoryTests {
         try (TestObserver observer = new TestObserver(repo)) {
             while (testCategories.size() < target) {
                 int targetLen = RAND.nextInt(20) + 12;
-                String name = RandomStringUtils.randomAlphabetic(targetLen);
+                String name = SRAND.nextAlphabetic(targetLen);
                 ToDoCategory newCategory = repo.insertCategory(name);
                 assertNotNull("Failed to insert new category " + name,
                         newCategory);
@@ -370,7 +368,7 @@ public class ToDoRepositoryTests {
     @Test
     public void testMetadataCRUD() {
         int targetLen = RAND.nextInt(20) + 12;
-        String name = RandomStringUtils.randomAlphabetic(targetLen);
+        String name = SRAND.nextAlphabetic(targetLen);
         byte[] firstValue = new byte[10 + RAND.nextInt(20)];
         byte[] secondValue = new byte[10 + RAND.nextInt(20)];
         try (TestObserver observer = new TestObserver(repo)) {
@@ -450,11 +448,11 @@ public class ToDoRepositoryTests {
         try {
             while (expectedData.size() < target) {
                 int targetLen = RAND.nextInt(20) + 12;
-                String name = RandomStringUtils.randomAlphabetic(targetLen);
+                String name = SRAND.nextAlphabetic(targetLen);
                 // For simplicity in logging any errors,
                 // the values will be encoded strings.
                 targetLen = RAND.nextInt(20) + 12;
-                String sValue = RandomStringUtils.randomAscii(targetLen);
+                String sValue = SRAND.nextAscii(targetLen);
                 ToDoMetadata datum = repo.upsertMetadata(name,
                         sValue.getBytes(StandardCharsets.UTF_8));
                 assertNotNull("No ToDoMetadata returned from insert", datum);
@@ -511,7 +509,7 @@ public class ToDoRepositoryTests {
         try (TestObserver observer = new TestObserver(repo)) {
             while (testNames.size() < target) {
                 int targetLen = RAND.nextInt(20) + 12;
-                String name = RandomStringUtils.randomAlphabetic(targetLen);
+                String name = SRAND.nextAlphabetic(targetLen);
                 byte[] value = new byte[10 + RAND.nextInt(20)];
                 ToDoMetadata datum = repo.upsertMetadata(name, value);
                 assertNotNull("No ToDoMetadata returned from insert", datum);
@@ -563,7 +561,7 @@ public class ToDoRepositoryTests {
         expectedToDo.setCreateTimeNow();
         expectedToDo.setModTime(expectedToDo.getCreateTime());
         int targetLen = RAND.nextInt(20) + 8;
-        expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
+        expectedToDo.setDescription(SRAND.nextAscii(targetLen));
 
         try (TestObserver observer = new TestObserver(repo)) {
             ToDoItem returnToDo = repo.insertItem(expectedToDo);
@@ -586,7 +584,7 @@ public class ToDoRepositoryTests {
                 observer.reset();
                 targetLen = RAND.nextInt(20) + 8;
                 expectedToDo.setDescription(
-                        RandomStringUtils.randomAscii(targetLen));
+                        SRAND.nextAscii(targetLen));
                 expectedToDo.setModTimeNow();
                 returnToDo = repo.updateItem(expectedToDo);
                 assertNotNull("No item returned from update", returnToDo);
@@ -619,13 +617,13 @@ public class ToDoRepositoryTests {
         expectedToDo.setCreateTimeNow();
         expectedToDo.setModTime(expectedToDo.getCreateTime());
         int targetLen = RAND.nextInt(20) + 8;
-        expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
+        expectedToDo.setDescription(SRAND.nextAscii(targetLen));
         expectedToDo.setDue(LocalDate.now().plusDays(RAND.nextInt(31) + 1));
         expectedToDo.setCompleted(Instant.ofEpochMilli(
                 RAND.nextLong() % 3155760000L + 946684800L));
         expectedToDo.setPriority(RAND.nextInt(10) + 1);
         targetLen = RAND.nextInt(80) + 16;
-        expectedToDo.setNote(RandomStringUtils.randomAscii(targetLen));
+        expectedToDo.setNote(SRAND.nextAscii(targetLen));
         ToDoAlarm alarm = new ToDoAlarm();
         alarm.setTime(LocalTime.ofSecondOfDay(RAND.nextInt(86400)));
         alarm.setAlarmDaysEarlier(RAND.nextInt(31) + 1);
@@ -669,14 +667,14 @@ public class ToDoRepositoryTests {
                 observer.reset();
                 targetLen = RAND.nextInt(20) + 8;
                 expectedToDo.setDescription(
-                        RandomStringUtils.randomAscii(targetLen));
+                        SRAND.nextAscii(targetLen));
                 expectedToDo.setDue(LocalDate.now().plusDays(
                         RAND.nextInt(31) + 1));
                 expectedToDo.setCompleted(Instant.ofEpochMilli(
                         RAND.nextLong() % 3155760000L + 946684800L));
                 expectedToDo.setPriority(RAND.nextInt(10) + 1);
                 targetLen = RAND.nextInt(80) + 16;
-                expectedToDo.setNote(RandomStringUtils.randomAscii(targetLen));
+                expectedToDo.setNote(SRAND.nextAscii(targetLen));
                 alarm.setTime(LocalTime.ofSecondOfDay(RAND.nextInt(86400)));
                 alarm.setAlarmDaysEarlier(RAND.nextInt(31) + 1);
                 alarm.setNotificationTime(Instant.ofEpochMilli(
@@ -730,7 +728,7 @@ public class ToDoRepositoryTests {
         expectedToDo.setCreateTimeNow();
         expectedToDo.setModTime(expectedToDo.getCreateTime());
         int targetLen = RAND.nextInt(20) + 8;
-        expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
+        expectedToDo.setDescription(SRAND.nextAscii(targetLen));
 
         try (TestObserver observer = new TestObserver(repo)) {
             ToDoItem returnToDo = repo.insertItem(expectedToDo);
@@ -897,7 +895,7 @@ public class ToDoRepositoryTests {
         expectedToDo.setCreateTimeNow();
         expectedToDo.setModTime(expectedToDo.getCreateTime());
         int targetLen = RAND.nextInt(20) + 8;
-        expectedToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
+        expectedToDo.setDescription(SRAND.nextAscii(targetLen));
 
         ToDoAlarm alarm = new ToDoAlarm();
         alarm.setTime(LocalTime.ofSecondOfDay(RAND.nextInt(86400)));
@@ -947,7 +945,7 @@ public class ToDoRepositoryTests {
     @Test
     public void testDeleteToDoCategory() {
         int targetLen = RAND.nextInt(20) + 12;
-        String testCategoryName = RandomStringUtils.randomAlphabetic(targetLen);
+        String testCategoryName = SRAND.nextAlphabetic(targetLen);
         ToDoCategory testCategory = repo.insertCategory(testCategoryName);
         assertNotNull("Repository did not return the new category",
                 testCategory);
@@ -959,7 +957,7 @@ public class ToDoRepositoryTests {
         testToDo.setCreateTimeNow();
         testToDo.setModTime(testToDo.getCreateTime());
         targetLen = RAND.nextInt(10) + 4;
-        testToDo.setDescription(RandomStringUtils.randomAscii(targetLen));
+        testToDo.setDescription(SRAND.nextAscii(targetLen));
         ToDoItem actualToDo = null;
         try {
             actualToDo = repo.insertItem(testToDo);
@@ -1026,7 +1024,7 @@ public class ToDoRepositoryTests {
             for (int i = 1; i < testCategoryIds.length; i++) {
                 int targetLen = RAND.nextInt(12) + 10;
                 String categoryName =
-                        RandomStringUtils.randomAlphabetic(targetLen);
+                        SRAND.nextAlphabetic(targetLen);
                 ToDoCategory newCategory = repo.insertCategory(categoryName);
                 assertNotNull("Repository did not return the"
                         + " newly inserted category", newCategory);
@@ -1040,7 +1038,7 @@ public class ToDoRepositoryTests {
                 int catIndex = RAND.nextInt(testCategoryIds.length);
                 newToDo.setCategoryId(testCategoryIds[catIndex]);
                 int targetLen = RAND.nextInt(20) + 8;
-                String description = RandomStringUtils.randomAscii(targetLen);
+                String description = SRAND.nextAscii(targetLen);
                 newToDo.setPriority(RAND.nextInt(3));
                 if (newToDo.isEncrypted()) {
                     newToDo.setEncryptedDescription(description.getBytes());
@@ -1280,7 +1278,7 @@ public class ToDoRepositoryTests {
         String unfiledName = testContext.getString(R.string.Category_Unfiled);
         int targetLen = RAND.nextInt(12) + 10;
         ToDoCategory testCategory = repo.insertCategory(
-                RandomStringUtils.randomAlphabetic(targetLen));
+                SRAND.nextAlphabetic(targetLen));
         assertNotNull("Newly inserted category", testCategory);
         assertNotNull("New category ID", testCategory.getId());
         testCategoryIds[1] = testCategory.getId();
@@ -1297,8 +1295,7 @@ public class ToDoRepositoryTests {
                         StringEncryption.MAX_SUPPORTED_ENCRYPTION + 1));
                 if (item.getPrivate() <= 1) {
                     targetLen = RAND.nextInt(16) + 5;
-                    item.setDescription(RandomStringUtils
-                            .randomAscii(targetLen));
+                    item.setDescription(SRAND.nextAscii(targetLen));
                 } else {
                     byte[] encrypted = new byte[32];
                     RAND.nextBytes(encrypted);
@@ -1427,7 +1424,7 @@ public class ToDoRepositoryTests {
     @Test
     public void testRunInTransactionSuccessful() {
         int targetLen = RAND.nextInt(20) + 12;
-        final String name = RandomStringUtils.randomAlphabetic(targetLen);
+        final String name = SRAND.nextAlphabetic(targetLen);
         final byte[] value = new byte[10 + RAND.nextInt(20)];
         repo.runInTransaction(new Runnable() {
             @Override
@@ -1450,7 +1447,7 @@ public class ToDoRepositoryTests {
     @Test
     public void testRunInTransactionRolledBack() {
         int targetLen = RAND.nextInt(20) + 12;
-        final String name = RandomStringUtils.randomAlphabetic(targetLen);
+        final String name = SRAND.nextAlphabetic(targetLen);
         final byte[] value = new byte[10 + RAND.nextInt(20)];
         SQLException expectedException = new SQLException("Test exception");
         try {

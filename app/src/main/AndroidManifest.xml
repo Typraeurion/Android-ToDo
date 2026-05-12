@@ -4,8 +4,8 @@
     package="com.xmission.trevin.android.todo"
     android:installLocation="auto"
     android:targetSandboxVersion="1"
-    android:versionCode="1060101"
-    android:versionName="1.6.1">
+    android:versionCode="1060201"
+    android:versionName="1.6.2">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
@@ -38,13 +38,10 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
-    <!-- Minimum = Ice Cream Sandwich (Android 4.0.1).
-         currently tracking Snow Cone (Android 12).
-	 Pie [28] requires migration from appcompat to androidx,
-	 as well as replacement of LoaderCallbacks.
-         No other changes are anticipated through SDK [35]. -->
+    <!-- Minimum = Lollipop (Android 5.0).
+         currently tracking Vonilla Ice Cream (Android 15). -->
 
-    <uses-sdk android:minSdkVersion="14"
+    <uses-sdk android:minSdkVersion="21"
               android:targetSdkVersion="35"/>
 
     <!-- For data extraction rules, see: https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore -->

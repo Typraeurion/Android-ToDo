@@ -87,12 +87,11 @@ features without using this manual.
 @section Device Compatibility
 
 The application is designed for compatibility with Android 15 (Vanilla
-Ice Cream) but also runs on Android 4.0 (Ice Cream Sandwich) through
-16 (Baklava) which should cover 99.9% of Android devices on the market
-as of March 2026.  (It has been tested on Ice Cream Sandwich,
-Jellybean, KitKat, Lollipop, Marshmallow, Nougat, Oreo, Quince Tart,
-Snow Cone, Tiramisu, Upside-down Cake, Vanilla Ice Cream, and
-Baklava.)  Support for newer Android devices is planned.
+Ice Cream) but also runs on Android 5.0 (Lollipop) through 16
+(Baklava) which should cover 99.8% of Android devices on the market as
+of May 2026.  (It has been tested on Lollipop, Marshmallow, Nougat,
+Oreo, Quince Tart, Snow Cone, Tiramisu, Upside-down Cake, Vanilla Ice
+Cream, and Baklava.)  Support for newer Android devices is planned.
 
 @node Permissions, Adding To Do Items, Device Compatibility, The Basics
 @section Permissions
@@ -800,6 +799,18 @@ It is not possible to enter a new item or change the text of an existing
 item directly in the To Do list; this can only be done in the item
 details form.  I tried making the text in the list editable, but had
 difficulty getting it to work.
+
+@item
+On some newer devices running Android 15 or 16, there may be a layout
+issue where the application ``action bar'' (containing the search bar,
+completion toggle, and drop-down menu) overlaps the ``New'' button and
+category filter drop-down or the top of the application window
+overlaps Android's system status bar.  This bug was introduced in
+version 1.5.0 which was the first to target Android 15, which added
+support for
+@url{https://medium.com/androiddevelopers/make-webviews-edge-to-edge-a6ef319adfac,edge-to-edge}
+display which is subsequently forced in Android 16.
+
 @end itemize
 
 The following bugs were in the 1.6.0 release (built 2026.03.23) bug
@@ -840,7 +851,7 @@ Under certain conditions, completing an item with a yearly repeat
 interval for a specific date (around the first of a month for a subset
 of week days) may incorrectly calculate the next due date.  This bug
 was introduced in the 1.5.0 release and @emph{probably} did not affect
-older versions@dots?
+older versions@dots{}?
 @end itemize
 
 The following bugs were in the 1.4.3 release (built 2025.12.29) but

@@ -62,6 +62,7 @@ public class CategoryFilterTests {
     static MockToDoRepository repository = null;
 
     static final Random RAND = new Random();
+    static final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     @BeforeClass
     public static void initializeRepository() {
@@ -126,7 +127,7 @@ public class CategoryFilterTests {
         char firstLetter = (char) (minLetter +
                 RAND.nextInt(maxLetter - minLetter + 1));
         int targetLen = RAND.nextInt(6) + 5;
-        String rest = RandomStringUtils.randomAlphabetic(targetLen)
+        String rest = SRAND.nextAlphabetic(targetLen)
                 .toLowerCase(Locale.US);
         return firstLetter + rest;
     }

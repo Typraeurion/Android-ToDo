@@ -42,6 +42,8 @@ import java.io.IOException;
 @RunWith(AndroidJUnit4.class)
 public class FileUtilsTests {
 
+    static final RandomStringUtils SRAND = RandomStringUtils.insecure();
+
     Context testContext = null;
 
     @Before
@@ -239,10 +241,10 @@ public class FileUtilsTests {
         File baseDirectory = testContext.getExternalFilesDir(null);
 
         File subDirectory = new File(baseDirectory,
-                RandomStringUtils.randomAlphabetic(7, 11));
+                SRAND.nextAlphabetic(7, 11));
         while (subDirectory.exists()) {
             subDirectory = new File(baseDirectory,
-                    RandomStringUtils.randomAlphabetic(7, 15));
+                    SRAND.nextAlphabetic(7, 15));
         }
 
         try {

@@ -30,16 +30,16 @@ android {
         applicationId = "com.xmission.trevin.android.todo"
 
         // Defines the minimum API level required to run the app.
-        minSdk = 14
+        minSdk = 21
 
         // Specifies the API level used to test the app.
         targetSdk = 35
 
         // Defines the version number of your app.
-        versionCode = 1060101
+        versionCode = 1060201
 
         // Defines a user-friendly version name for your app.
-        versionName = "1.6.1"
+        versionName = "1.6.2"
 
         testInstrumentationRunner "com.xmission.trevin.android.todo.util.MultiDexJUnitRunner"
 
@@ -71,7 +71,7 @@ android {
             // THIS WILL RESULT IN CRASHES!!
             minifyEnabled = true
             multiDexKeepProguard file('multidex-config.pro')
-	    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -97,21 +97,21 @@ dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 
     implementation 'androidx.annotation:annotation:1.9.1'
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'androidx.concurrent:concurrent-futures:1.1.0'
-    implementation 'androidx.core:core:1.7.0'
-    implementation 'androidx.multidex:multidex:2.0.0'
-    implementation 'androidx.work:work-runtime:2.7.1'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.concurrent:concurrent-futures:1.2.0'
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.work:work-runtime:2.10.5'
 
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.5.1'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation('androidx.test.espresso:espresso-core:3.5.1', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    androidTestImplementation 'androidx.work:work-testing:2.7.1'
+    androidTestImplementation 'androidx.work:work-testing:2.10.5'
     androidTestImplementation 'junit:junit:4.13.2'
-    androidTestImplementation('org.apache.commons:commons-lang3:3.5')
+    androidTestImplementation('org.apache.commons:commons-lang3:3.20.0')
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.apache.commons:commons-lang3:3.20.0'

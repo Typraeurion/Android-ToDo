@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.6.1 (2026.05.10)\n
+version 1.6.2 (2026.05.12)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -89,7 +89,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="DetailButtonCancel">Cancel</string>
     <string name="DetailButtonDelete">Delete&#8230;</string>
     <string name="DetailButtonOK">OK</string>
-    <string name="DetailDescriptionPlaceholder">Description</string>
+    <string name="DetailDescriptionPlaceholder">Description (required)</string>
     <string name="DetailNotset">None</string>
     <string name="DetailTextAlarm">Alarm:</string>
     <string name="DetailTextCategory">Category:</string>

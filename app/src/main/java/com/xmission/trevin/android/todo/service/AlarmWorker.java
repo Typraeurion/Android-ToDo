@@ -45,7 +45,6 @@ import android.provider.MediaStore.Audio.Media;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
@@ -368,74 +367,46 @@ public class AlarmWorker extends Worker {
                 alarm.getDueDate().format(DateTimeFormatter.ISO_DATE),
                 isOverdue ? "overdue" : "normal"));
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-            NotificationCompat.Builder builder =
-                    new NotificationCompat.Builder(context,
-                            isOverdue ? OVERDUE_CHANNEL_ID : ALMOST_DUE_CHANNEL_ID)
-                            .setSmallIcon(R.drawable.stat_todo)
-                            .setContentTitle(title)
-                            .setContentText(descr)
-                            .setContentIntent(intent)
-                            .setDefaults(defaultFlags)
-                            .setOnlyAlertOnce(true)
-                            .setTicker(descr)
-                            .setWhen(alarm.getDueTime()
-                                    .toInstant().toEpochMilli());
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) { // KitKat through Nougat
+            builder = new Notification.Builder(context)
+                    .setDefaults(defaultFlags)
+                    .setPriority(isOverdue ? Notification.PRIORITY_HIGH
+                            : Notification.PRIORITY_DEFAULT);
             if (soundID >= 0)
                 builder = builder.setSound(Uri.withAppendedPath(
                         Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
-            notice = builder.build();
+        } else { // Oreo and up
+            builder = new Notification.Builder(context,
+                    isOverdue ? OVERDUE_CHANNEL_ID : ALMOST_DUE_CHANNEL_ID);
         }
-        // FIXME: NotificationCompat should resolve API differences;
-        // merge this section into the above and remove the version check.
-        else {
-            Notification.Builder builder;
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) { // KitKat through Nougat
-                builder = new Notification.Builder(context)
-                        .setDefaults(defaultFlags)
-                        .setPriority(isOverdue ? Notification.PRIORITY_HIGH
-                                : Notification.PRIORITY_DEFAULT);
-                if (soundID >= 0)
-                    builder = builder.setSound(Uri.withAppendedPath(
-                            Media.INTERNAL_CONTENT_URI, Long.toString(soundID)));
-            } else { // Oreo and up
-                builder = new Notification.Builder(context,
-                        isOverdue ? OVERDUE_CHANNEL_ID : ALMOST_DUE_CHANNEL_ID);
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                builder = builder.setShowWhen(true);
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-                builder = builder.setGroup(String.format(Locale.US,
+        builder = builder.setShowWhen(true)
+                .setGroup(String.format(Locale.US,
                         NOTIFICATION_GROUP_FORMAT, alarm.getCategoryId()));
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                if (isOverdue) {
-                    builder = builder.setCategory(Notification.CATEGORY_ALARM);
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    builder = builder.setCategory(Notification.CATEGORY_REMINDER);
-                } else {
-                    // Substitute category for upcoming due items on Lollipop
-                    builder = builder.setCategory(Notification.CATEGORY_EVENT);
-                }
-                if (!alarm.isPrivate()) {
-                    builder = builder.setVisibility(Notification.VISIBILITY_PUBLIC);
-                } else if (!alarm.isEncrypted()) {
-                    builder = builder.setVisibility(Notification.VISIBILITY_PRIVATE);
-                } else {
-                    builder = builder.setVisibility(Notification.VISIBILITY_SECRET);
-                }
-            }
-            builder = builder.setSmallIcon(R.drawable.stat_todo)
-                    .setContentTitle(title)
-                    .setContentText(descr)
-                    .setContentIntent(intent)
-                    .setOnlyAlertOnce(true)
-                    .setTicker(descr)
-                    .setWhen(alarm.getDueTime()
-                            .toInstant().toEpochMilli());
-            notice = builder.build();
+        if (isOverdue) {
+            builder = builder.setCategory(Notification.CATEGORY_ALARM);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            builder = builder.setCategory(Notification.CATEGORY_REMINDER);
+        } else {
+            // Substitute category for upcoming due items on Lollipop
+            builder = builder.setCategory(Notification.CATEGORY_EVENT);
         }
+        if (!alarm.isPrivate()) {
+            builder = builder.setVisibility(Notification.VISIBILITY_PUBLIC);
+        } else if (!alarm.isEncrypted()) {
+            builder = builder.setVisibility(Notification.VISIBILITY_PRIVATE);
+        } else {
+            builder = builder.setVisibility(Notification.VISIBILITY_SECRET);
+        }
+        builder = builder.setSmallIcon(R.drawable.stat_todo)
+                .setContentTitle(title)
+                .setContentText(descr)
+                .setContentIntent(intent)
+                .setOnlyAlertOnce(true)
+                .setTicker(descr)
+                .setWhen(alarm.getDueTime()
+                        .toInstant().toEpochMilli());
+        notice = builder.build();
 
         // We have to narrow the item ID to fit a notification ID;
         // hope we don't have any collisions.  (Shouldn't happen

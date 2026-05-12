@@ -55,9 +55,13 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
-
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * Displays the details of a To Do item.  Will display the item from the
@@ -65,7 +69,7 @@ import androidx.annotation.Nullable;
  *
  * @author Trevin Beattie
  */
-public class ToDoDetailsActivity extends Activity {
+public class ToDoDetailsActivity extends AppCompatActivity {
 
     private static final String TAG = "ToDoDetailsActivity";
 
@@ -79,11 +83,10 @@ public class ToDoDetailsActivity extends Activity {
     private static final int REPEAT_DIALOG_ID = 8;
 
     /**
-     * Request code to use when starting the note activity from the
-     * details activity.  This lets us know the note should be returned
-     * to the details rather than saved directly in the repository.
+     * Launcher for starting {@link ToDoNoteActivity} and receiving
+     * the note back in the details activity.
      */
-    public static final int DETAILS_HANDOFF_REQUEST = 14;
+    private ActivityResultLauncher<Intent> noteActivityLauncher;
 
     /**
      * The ID of the To Do item we are editing; {@code null} for a new item.
@@ -237,12 +240,8 @@ public class ToDoDetailsActivity extends Activity {
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        Object savedData;
-        if (savedInstanceState != null) {
-            savedData = savedInstanceState.getSerializable("detailFormData");
-        } else {
-            savedData = getLastNonConfigurationInstance();
-        }
+        Object savedData = (savedInstanceState != null)
+                ? savedInstanceState.getSerializable("detailFormData") : null;
         boolean hasSavedState = (savedData instanceof DetailFormData);
 
         if (hasSavedState) {
@@ -343,6 +342,10 @@ public class ToDoDetailsActivity extends Activity {
         alarmText.setOnClickListener(new AlarmButtonOnClickListener());
         repeatButton.setOnClickListener(new RepeatButtonOnClickListener());
 
+        noteActivityLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                new NoteActivityResultCallback());
+
         // Disable the Done and Delete buttons until the repository is ready
         okButton = findViewById(R.id.DetailButtonOK);
         okButton.setEnabled(false);
@@ -350,22 +353,7 @@ public class ToDoDetailsActivity extends Activity {
         deleteButton.setEnabled(false);
 
         ImageButton noteButton = findViewById(R.id.DetailButtonNote);
-        noteButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "DetailButtonNote.onClick");
-                Intent intent = new Intent(v.getContext(),
-                        ToDoNoteActivity.class);
-                intent.putExtra(ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION,
-                        toDoDescription.getText().toString());
-                intent.putExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE,
-                        (todo.getNote() == null) ? "" : todo.getNote());
-                if (todoId != null)
-                    intent.putExtra(EXTRA_ITEM_ID, todoId);
-                ToDoDetailsActivity.this.startActivityForResult(intent,
-                        DETAILS_HANDOFF_REQUEST);
-            }
-        });
+        noteButton.setOnClickListener(new NoteButtonOnClickListener());
 
         // Connect to the database (on a non-UI thread) and populate the UI.
         Runnable openRepo = new OpenRepositoryRunner(
@@ -524,35 +512,11 @@ public class ToDoDetailsActivity extends Activity {
     }
 
     /**
-     * Called when {@link ToDoNoteActivity} returns a result
+     * Collects the current form state into a {@link DetailFormData} object
+     * for use by {@link #onSaveInstanceState}.
      */
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(TAG, String.format(Locale.US,
-                ".onActivityResult(%d,%d)", requestCode, resultCode));
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != DETAILS_HANDOFF_REQUEST) {
-            Log.w(TAG, "Received a result from an unknown request; ignoring it.");
-            return;
-        }
-        if (resultCode != RESULT_OK)
-            return;
-        // Retrieve the note and update our local copy
-        String note = data.getStringExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE);
-        if ((note != null) && note.length() == 0)
-            note = null;
-        todo.setNote(note);
-    }
-
-    /**
-     * Called when the activity is about to be destroyed
-     * and then immediately restarted (such as an orientation change).
-     *
-     * @return the form data needed to restore the state
-     */
-    @Override
-    public DetailFormData onRetainNonConfigurationInstance() {
-        Log.d(TAG, ".onRetainNonConfigurationInstance");
+    private DetailFormData collectFormData() {
+        Log.d(TAG, ".collectFormData");
         // Save the current dialog state
         DetailFormData data = new DetailFormData();
         data.item = todo;
@@ -598,8 +562,7 @@ public class ToDoDetailsActivity extends Activity {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         Log.d(TAG, ".onSaveInstanceState");
-        outState.putSerializable("detailFormData",
-                onRetainNonConfigurationInstance());
+        outState.putSerializable("detailFormData", collectFormData());
         super.onSaveInstanceState(outState);
     }
 
@@ -1223,6 +1186,8 @@ public class ToDoDetailsActivity extends Activity {
                 code, Arrays.toString(permissions),
                 Arrays.toString(resultNames)));
 
+        super.onRequestPermissionsResult(code, permissions, results);
+
         if (code != R.id.AlarmButtonOK) {
             Log.e(TAG, "Unexpected code from request permissions; ignoring!");
             return;
@@ -1358,6 +1323,48 @@ public class ToDoDetailsActivity extends Activity {
                     showDialog(REPEAT_DIALOG_ID);
                     break;
             }
+        }
+    }
+
+    /**
+     * Called when the user clicks the note button
+     */
+    class NoteButtonOnClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            Log.d(TAG, "DetailButtonNote.onClick");
+            Intent intent = new Intent(v.getContext(),
+                    ToDoNoteActivity.class);
+            intent.putExtra(ToDoNoteActivity.EXTRA_ITEM_DESCRIPTION,
+                    toDoDescription.getText().toString());
+            intent.putExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE,
+                    (todo.getNote() == null) ? "" : todo.getNote());
+            if (todoId != null)
+                intent.putExtra(EXTRA_ITEM_ID, todoId);
+            noteActivityLauncher.launch(intent);
+        }
+    }
+
+    /**
+     * Receives the result from {@link ToDoNoteActivity} when it returns
+     * a note to the details activity.
+     */
+    class NoteActivityResultCallback implements ActivityResultCallback<ActivityResult> {
+        @Override
+        public void onActivityResult(ActivityResult result) {
+            Log.d(TAG, String.format(Locale.US,
+                    ".NoteActivityResultCallback.onActivityResult(%d)",
+                    result.getResultCode()));
+            if (result.getResultCode() != RESULT_OK)
+                return;
+            // Retrieve the note and update our local copy
+            Intent data = result.getData();
+            if (data == null)
+                return;
+            String note = data.getStringExtra(ToDoNoteActivity.EXTRA_ITEM_NOTE);
+            if ((note != null) && note.isEmpty())
+                note = null;
+            todo.setNote(note);
         }
     }
 

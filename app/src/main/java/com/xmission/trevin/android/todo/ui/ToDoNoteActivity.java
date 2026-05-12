@@ -37,10 +37,10 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
-
-import androidx.annotation.Nullable;
 
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -52,7 +52,7 @@ import java.util.concurrent.Executors;
  *
  * @author Trevin Beattie
  */
-public class ToDoNoteActivity extends Activity {
+public class ToDoNoteActivity extends AppCompatActivity {
 
     private static final String TAG = "ToDoNoteActivity";
 
@@ -125,12 +125,8 @@ public class ToDoNoteActivity extends Activity {
 
         setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);
 
-        Object savedData;
-        if (savedInstanceState != null) {
-            savedData = savedInstanceState.getSerializable("noteFormData");
-        } else {
-            savedData = getLastNonConfigurationInstance();
-        }
+        Object savedData = (savedInstanceState != null)
+                ? savedInstanceState.getSerializable("noteFormData") : null;
         boolean hasSavedState = (savedData instanceof NoteFormData);
 
         if (hasSavedState) {
@@ -314,12 +310,11 @@ public class ToDoNoteActivity extends Activity {
     }
 
     /**
-     * Called when the activity is about to be destroyed
-     * and then immediately restarted (such as an orientation change).
+     * Collects the current form state into a {@link NoteFormData} object
+     * for use by {@link #onSaveInstanceState}.
      */
-    @Override
-    public NoteFormData onRetainNonConfigurationInstance() {
-        Log.d(TAG, ".onRetainNonConfigurationInstance");
+    private NoteFormData collectFormData() {
+        Log.d(TAG, ".collectFormData");
         NoteFormData data = new NoteFormData();
         data.todoId = todoId;
         data.isDetailHandoff = isDetailHandoff;
@@ -339,8 +334,7 @@ public class ToDoNoteActivity extends Activity {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         Log.d(TAG, ".onSaveInstanceState");
-        outState.putSerializable("noteFormData",
-                onRetainNonConfigurationInstance());
+        outState.putSerializable("noteFormData", collectFormData());
         super.onSaveInstanceState(outState);
     }
 

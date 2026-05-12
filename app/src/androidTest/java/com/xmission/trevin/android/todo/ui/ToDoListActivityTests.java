@@ -72,6 +72,7 @@ public class ToDoListActivityTests {
     static Context testContext = null;
 
     static final Random RAND = new Random();
+    static final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     private static Instrumentation instrument = null;
 
@@ -276,12 +277,19 @@ public class ToDoListActivityTests {
         for (int i = RAND.nextInt(3) + 2; i >= 0; --i) {
             ToDoItem todo = randomToDo();
             todo.setCategoryId(category1.getId());
+            // Make sure all test items are NOT completed, public, and not hidden.
+            todo.setChecked(false);
+            todo.setPrivate(0);
+            todo.setHideDaysEarlier(null);
             todosInCategory1.add(mockRepo.insertItem(todo));
         }
         for (int i = RAND.nextInt(3) + 2; (i >= 0) ||
                 (todosInCategory2.size() == todosInCategory1.size()); --i) {
             ToDoItem todo = randomToDo();
             todo.setCategoryId(category2.getId());
+            todo.setChecked(false);
+            todo.setPrivate(0);
+            todo.setHideDaysEarlier(null);
             todosInCategory2.add(mockRepo.insertItem(todo));
         }
         // Initialize the selected category preference to category1
@@ -320,8 +328,10 @@ public class ToDoListActivityTests {
             timeLimit = System.nanoTime() + 5000000000L;
             while (itemAdapter[0].getCount() != todosInCategory1.size()) {
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-                assertFalse(
-                        "Timed out waiting for the To Do list to show items from category1",
+                assertFalse(String.format(Locale.US,
+                        "Timed out waiting for the To Do list to show items"
+                                + " from category1; expected %d items but there are %d",
+                                todosInCategory1.size(), itemAdapter[0].getCount()),
                         System.nanoTime() > timeLimit);
                 try {
                     Thread.sleep(128);
@@ -526,7 +536,7 @@ public class ToDoListActivityTests {
     @Test
     public void testUnlockEncryptedItems() {
         List<ToDoItem> testToDos = new ArrayList<>();
-        final String password = RandomStringUtils.randomAlphanumeric(12);
+        final String password = SRAND.nextAlphanumeric(12);
         StringEncryption se = new StringEncryption();
         se.setPassword(password.toCharArray());
         se.addSalt();

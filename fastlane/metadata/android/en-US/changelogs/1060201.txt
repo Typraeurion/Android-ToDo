@@ -1,0 +1,9 @@
+Version 1.6.2
+* Dropped support for Android 4 (Ice Cream Sandwich,
+  Jelly Bean, and KitKat) in order to update AndroidX
+  libraries for better compatibility with Android 15+.
+* Fixed a duplicate layout attribute on the note activity
+  which might result in the note text overlapping Android's
+  system status bar on newer Android 16 devices.
+* Added placeholder text in the item description line to make
+  it clear what the line is for and that its text is required.

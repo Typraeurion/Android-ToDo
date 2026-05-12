@@ -46,6 +46,7 @@ public class ToDoPreferencesTests {
 
     /** Random number generator for some tests */
     final Random RAND = new Random();
+    final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     private static Context testContext;
     static MockSharedPreferences mockPrefs;
@@ -496,8 +497,8 @@ public class ToDoPreferencesTests {
     /** Test getting the export file name */
     @Test
     public void testGetExportFile() {
-        String defaultFile = RandomStringUtils.randomAscii(10, 33);
-        String expectedFile = RandomStringUtils.randomAscii(10, 33);
+        String defaultFile = SRAND.nextAscii(10, 33);
+        String expectedFile = SRAND.nextAscii(10, 33);
         mockPrefs.initializePreference(TPREF_EXPORT_FILE, expectedFile);
         assertEquals("Export file", expectedFile,
                 toDoPrefs.getExportFile(defaultFile));
@@ -506,7 +507,7 @@ public class ToDoPreferencesTests {
     /** Test getting the default export file name */
     @Test
     public void testGetDefaultExportFile() {
-        String defaultFile = RandomStringUtils.randomAscii(10, 33);
+        String defaultFile = SRAND.nextAscii(10, 33);
         assertEquals("Default export file", defaultFile,
                 toDoPrefs.getExportFile(defaultFile));
     }
@@ -514,7 +515,7 @@ public class ToDoPreferencesTests {
     /** Test setting the export file name */
     @Test
     public void testSetExportFile() {
-        String expectedFile = RandomStringUtils.randomAscii(10, 33);
+        String expectedFile = SRAND.nextAscii(10, 33);
         toDoPrefs.setExportFile(expectedFile);
         assertFalse("setExportFile did not close the editor!",
                 mockPrefs.isEditorOpen());
@@ -560,8 +561,8 @@ public class ToDoPreferencesTests {
     /** Test getting the import file name */
     @Test
     public void testGetImportFile() {
-        String defaultFile = RandomStringUtils.randomAscii(10, 33);
-        String expectedFile = RandomStringUtils.randomAscii(10, 33);
+        String defaultFile = SRAND.nextAscii(10, 33);
+        String expectedFile = SRAND.nextAscii(10, 33);
         mockPrefs.initializePreference(TPREF_IMPORT_FILE, expectedFile);
         assertEquals("Import file", expectedFile,
                 toDoPrefs.getImportFile(defaultFile));
@@ -570,7 +571,7 @@ public class ToDoPreferencesTests {
     /** Test getting the default export file name */
     @Test
     public void testGetDefaultImportFile() {
-        String defaultFile = RandomStringUtils.randomAscii(10, 33);
+        String defaultFile = SRAND.nextAscii(10, 33);
         assertEquals("Default import file", defaultFile,
                 toDoPrefs.getImportFile(defaultFile));
     }
@@ -578,7 +579,7 @@ public class ToDoPreferencesTests {
     /** Test setting the export file name */
     @Test
     public void testSetImportFile() {
-        String expectedFile = RandomStringUtils.randomAscii(10, 33);
+        String expectedFile = SRAND.nextAscii(10, 33);
         toDoPrefs.setImportFile(expectedFile);
         assertFalse("setImportFile did not close the editor!",
                 mockPrefs.isEditorOpen());
@@ -898,13 +899,13 @@ public class ToDoPreferencesTests {
     @Test
     public void testExportFileListener() {
         runListenerCalledTest(TPREF_EXPORT_FILE, "setExportFile",
-                () -> toDoPrefs.setExportFile(RandomStringUtils.randomAscii(10, 33)));
+                () -> toDoPrefs.setExportFile(SRAND.nextAscii(10, 33)));
     }
 
     @Test
     public void testExportFileIgnored() {
         runListenerNotCalledTest(TPREF_EXPORT_FILE, "setExportFile",
-                () -> toDoPrefs.setExportFile(RandomStringUtils.randomAscii(10, 33)));
+                () -> toDoPrefs.setExportFile(SRAND.nextAscii(10, 33)));
     }
 
     @Test
@@ -922,13 +923,13 @@ public class ToDoPreferencesTests {
     @Test
     public void testImportFileListener() {
         runListenerCalledTest(TPREF_IMPORT_FILE, "setImportFile",
-                () -> toDoPrefs.setImportFile(RandomStringUtils.randomAscii(10, 33)));
+                () -> toDoPrefs.setImportFile(SRAND.nextAscii(10, 33)));
     }
 
     @Test
     public void testImportFileIgnored() {
         runListenerNotCalledTest(TPREF_IMPORT_FILE, "setImportFile",
-                () -> toDoPrefs.setImportFile(RandomStringUtils.randomAscii(10, 33)));
+                () -> toDoPrefs.setImportFile(SRAND.nextAscii(10, 33)));
     }
 
     @Test

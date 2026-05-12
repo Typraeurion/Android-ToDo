@@ -26,6 +26,7 @@ import com.xmission.trevin.android.todo.data.repeat.RepeatType;
 import com.xmission.trevin.android.todo.util.StringEncryption;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -47,6 +48,7 @@ public class ToDoItemTests {
 
     /** Random number generator for some tests */
     static final Random RAND = new Random();
+    static final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     /**
      * The defaults for the created and modified timestamps
@@ -83,7 +85,7 @@ public class ToDoItemTests {
     private static ToDoItem randomItem() {
         ToDoItem item = newEmptyItem();
         item.setId(RAND.nextLong() % 1000000000L + 1L);
-        item.setDescription(RandomStringUtils.randomAlphanumeric(
+        item.setDescription(SRAND.nextAlphanumeric(
                 RAND.nextInt(16) + 8));
         item.setEncryptedDescription(new byte[RAND.nextInt(64) + 32]);
         RAND.nextBytes(item.getEncryptedDescription());
@@ -98,9 +100,9 @@ public class ToDoItemTests {
         item.setPriority(RAND.nextInt(10) + 2); // Default is 1
         item.setPrivate(RAND.nextInt(StringEncryption.MAX_SUPPORTED_ENCRYPTION) + 1); // Default is 0
         item.setCategoryId(RAND.nextInt(100) + 1); // Default is 0 (Unfiled)
-        item.setCategoryName(RandomStringUtils.randomAlphabetic(
+        item.setCategoryName(SRAND.nextAlphabetic(
                 RAND.nextInt(10) + 5));
-        item.setNote(RandomStringUtils.randomAlphanumeric(
+        item.setNote(SRAND.nextAlphanumeric(
                 RAND.nextInt(128) + 16));
         item.setEncryptedNote(new byte[RAND.nextInt(128) + 32]);
         RAND.nextBytes(item.getEncryptedNote());
@@ -166,7 +168,7 @@ public class ToDoItemTests {
         ToDoItem item2 = newEmptyItem();
         do {
             item2.setId(RAND.nextLong() % 1000000000L + 1L);
-        } while (item2.getId() == itemWithId.getId());
+        } while (item2.getId().equals(itemWithId.getId()));
         assertNotEquals("Item hash codes with different ID's",
                 itemWithId.hashCode(), item2.hashCode());
     }
@@ -185,7 +187,7 @@ public class ToDoItemTests {
                 itemWithId.equals(item2));
         do {
             item2.setId(RAND.nextLong() % 1000000000L + 1L);
-        } while (item2.getId() == itemWithId.getId());
+        } while (item2.getId().equals(itemWithId.getId()));
         assertFalse("Items with different ID's compare equal",
                 itemWithId.equals(item2));
     }
@@ -202,7 +204,7 @@ public class ToDoItemTests {
     @Test
     public void testDescriptionToString() {
         ToDoItem itemWithDescription = newEmptyItem();
-        itemWithDescription.setDescription(RandomStringUtils.randomAlphanumeric(
+        itemWithDescription.setDescription(SRAND.nextAlphanumeric(
                 RAND.nextInt(20) + 10));
         assertNotEquals("Items with or without Description",
                 EMPTY_ITEM.toString(), itemWithDescription.toString());
@@ -211,7 +213,7 @@ public class ToDoItemTests {
     @Test
     public void testDescriptionHashCode() {
         ToDoItem itemWithDescription = newEmptyItem();
-        itemWithDescription.setDescription(RandomStringUtils.randomAlphanumeric(
+        itemWithDescription.setDescription(SRAND.nextAlphanumeric(
                         RAND.nextInt(20) + 10));
         assertNotEquals("Item hash codes with or without Description",
                 EMPTY_ITEM.hashCode(), itemWithDescription.hashCode());
@@ -220,7 +222,7 @@ public class ToDoItemTests {
         assertEquals("Item hash codes with the same description",
                 itemWithDescription.hashCode(), item2.hashCode());
         do {
-            item2.setDescription(RandomStringUtils.randomAlphanumeric(
+            item2.setDescription(SRAND.nextAlphanumeric(
                     RAND.nextInt(20) + 10));
         } while (StringUtils.equals(item2.getDescription(),
                 itemWithDescription.getDescription()));
@@ -231,7 +233,7 @@ public class ToDoItemTests {
     @Test
     public void testDescriptionEquals() {
         ToDoItem itemWithDescription = newEmptyItem();
-        itemWithDescription.setDescription(RandomStringUtils.randomAlphanumeric(
+        itemWithDescription.setDescription(SRAND.nextAlphanumeric(
                         RAND.nextInt(20) + 10));
         assertFalse("Items with or without description compare equal",
                 itemWithDescription.equals(EMPTY_ITEM));
@@ -240,7 +242,7 @@ public class ToDoItemTests {
         assertTrue("Items with same description do not compare equal",
                 itemWithDescription.equals(item2));
         do {
-                item2.setDescription(RandomStringUtils.randomAlphanumeric(
+                item2.setDescription(SRAND.nextAlphanumeric(
                         RAND.nextInt(20) + 10));
         } while (StringUtils.equals(item2.getDescription(),
                 itemWithDescription.getDescription()));
@@ -251,7 +253,7 @@ public class ToDoItemTests {
     @Test
     public void testDescriptionClone() {
         ToDoItem itemWithDescription = newEmptyItem();
-        itemWithDescription.setDescription(RandomStringUtils.randomAlphanumeric(
+        itemWithDescription.setDescription(SRAND.nextAlphanumeric(
                         RAND.nextInt(20) + 10));
         ToDoItem clone = itemWithDescription.clone();
         assertEquals("Clone of item description",
@@ -683,7 +685,7 @@ public class ToDoItemTests {
     @Test
     public void testCategoryNameToString() {
         ToDoItem itemWithCategoryName = newEmptyItem();
-        itemWithCategoryName.setCategoryName(RandomStringUtils.randomAlphabetic(
+        itemWithCategoryName.setCategoryName(SRAND.nextAlphabetic(
                 RAND.nextInt(10) + 5));
         assertNotEquals("Items with or without category name",
                 EMPTY_ITEM.toString(), itemWithCategoryName.toString());
@@ -692,15 +694,15 @@ public class ToDoItemTests {
     @Test
     public void testCategoryNameHashCode() {
         ToDoItem itemWithCategoryName = newEmptyItem();
-        itemWithCategoryName.setCategoryName(RandomStringUtils.randomAlphabetic(
+        itemWithCategoryName.setCategoryName(SRAND.nextAlphabetic(
                 RAND.nextInt(10) + 5));
         assertNotEquals("Item hash codes with or without category name",
                 EMPTY_ITEM.hashCode(), itemWithCategoryName.hashCode());
         ToDoItem item2 = newEmptyItem();
         do {
-            item2.setCategoryName(RandomStringUtils.randomAlphabetic(
+            item2.setCategoryName(SRAND.nextAlphabetic(
                     RAND.nextInt(10) + 5));
-        } while (StringUtils.equals(item2.getCategoryName(),
+        } while (Strings.CS.equals(item2.getCategoryName(),
                 itemWithCategoryName.getCategoryName()));
         assertNotEquals("Item hash codes with different category names",
                 itemWithCategoryName.hashCode(), item2.hashCode());
@@ -709,7 +711,7 @@ public class ToDoItemTests {
     @Test
     public void testCategoryNameEquals() {
         ToDoItem itemWithCategoryName = newEmptyItem();
-        itemWithCategoryName.setCategoryName(RandomStringUtils.randomAlphabetic(
+        itemWithCategoryName.setCategoryName(SRAND.nextAlphabetic(
                         RAND.nextInt(10) + 5));
         assertTrue("Items with a category name do not compare equal",
                 itemWithCategoryName.equals(itemWithCategoryName));
@@ -720,9 +722,9 @@ public class ToDoItemTests {
         assertTrue("Items with the same category name do not compare equal",
                 itemWithCategoryName.equals(item2));
         do {
-            item2.setCategoryName(RandomStringUtils.randomAlphabetic(
+            item2.setCategoryName(SRAND.nextAlphabetic(
                     RAND.nextInt(10) + 5));
-        } while (StringUtils.equals(item2.getCategoryName(),
+        } while (Strings.CS.equals(item2.getCategoryName(),
                 itemWithCategoryName.getCategoryName()));
         assertFalse("Items with different category names compare equal",
                 itemWithCategoryName.equals(item2));
@@ -731,7 +733,7 @@ public class ToDoItemTests {
     @Test
     public void testCategoryNameClone() {
         ToDoItem itemWithCategoryName = newEmptyItem();
-        itemWithCategoryName.setCategoryName(RandomStringUtils.randomAlphabetic(
+        itemWithCategoryName.setCategoryName(SRAND.nextAlphabetic(
                         RAND.nextInt(10) + 5));
         ToDoItem clone = itemWithCategoryName.clone();
         assertEquals("Clone of item category name",
@@ -741,7 +743,7 @@ public class ToDoItemTests {
     @Test
     public void testNoteToString() {
         ToDoItem itemWithNote = newEmptyItem();
-        itemWithNote.setNote(RandomStringUtils.randomAlphanumeric(
+        itemWithNote.setNote(SRAND.nextAlphanumeric(
                 RAND.nextInt(200) + 10));
         assertNotEquals("Items with or without a note",
                 EMPTY_ITEM.toString(), itemWithNote.toString());
@@ -750,15 +752,15 @@ public class ToDoItemTests {
     @Test
     public void testNoteHashCode() {
         ToDoItem itemWithNote = newEmptyItem();
-        itemWithNote.setNote(RandomStringUtils.randomAlphanumeric(
+        itemWithNote.setNote(SRAND.nextAlphanumeric(
                         RAND.nextInt(200) + 10));
         assertNotEquals("Item hash codes with or without a note",
                 EMPTY_ITEM.hashCode(), itemWithNote.hashCode());
         ToDoItem item2 = newEmptyItem();
         do {
-            item2.setNote(RandomStringUtils.randomAlphanumeric(
+            item2.setNote(SRAND.nextAlphanumeric(
                     RAND.nextInt(200) + 10));
-        } while (StringUtils.equals(item2.getNote(), itemWithNote.getNote()));
+        } while (Strings.CS.equals(item2.getNote(), itemWithNote.getNote()));
         assertNotEquals("Item hash codes with different notes",
                 itemWithNote.hashCode(), item2.hashCode());
     }
@@ -766,7 +768,7 @@ public class ToDoItemTests {
     @Test
     public void testNoteEquals() {
         ToDoItem itemWithNote = newEmptyItem();
-        itemWithNote.setNote(RandomStringUtils.randomAlphanumeric(
+        itemWithNote.setNote(SRAND.nextAlphanumeric(
                         RAND.nextInt(200) + 10));
         assertTrue("Items with a note do not compare equal",
                 itemWithNote.equals(itemWithNote));
@@ -777,9 +779,9 @@ public class ToDoItemTests {
         assertTrue("Items with the same note do not compare equal",
                 itemWithNote.equals(item2));
         do {
-            item2.setNote(RandomStringUtils.randomAlphanumeric(
+            item2.setNote(SRAND.nextAlphanumeric(
                     RAND.nextInt(200) + 10));
-        } while (StringUtils.equals(item2.getNote(), itemWithNote.getNote()));
+        } while (Strings.CS.equals(item2.getNote(), itemWithNote.getNote()));
         assertFalse("Items with different notes compare equal",
                 itemWithNote.equals(item2));
     }
@@ -787,7 +789,7 @@ public class ToDoItemTests {
     @Test
     public void testNoteClone() {
         ToDoItem itemWithNote = newEmptyItem();
-        itemWithNote.setNote(RandomStringUtils.randomAlphanumeric(
+        itemWithNote.setNote(SRAND.nextAlphanumeric(
                         RAND.nextInt(200) + 10));
         ToDoItem clone = itemWithNote.clone();
         assertEquals("Clone of item note", itemWithNote.getNote(),
@@ -964,7 +966,7 @@ public class ToDoItemTests {
                     LocalDate.ofEpochDay(RAND.nextInt(100000))));
         } while (item2.getRepeatInterval().equals(
                 itemWithRepeat.getRepeatInterval()));
-        assertNotEquals("Items with different repeats compare equal",
+        assertFalse("Items with different repeats compare equal",
                 itemWithRepeat.equals(item2));
     }
 
@@ -996,7 +998,7 @@ public class ToDoItemTests {
         ToDoItem item2 = newEmptyItem();
         do {
             item2.setHideDaysEarlier(RAND.nextInt(7) + 1);
-        } while (item2.getHideDaysEarlier() == itemWithHide.getHideDaysEarlier());
+        } while (item2.getHideDaysEarlier().equals(itemWithHide.getHideDaysEarlier()));
         assertNotEquals("Item hash codes with different hide days earlier",
                 itemWithHide.hashCode(), item2.hashCode());
     }
@@ -1015,7 +1017,7 @@ public class ToDoItemTests {
                 itemWithHide.equals(item2));
         do {
             item2.setHideDaysEarlier(RAND.nextInt(7));
-        } while (item2.getHideDaysEarlier() == itemWithHide.getHideDaysEarlier());
+        } while (item2.getHideDaysEarlier().equals(itemWithHide.getHideDaysEarlier()));
         assertFalse("Items with different hide days earlier compare equal",
                 itemWithHide.equals(item2));
     }

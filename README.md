@@ -11,7 +11,7 @@ Pilot, plus many other features:
 * Mark items as private and optionally encrypt them with a password.
 * Export lists to a local XML file.
 * Import lists from either XML or a Palm Pilot data file.
-* Backwards compatible with Android 4 (Ice Cream Sandwich) and up.
+* Backwards compatible with Android 5 (Lollipop) and up.
 
 See the [To Do list](doc/ToDo.pdf) documentation for full details on
 using the app.

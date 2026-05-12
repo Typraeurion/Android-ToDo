@@ -36,11 +36,9 @@ import android.app.Activity;
 import android.app.LoaderManager;
 import android.app.NotificationManager;
 import android.content.*;
-import android.os.Build;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
-import androidx.core.widget.CompoundButtonCompat;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -278,17 +276,6 @@ public class ToDoCursorAdapter extends BaseAdapter {
         if (itemView == null) {
             Log.d(TAG, "Creating a new list item view");
             itemView = inflater.inflate(R.layout.todo_list_item, parent, false);
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                // AppCompat 1.1+ replaces the button drawable and applies a tint
-                // on pre-Lollipop devices, overriding custom drawables set via
-                // style attributes.  Clear the tint first (so the subsequent
-                // setButtonDrawable call does not re-apply it), then restore
-                // our custom drawable.
-                CheckBox checkBox =
-                        itemView.findViewById(R.id.ToDoItemChecked);
-                CompoundButtonCompat.setButtonTintList(checkBox, null);
-                checkBox.setButtonDrawable(R.drawable.btn_check);
-            }
         }
 
         // Remove any existing callbacks to avoid spurious database changes

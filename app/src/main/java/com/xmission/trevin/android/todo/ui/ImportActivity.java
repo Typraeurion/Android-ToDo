@@ -231,8 +231,7 @@ public class ImportActivity extends Activity {
         } else {
             importRadioShared.setChecked(true);
             importDocUri = null;
-            if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) &&
-                    fullPath.startsWith("content://")) {
+            if (fullPath.startsWith("content://")) {
                 try {
                     importDocUri = Uri.parse(fullPath);
                     // Test whether we still have access to this file

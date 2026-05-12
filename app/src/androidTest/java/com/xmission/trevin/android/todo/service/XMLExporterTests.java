@@ -155,6 +155,7 @@ import javax.xml.xpath.XPathFactory;
 public class XMLExporterTests {
 
     private static final Random RAND = new Random();
+    private static final RandomStringUtils SRAND = RandomStringUtils.insecure();
 
     private static Context testContext;
     private static MockSharedPreferences underlyingPrefs = null;
@@ -282,9 +283,9 @@ public class XMLExporterTests {
     @Test
     public void testExportPreferences() throws Exception {
         mockPrefs.edit()
-                .setExportFile(RandomStringUtils.randomAlphabetic(12, 24))
+                .setExportFile(SRAND.nextAlphabetic(12, 24))
                 .setExportPrivate(RAND.nextBoolean())
-                .setImportFile(RandomStringUtils.randomAlphabetic(12, 24))
+                .setImportFile(SRAND.nextAlphabetic(12, 24))
                 .setImportPrivate(RAND.nextBoolean())
                 .setImportType(ImportType.values()[RAND
                         .nextInt(ImportType.values().length)])
@@ -395,8 +396,8 @@ public class XMLExporterTests {
     public void testExportPublicMetadata() throws Exception {
         Map<String,String> expectedMetadata = new TreeMap<>();
         for (int i = RAND.nextInt(5) + 5; i >= 0; --i) {
-            String key = RandomStringUtils.randomAlphabetic(10, 13);
-            String value = RandomStringUtils.randomAlphanumeric(20, 25);
+            String key = SRAND.nextAlphabetic(10, 13);
+            String value = SRAND.nextAlphanumeric(20, 25);
             expectedMetadata.put(key, value);
             mockRepo.upsertMetadata(key,
                     value.getBytes(StandardCharsets.UTF_8));
@@ -520,8 +521,8 @@ public class XMLExporterTests {
         Map<Long,String> expectedCategories = new TreeMap<>();
         for (int i = RAND.nextInt(5) + 5; i >= 0; --i) {
             ToDoCategory category = mockRepo.insertCategory(
-                    RandomStringUtils.randomAlphabetic(5, 8) + " "
-                            + RandomStringUtils.randomAlphanumeric(5, 9));
+                    SRAND.nextAlphabetic(5, 8) + " "
+                            + SRAND.nextAlphanumeric(5, 9));
             expectedCategories.put(category.getId(), category.getName());
         }
         expectedCategories.put((long) ToDoCategory.UNFILED,
@@ -1073,8 +1074,8 @@ public class XMLExporterTests {
         testCategories.add(category);
         for (int i = RAND.nextInt(5) + 5; i >= 0; --i) {
             category = mockRepo.insertCategory(
-                    RandomStringUtils.randomAlphabetic(5, 8) + " "
-                            + RandomStringUtils.randomAlphanumeric(5, 9));
+                    SRAND.nextAlphabetic(5, 8) + " "
+                            + SRAND.nextAlphanumeric(5, 9));
             testCategories.add(category);
         }
 

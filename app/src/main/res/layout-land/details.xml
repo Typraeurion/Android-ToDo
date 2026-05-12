@@ -11,12 +11,13 @@
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:orientation="vertical">
-        <EditText android:text="@string/DetailDescriptionPlaceholder"
+        <EditText android:text=""
             android:id="@+id/DetailEditTextDescription"
             android:enabled="false"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text|textCapSentences|textMultiLine"
+            android:hint="@string/DetailDescriptionPlaceholder"
             android:autofillHints="no">
             <requestFocus/>
         </EditText>
@@ -36,7 +37,6 @@
                     android:layout_height="match_parent"
                     android:textColor="@color/black"
                     android:paddingRight="8sp"
-                    android:inputType="number"
                     android:autofillHints="no"
                     android:labelFor="@id/DetailEditTextPriority">
                 </TextView>

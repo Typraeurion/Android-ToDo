@@ -103,11 +103,13 @@ public class MockToDoRepository implements ToDoRepository {
     private Runnable observerNotificationRunner = new Runnable() {
         @Override
         public void run() {
-            for (DataSetObserver observer : registeredObservers) try {
-                observer.onChanged();
-            } catch (Exception e) {
-                Log.w(TAG, "Caught exception when notifying observer "
-                        + observer.getClass().getCanonicalName(), e);
+            synchronized (registeredObservers) {
+                for (DataSetObserver observer : registeredObservers) try {
+                    observer.onChanged();
+                } catch (Exception e) {
+                    Log.w(TAG, "Caught exception when notifying observer "
+                            + observer.getClass().getCanonicalName(), e);
+                }
             }
         }
     };
@@ -160,11 +162,13 @@ public class MockToDoRepository implements ToDoRepository {
     private Runnable observerInvalidationRunner = new Runnable() {
         @Override
         public void run() {
-            for (DataSetObserver observer : registeredObservers) try {
-                observer.onInvalidated();
-            } catch (Exception e) {
-                Log.w(TAG, "Caught exception when invalidating observer "
-                        + observer.getClass().getCanonicalName(), e);
+            synchronized (registeredObservers) {
+                for (DataSetObserver observer : registeredObservers) try {
+                    observer.onInvalidated();
+                } catch (Exception e) {
+                    Log.w(TAG, "Caught exception when invalidating observer "
+                            + observer.getClass().getCanonicalName(), e);
+                }
             }
         }
     };
@@ -265,7 +269,7 @@ public class MockToDoRepository implements ToDoRepository {
                         return -1;
                     if (item2.getId() == null)
                         return 1;
-                    return (item1.getId() < item2.getId()) ? -1 : 1;
+                    return Long.compare(item1.getId(), item2.getId());
                 }
             };
 
@@ -1293,12 +1297,16 @@ public class MockToDoRepository implements ToDoRepository {
 
     @Override
     public void registerDataSetObserver(@NonNull DataSetObserver observer) {
-        registeredObservers.add(observer);
+        synchronized (registeredObservers) {
+            registeredObservers.add(observer);
+        }
     }
 
     @Override
     public void unregisterDataSetObserver(@NonNull DataSetObserver observer) {
-        registeredObservers.remove(observer);
+        synchronized (registeredObservers) {
+            registeredObservers.remove(observer);
+        }
     }
 
 }
