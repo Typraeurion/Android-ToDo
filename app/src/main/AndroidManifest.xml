@@ -4,8 +4,8 @@
     package="com.xmission.trevin.android.todo"
     android:installLocation="auto"
     android:targetSandboxVersion="1"
-    android:versionCode="1050101"
-    android:versionName="1.5.1">
+    android:versionCode="1060001"
+    android:versionName="1.6.0">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
