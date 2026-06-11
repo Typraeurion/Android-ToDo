@@ -1,0 +1,3 @@
+Version 1.6.3
+* Fixed a regression bug in the scroll bar implementation
+  where the thumb did not visibly move while dragging it.

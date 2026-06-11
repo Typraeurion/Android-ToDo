@@ -787,8 +787,8 @@ same password if you wish.)}
 @node Known Bugs, , Exporting and Importing, Top
 @chapter Known Bugs
 
-The following bugs are known to exist in version 1.6.1 (build date
-2026.05.10) of To Do.  If you encounter any other bugs, please go to
+The following bugs are known to exist in version 1.6.3 (build date
+2026.06.11) of To Do.  If you encounter any other bugs, please go to
 my project page on GitHub to report them:
 
 @uref{https://github.com/Typraeurion/Android-ToDo/issues}
@@ -813,7 +813,16 @@ display which is subsequently forced in Android 16.
 
 @end itemize
 
-The following bugs were in the 1.6.0 release (built 2026.03.23) bug
+The following bugs were in the 1.6.2 release (built 2026.05.12) but
+have been fixed as of 1.6.3 (built 2026.06.11).
+
+@itemize @bullet
+@item
+When dragging the scroll bar in the settings or note editor, the thumb
+does not visibly move.  This bug was introduced in version 1.6.2.
+@end itemize
+
+The following bugs were in the 1.6.0 release (built 2026.03.23) but
 have been fixed as of 1.6.1 (built 2026.05.10).
 
 @itemize @bullet
