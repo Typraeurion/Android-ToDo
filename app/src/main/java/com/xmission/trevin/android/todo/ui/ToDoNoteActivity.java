@@ -37,6 +37,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -209,6 +210,9 @@ public class ToDoNoteActivity extends AppCompatActivity {
         deleteButton = findViewById(R.id.NoteButtonDelete);
         deleteButton.setOnClickListener(new DeleteButtonOnClickListener());
         deleteButton.setEnabled(isDetailHandoff);
+
+        getOnBackPressedDispatcher().addCallback(
+                this, new ConfirmDiscardOnBackPressedCallback());
 
         // Connect to the database (on a non-UI thread) and populate the UI
         Runnable openRepo = new OpenRepositoryRunner(
@@ -519,38 +523,54 @@ public class ToDoNoteActivity extends AppCompatActivity {
     // This alert dialog is made available at the package level for testing
     AlertDialog discardConfirmationDialog = null;
 
-    /** Called when the user presses the Back button */
-    @Override
-    public void onBackPressed() {
-        Log.d(TAG, "Back button pressed");
-        // Did the user make any changes to the note?
-        String note = toDoNote.getText().toString();
-        if (!TextUtils.equals(oldNoteText, note)) {
-            Log.d(TAG, "Note has been changed; asking for confirmation");
-            if (discardConfirmationDialog == null) {
-                discardConfirmationDialog = new AlertDialog
-                        .Builder(this)
-                        .setIcon(android.R.drawable.ic_dialog_alert)
-                        .setMessage(R.string.ConfirmUnsavedChanges)
-                        .setTitle(R.string.AlertUnsavedChangesTitle)
-                        .setNegativeButton(R.string.ConfirmationButtonCancel,
-                                ToDoDetailsActivity.DISMISS_LISTENER)
-                        .setPositiveButton(R.string.ConfirmationButtonDiscard,
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog,
-                                                        int which) {
-                                        dialog.dismiss();
-                                        Log.d(TAG, "Calling superclass onBackPressed");
-                                        ToDoNoteActivity.super.onBackPressed();
-                                    }
-                                })
-                        .create();
-            }
-            discardConfirmationDialog.show();
-            return;
+    /**
+     * Called when the user presses the Back button.  If the note has
+     * unsaved changes, the user is asked to confirm discarding them
+     * before the back navigation is allowed to proceed.
+     */
+    private class ConfirmDiscardOnBackPressedCallback extends OnBackPressedCallback {
+        ConfirmDiscardOnBackPressedCallback() {
+            super(true);
         }
-        super.onBackPressed();
+
+        @Override
+        public void handleOnBackPressed() {
+            Log.d(TAG, "Back button pressed");
+            // Did the user make any changes to the note?
+            String note = toDoNote.getText().toString();
+            if (!TextUtils.equals(oldNoteText, note)) {
+                Log.d(TAG, "Note has been changed; asking for confirmation");
+                if (discardConfirmationDialog == null) {
+                    discardConfirmationDialog = new AlertDialog
+                            .Builder(ToDoNoteActivity.this)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .setMessage(R.string.ConfirmUnsavedChanges)
+                            .setTitle(R.string.AlertUnsavedChangesTitle)
+                            .setNegativeButton(R.string.ConfirmationButtonCancel,
+                                    ToDoDetailsActivity.DISMISS_LISTENER)
+                            .setPositiveButton(R.string.ConfirmationButtonDiscard,
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog,
+                                                            int which) {
+                                            dialog.dismiss();
+                                            Log.d(TAG, "Discarding changes and navigating back");
+                                            goBack();
+                                        }
+                                    })
+                            .create();
+                }
+                discardConfirmationDialog.show();
+                return;
+            }
+            goBack();
+        }
+
+        /** Perform the default back navigation. */
+        private void goBack() {
+            setEnabled(false);
+            getOnBackPressedDispatcher().onBackPressed();
+        }
     }
 
     /** Called when the activity is about to be destroyed */

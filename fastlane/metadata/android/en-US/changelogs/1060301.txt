@@ -1,3 +1,7 @@
 Version 1.6.3
+* Updated the target SDK to Android 16 (Baklava).
 * Fixed a regression bug in the scroll bar implementation
   where the thumb did not visibly move while dragging it.
+* Fixed an edge case bug in computing the next due date for on-date
+  repeat intervals that are allowed on a limited set of days of
+  the week where the adjusted date crosses the year boundary.

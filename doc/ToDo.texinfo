@@ -86,12 +86,13 @@ features without using this manual.
 @node Device Compatibility, Permissions, The Basics, The Basics
 @section Device Compatibility
 
-The application is designed for compatibility with Android 15 (Vanilla
-Ice Cream) but also runs on Android 5.0 (Lollipop) through 16
-(Baklava) which should cover 99.8% of Android devices on the market as
-of May 2026.  (It has been tested on Lollipop, Marshmallow, Nougat,
+The application is designed for compatibility with Android 16
+(Baklava) but also runs on Android 5.0 (Lollipop) through 17 (Cinnamon
+Bun) which should cover 99.8% of Android devices on the market as of
+June 2026.  (It has been tested on Lollipop, Marshmallow, Nougat,
 Oreo, Quince Tart, Snow Cone, Tiramisu, Upside-down Cake, Vanilla Ice
-Cream, and Baklava.)  Support for newer Android devices is planned.
+Cream, Baklava, and Cinnamon Bun.)  Support for newer Android devices
+is planned.
 
 @node Permissions, Adding To Do Items, Device Compatibility, The Basics
 @section Permissions
@@ -820,6 +821,15 @@ have been fixed as of 1.6.3 (built 2026.06.11).
 @item
 When dragging the scroll bar in the settings or note editor, the thumb
 does not visibly move.  This bug was introduced in version 1.6.2.
+
+@item
+An edge case bug was found in computing the next due date for on-date
+repeat intervals that are allowed on a limited set of days of the week
+where the adjusted date crosses the year boundary.  For example a
+yearly repeat on the closest Wednesday or Friday to December 31 would
+be adjusted in 2002 to January 1, 2003, and then the next due date
+would incorrectly jump to December 31, 2004 instead of December 31,
+2003.
 @end itemize
 
 The following bugs were in the 1.6.0 release (built 2026.03.23) but

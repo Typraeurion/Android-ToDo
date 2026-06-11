@@ -35,7 +35,9 @@ import android.text.*;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.work.Data;
@@ -61,7 +63,7 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
  *
  * @author Trevin Beattie
  */
-public class ImportActivity extends Activity {
+public class ImportActivity extends AppCompatActivity {
 
     private static final String TAG = "ImportActivity";
 
@@ -320,6 +322,9 @@ public class ImportActivity extends Activity {
 
         importButton.setOnClickListener(new ImportButtonOnClickListener());
         cancelButton.setOnClickListener(new CancelClickListener());
+
+        getOnBackPressedDispatcher().addCallback(
+                this, new ImportOnBackPressedCallback());
     }
 
     /**
@@ -333,6 +338,7 @@ public class ImportActivity extends Activity {
         Log.d(TAG, String.format(Locale.US, ".onActivityResult(%d,%d,%s)",
                 requestCode, resultCode, (resultData == null) ?
                         null : resultData.getData()));
+        super.onActivityResult(requestCode, resultCode, resultData);
         if (requestCode != SAF_PICK_XML_FILE)
             // Request code not recognized; ignore it
             return;
@@ -393,13 +399,21 @@ public class ImportActivity extends Activity {
     }
 
     /**
-     * Override the back button to prevent it from happening
+     * Intercept the back button to prevent it from happening
      * in the middle of an import.
      */
-    @Override
-    public void onBackPressed() {
-        if (cancelButton.isEnabled())
-            super.onBackPressed();
+    private class ImportOnBackPressedCallback extends OnBackPressedCallback {
+        ImportOnBackPressedCallback() {
+            super(true);
+        }
+
+        @Override
+        public void handleOnBackPressed() {
+            if (cancelButton.isEnabled()) {
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        }
     }
 
     /** Enable or disable the form items */
@@ -716,6 +730,8 @@ public class ImportActivity extends Activity {
         Log.d(TAG, String.format(".onRequestPermissionsResult(%d, %s, %s)",
                 code, Arrays.toString(permissions),
                 Arrays.toString(resultNames)));
+
+        super.onRequestPermissionsResult(code, permissions, results);
 
         if (code != R.id.ImportEditTextFile) {
             Log.e(TAG, "Unexpected code from request permissions; ignoring!");

@@ -38,7 +38,9 @@ import android.text.*;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.work.Data;
@@ -63,7 +65,7 @@ import com.xmission.trevin.android.todo.util.StringEncryption;
  *
  * @author Trevin Beattie
  */
-public class ExportActivity extends Activity {
+public class ExportActivity extends AppCompatActivity {
 
     private static final String TAG = "ExportActivity";
 
@@ -272,6 +274,9 @@ public class ExportActivity extends Activity {
 
         exportButton.setOnClickListener(new ExportButtonOnClickListener());
         cancelButton.setOnClickListener(new CancelClickListener());
+
+        getOnBackPressedDispatcher().addCallback(
+                this, new ExportOnBackPressedCallback());
     }
 
     /**
@@ -285,6 +290,7 @@ public class ExportActivity extends Activity {
         Log.d(TAG, String.format(Locale.US, ".onActivityResult(%d,%d,%s)",
                 requestCode, resultCode, (resultData == null) ?
                         null : resultData.getData()));
+        super.onActivityResult(requestCode, resultCode, resultData);
         if (requestCode != SAF_PICK_XML_DIRECTORY)
             // Request code not recognized; ignore it
             return;
@@ -345,13 +351,21 @@ public class ExportActivity extends Activity {
     }
 
     /**
-     * Override the back button to prevent it from happening
+     * Intercept the back button to prevent it from happening
      * in the middle of an export.
      */
-    @Override
-    public void onBackPressed() {
-        if (cancelButton.isEnabled())
-            super.onBackPressed();
+    private class ExportOnBackPressedCallback extends OnBackPressedCallback {
+        ExportOnBackPressedCallback() {
+            super(true);
+        }
+
+        @Override
+        public void handleOnBackPressed() {
+            if (cancelButton.isEnabled()) {
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        }
     }
 
     /** Enable or disable the form items */
@@ -588,6 +602,8 @@ public class ExportActivity extends Activity {
         Log.d(TAG, String.format(".onRequestPermissionsResult(%d, %s, %s)",
                 code, Arrays.toString(permissions),
                 Arrays.toString(resultNames)));
+
+        super.onRequestPermissionsResult(code, permissions, results);
 
         if (code != R.id.ExportEditTextFile) {
             Log.e(TAG, "Unexpected code from request permissions; ignoring!");

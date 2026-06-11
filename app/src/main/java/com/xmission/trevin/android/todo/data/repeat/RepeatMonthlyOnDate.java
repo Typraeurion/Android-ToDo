@@ -23,6 +23,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Repeating interval for a monthly To Do item that occurs on a
@@ -70,7 +71,7 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
             // within a week of the prior due date.
             LocalDate priorTarget = priorDueDate.withDayOfMonth(
                     Math.min(date, priorDueDate.lengthOfMonth()));
-            int daysApart = priorTarget.until(priorDueDate).getDays();
+            long daysApart = ChronoUnit.DAYS.between(priorTarget, priorDueDate);
             if (daysApart < -14) {
                 // Target must have been in the previous month
                 Log.d("RepeatMonthlyOnDate", String.format(
@@ -84,7 +85,7 @@ public class RepeatMonthlyOnDate extends AbstractDateRepeat {
                 Log.d("RepeatMonthlyOnDate", String.format(
                         "Prior due date appears to be adjusted from the next"
                                 + " month; adding %d months for the next repeat",
-                        increment - 1));
+                        increment + 1));
                 nextMonth = priorDueDate.plusMonths(increment + 1);
             } else {
                 nextMonth = priorDueDate.plusMonths(increment);

@@ -180,6 +180,42 @@ public class RepeatYearlyOnDateTests {
     }
 
     /**
+     * Test case for a yearly repeating interval for December 31 on the
+     * closest Sunday, Wednesday, or Friday when the current due date
+     * is Wednesday, January 1, 2003 (year-crossing issue).
+     */
+    @Test
+    public void testRepeatYearlyOnDec31ClosestWednesdayFromJan1() {
+        LocalDate targetDate = LocalDate.of(2002, 12, 31);
+        LocalDate startDate = targetDate.plusDays(1);
+        Set<WeekDays> allowed = Set.of(WeekDays.SUNDAY,
+                WeekDays.WEDNESDAY, WeekDays.FRIDAY);
+        WeekdayDirection direction = WeekdayDirection.CLOSEST_OR_PREVIOUS;
+        RepeatYearlyOnDate repeat = new RepeatYearlyOnDate(targetDate);
+        repeat.setDate(targetDate.getDayOfMonth());
+        repeat.setMonth(Months.fromJavaMonth(targetDate.getMonth()));
+        repeat.setAllowedWeekDays(allowed);
+        repeat.setDirection(direction);
+        startDate = adjustTarget(startDate, allowed, direction);
+        LocalDate completed = startDate.plusDays(52);
+        targetDate = targetDate.plusYears(1)
+                .withMonth(repeat.getMonth().getJavaMonth().getValue());
+        targetDate = targetDate.withDayOfMonth(Math.min(repeat.getDate(),
+                targetDate.lengthOfMonth()));
+        LocalDate expectedDue = adjustTarget(targetDate, allowed, direction);
+        LocalDate actualDue = repeat.computeNextDueDate(startDate, completed);
+        StringBuffer message = new StringBuffer(
+                "Next due date for task due ")
+                .append(startDate.format(DAY_FORMAT)).append(", ")
+                .append(direction).append(' ')
+                .append(allowed).append(" to ")
+                .append(repeat.getDate()).append(' ')
+                .append(repeat.getMonth()).append(", completed ")
+                .append(completed.format(DAY_FORMAT));
+        assertEquals(message.toString(), expectedDue, actualDue);
+    }
+
+    /**
      * Test an every <i>N</i> years repeating interval, allowed on the
      * next of a subset of days of the week, with an end date.
      */

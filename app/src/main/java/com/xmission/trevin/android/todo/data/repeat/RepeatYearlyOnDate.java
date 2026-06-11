@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Repeating interval for a monthly To Do item that occurs on a
@@ -102,20 +103,39 @@ public class RepeatYearlyOnDate extends AbstractDateRepeat {
             @NonNull LocalDate priorDueDate, @NonNull LocalDate completed) {
         // tentatively advance by 1 year to check whether
         // an adjustment will cross back to the previous year.
-        LocalDate nextYear = priorDueDate.plusYears(1);
-        LocalDate candiDate = setDateAndAdjust(nextYear);
-        if (candiDate.equals(priorDueDate)) {
-            // Confirmed month crossing; increment
-            // 1 year more than the normal increment.
-            Log.d(getClass().getSimpleName(), String.format(
-                    "Adjustment for %s crossed back to %s;"
-                            + " advancing %d years",
-                    nextYear, candiDate, increment + 1));
-            candiDate = setDateAndAdjust(nextYear.plusYears(increment));
-        } else if (increment > 1) {
-            // No year crossing; use the normal increment
-            candiDate = setDateAndAdjust(priorDueDate.plusYears(increment));
+        LocalDate nextYear;
+        // If the prior due date is not the target date,
+        // the target date was probably a disallowed day of the week.
+        if ((priorDueDate.getDayOfMonth() != date) ||
+                (priorDueDate.getMonth() != month.getJavaMonth())) {
+            // Move to the target date if it's
+            // within a month of the prior due date.
+            LocalDate priorTarget = priorDueDate.withMonth(
+                    month.getJavaMonth().getValue());
+            priorTarget = priorTarget.withDayOfMonth(
+                    Math.min(date, priorTarget.lengthOfMonth()));
+            long daysApart = ChronoUnit.DAYS.between(priorTarget, priorDueDate);
+            if (daysApart < -31) {
+                // Target must have been in the previous year
+                Log.d("RepeatYearlyOnDate", String.format(
+                        "Prior due date appears to be adjusted from the previous"
+                        + " year; adding %d years for the next repeat",
+                        increment - 1));
+                nextYear = priorDueDate.plusYears(increment - 1);
+            } else if (daysApart > 31) {
+                // Target must have been in the next year
+                Log.d("RepeatYearlyOnDate", String.format(
+                        "Prior due date appears to be adjusted from the next"
+                        + " year; adding %d years for the next repeat",
+                        increment + 1));
+                nextYear = priorDueDate.plusYears(increment + 1);
+            } else {
+                nextYear = priorDueDate.plusYears(increment);
+            }
+        } else {
+            nextYear = priorDueDate.plusYears(increment);
         }
+        LocalDate candiDate = setDateAndAdjust(nextYear);
         return checkEndDate(priorDueDate, candiDate);
     }
 

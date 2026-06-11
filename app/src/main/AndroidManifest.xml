@@ -39,10 +39,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!-- Minimum = Lollipop (Android 5.0).
-         currently tracking Vonilla Ice Cream (Android 15). -->
+         currently tracking Baklava (Android 16). -->
 
     <uses-sdk android:minSdkVersion="21"
-              android:targetSdkVersion="35"/>
+              android:targetSdkVersion="36"/>
 
     <!-- For data extraction rules, see: https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore -->
     <!-- For full backup content, see: https://developer.android.com/identity/data/autobackup#Files -->

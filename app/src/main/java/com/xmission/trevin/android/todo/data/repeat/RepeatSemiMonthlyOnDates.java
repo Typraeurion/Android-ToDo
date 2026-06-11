@@ -23,6 +23,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Repeating interval for a monthly To Do item that occurs on two
@@ -167,7 +168,8 @@ public class RepeatSemiMonthlyOnDates extends AbstractDateRepeat {
                         Math.min(this.date, lastDay));
                 LocalDate target2 = priorDueDate.withDayOfMonth(
                         Math.min(date2, lastDay));
-                int delta1 = Math.abs(priorDueDate.until(target1).getDays());
+                long delta1 = Math.abs(ChronoUnit.DAYS
+                        .between(priorDueDate, target1));
                 if (delta1 > 15) {
                     if (date < 15)
                         target1 = target1.minusMonths(1);
@@ -176,9 +178,11 @@ public class RepeatSemiMonthlyOnDates extends AbstractDateRepeat {
                     lastDay = target1.lengthOfMonth();
                     target1 = target1.withDayOfMonth(
                             Math.min(this.date, lastDay));
-                    delta1 = Math.abs(priorDueDate.until(target1).getDays());
+                    delta1 = Math.abs(ChronoUnit.DAYS
+                            .between(priorDueDate, target1));
                 }
-                int delta2 = Math.abs(priorDueDate.until(target2).getDays());
+                long delta2 = Math.abs(ChronoUnit.DAYS
+                        .between(priorDueDate, target2));
                 if (delta2 > 15) {
                     if (date < 15)
                         target2 = target2.minusMonths(1);
@@ -187,7 +191,8 @@ public class RepeatSemiMonthlyOnDates extends AbstractDateRepeat {
                     lastDay = target2.lengthOfMonth();
                     target2 = target2.withDayOfMonth(
                             Math.min(date2, lastDay));
-                    delta2 = Math.abs(priorDueDate.until(target2).getDays());
+                    delta2 = Math.abs(ChronoUnit.DAYS
+                            .between(priorDueDate, target2));
                 }
                 return (delta1 <= delta2) ? target1 : target2;
         }
