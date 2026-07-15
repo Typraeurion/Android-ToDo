@@ -226,7 +226,7 @@ things to do, a shopping list, a packing list, books to read, etc.
 When the application is first installed it comes with just one category,
 ``Unfiled,'' and all new items will be in this category.  To add new
 categories, open the category drop-down list next to the ``New'' button,
-then select ``Edit categories...''.
+then select ``Edit categories@dots{}''.
 
 @image{Default_category_list,72mm,128.1mm}
 
@@ -249,6 +249,12 @@ will default to the currently selected category.  If you select ``All,''
 then all items from all categories will be shown.
 
 @image{Single_list,72mm,128.1mm}
+
+If you find that you no longer need a category, you can remove it.
+Just go back to ``Edit Categories@dots{}'' and erase the name of the
+category, leaving the line blank.  When you click ``OK'', if there
+were any to-do items in that category they will be reassigned to
+``Unfiled''.
 
 @node Due Dates and Alarms, Repeating Tasks, Categorizing Lists, Top
 @chapter Due Dates and Alarms
