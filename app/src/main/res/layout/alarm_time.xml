@@ -3,19 +3,19 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="@color/view_background"
     android:scrollbars="vertical"
     android:scrollbarAlwaysDrawVerticalTrack="false">
     <LinearLayout android:id="@+id/LinearLayout00"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@color/white">
+        android:background="@color/view_background">
         <CheckBox android:id="@+id/AlarmCheckBox"
             android:layout_height="wrap_content"
             android:text="@string/AlarmTextAlarm"
             android:layout_width="match_parent"
-            android:textColor="@color/black"/>
+            android:textColor="@color/text_color"/>
 
         <LinearLayout android:id="@+id/LinearLayout01"
             android:layout_width="wrap_content"
@@ -33,7 +33,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/AlarmTextDaysEarlier"
-                android:textColor="@color/black"
+                android:textColor="@color/text_color"
                 android:padding="4sp"
                 android:labelFor="@id/AlarmEditDaysEarlier"/>
         </LinearLayout>
@@ -48,7 +48,7 @@
             android:layout_width="wrap_content"
             android:lines="2"
             android:text="@string/AlarmTextNextAlarm"
-            android:textColor="@color/black"/>
+            android:textColor="@color/text_color"/>
 
         <LinearLayout android:id="@+id/LinearLayout02"
             android:layout_height="wrap_content"

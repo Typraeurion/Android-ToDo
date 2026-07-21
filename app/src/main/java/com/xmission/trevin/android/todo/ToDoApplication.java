@@ -17,17 +17,18 @@
 package com.xmission.trevin.android.todo;
 
 //import android.app.Application;
+import android.app.Application;
 import android.os.Build;
 import android.util.Log;
+import androidx.appcompat.app.AppCompatDelegate;
 
-import androidx.multidex.MultiDexApplication;
-
+import com.xmission.trevin.android.todo.data.ToDoPreferences;
 import com.xmission.trevin.android.todo.receiver.AlarmInitReceiver;
 
 /**
  * Perform one-time initialization tasks for the To Do application.
  */
-public class ToDoApplication extends MultiDexApplication {
+public class ToDoApplication extends Application {
 
     private static final String TAG = "ToDoApplication";
 
@@ -36,9 +37,27 @@ public class ToDoApplication extends MultiDexApplication {
         Log.d(TAG, ".onCreate");
         super.onCreate();
 
-        // Initialize MultiDex so that the "desugaring" library can
-        // give us access to the java.time.* classes on older API's.
-        //MultiDex.install(this);
+        // Skip initializing night mode if we're running instrumented tests
+        // because using real preferences would interfere with mock preferences.
+        try {
+            Class.forName("androidx.test.InstrumentationRegistry");
+            Log.d(TAG, "Instrumentation detected; skipping night mode initialization");
+        } catch (ClassNotFoundException cx) {
+            // Initialize night mode according to current preferences
+            ToDoPreferences prefs = ToDoPreferences.getInstance(this);
+            ToDoPreferences.UITheme userTheme = prefs.getUITheme();
+            int nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+            switch (userTheme) {
+                case LIGHT:
+                    nightMode = AppCompatDelegate.MODE_NIGHT_NO;
+                    break;
+                case DARK:
+                    nightMode = AppCompatDelegate.MODE_NIGHT_YES;
+                    break;
+            }
+            AppCompatDelegate.setDefaultNightMode(nightMode);
+
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             /*

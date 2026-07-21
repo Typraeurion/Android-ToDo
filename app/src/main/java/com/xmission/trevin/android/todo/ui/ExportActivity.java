@@ -481,7 +481,7 @@ public class ExportActivity extends AppCompatActivity {
     private class IncludePrivateCheckedChangeListener
             implements CompoundButton.OnCheckedChangeListener {
         public void onCheckedChanged(
-                CompoundButton b, boolean checked) {
+                @NonNull CompoundButton b, boolean checked) {
             prefs.setExportPrivate(checked);
             findViewById(R.id.TableRowPasswordNotSetWarning)
                     .setVisibility((checked && !hasPassword)

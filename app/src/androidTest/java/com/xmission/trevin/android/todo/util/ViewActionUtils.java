@@ -21,14 +21,13 @@ import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
-import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.RootMatchers.isDialog;
 import static androidx.test.espresso.matcher.ViewMatchers.*;
 
-import static com.xmission.trevin.android.todo.ui.FocusAction.requestFocus;
 import static com.xmission.trevin.android.todo.util.LaunchUtils.*;
+import static org.hamcrest.CoreMatchers.any;
 import static org.hamcrest.CoreMatchers.anything;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.AllOf.allOf;
@@ -75,6 +74,39 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ViewActionUtils {
 
     private static final String LOG_TAG = "ViewActionUtils";
+
+    /**
+     * A {@link ViewAction} which wraps another {@link ViewAction}
+     * and suppresses any exception thrown by it.
+     */
+    private static class OptionalAction implements ViewAction {
+        private final ViewAction silentAction;
+        private OptionalAction(@NonNull ViewAction action) {
+            silentAction = action;
+        }
+        @Override
+        public Matcher<View> getConstraints() {
+            // We must return any(View.class) to prevent Espresso from
+            // failing before the perform() call if constraints are not met.
+            return any(View.class);
+        }
+        @Override
+        public String getDescription() {
+            return "Optional: " + silentAction.getDescription();
+        }
+        @Override
+        public void perform(UiController uiController, View view) {
+            try {
+                silentAction.perform(uiController, view);
+            } catch (Exception e) {
+                Log.w(LOG_TAG, getDescription() + " failed", e);
+            }
+        }
+    }
+
+    public static ViewAction optional(@NonNull ViewAction action) {
+        return new OptionalAction(action);
+    }
 
     /**
      * Wait for a {@link Dialog} with specified text to be shown.
@@ -812,6 +844,44 @@ public class ViewActionUtils {
     }
 
     /**
+     * A {@link ViewAction} that sets the text of an {@link EditText}
+     * directly.  Unlike {@link androidx.test.espresso.action.ViewActions#replaceText},
+     * its only constraints are that the target is a visible
+     * {@code EditText}; it does <em>not</em> require the view to occupy a
+     * non-empty rectangle on the screen.  This avoids a race observed on
+     * API 27 where requesting focus pops up the soft keyboard and the field
+     * is still reported off-screen (empty global visible rect) by the time
+     * a following {@code replaceText} checks its {@code isDisplayed()}
+     * constraint.  Requesting focus and setting the text happen together in
+     * a single action, so no intervening action can raise the keyboard
+     * before the constraints are checked.  Setting the text calls
+     * {@link EditText#setText}, the same underlying operation
+     * {@code replaceText} performs, so any text watchers on the field fire
+     * exactly as they would for real input.
+     *
+     * @param newText the text to set in the edit text field
+     */
+    private static ViewAction setEditTextValue(final String newText) {
+        return new ViewAction() {
+            @Override
+            public Matcher<View> getConstraints() {
+                return allOf(isAssignableFrom(EditText.class),
+                        withEffectiveVisibility(Visibility.VISIBLE));
+            }
+            @Override
+            public String getDescription() {
+                return "set EditText value to \"" + newText + "\"";
+            }
+            @Override
+            public void perform(UiController uiController, View view) {
+                view.requestFocus();
+                ((EditText) view).setText(newText);
+                uiController.loopMainThreadUntilIdle();
+            }
+        };
+    }
+
+    /**
      * Change the content of an edit text field.  The field must exist
      * within the activity content.  This is the Espresso version.
      *
@@ -841,9 +911,8 @@ public class ViewActionUtils {
         }
         onView(withId(fieldId))
                 .check(matches(isAssignableFrom(EditText.class)))
-                .perform(requestFocus(),
-                        replaceText(newText),
-                        closeSoftKeyboard());
+                .perform(setEditTextValue(newText),
+                        optional(closeSoftKeyboard()));
     }
 
     /**

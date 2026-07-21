@@ -1,0 +1,3 @@
+Version 1.6.4
+* Updated the target SDK to Android 17 (Cinnamon Bun).
+* Added support for switching the UI theme to dark/night mode.

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Invisible box for sizing -->
+    <item
+        android:gravity="center"
+        android:width="30dp"
+        android:height="30dp">
+      <shape android:shape="rectangle">
+        <solid android:color="#00808080" />
+      </shape>
+    </item>
+    <!-- The base button -->
+    <item
+        android:gravity="center"
+        android:width="25dp"
+        android:height="25dp">
+        <shape android:shape="rectangle">
+            <!-- 1-pixel almost-black border -->
+            <stroke android:width="1dp"
+                android:color="#c0121212"/>
+            <!-- 1-point (approximate) corner rounding -->
+            <corners android:radius="2.5dp"/>
+            <!-- Gradient centered 3/4 of the way down.  Originally this
+                 was a radial gradient extended beyond the boundaries on
+                 a vertical rectangle, which made it appear linear when
+                 stretched (from a 9-patch) with highlights around the edges. -->
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#7a7a7a"
+                android:centerY="0.75"
+                android:centerColor="#5e5e5e"
+                android:endColor="#6e6e6e"/>
+        </shape>
+    </item>
+    <!-- Side lightening.  Here we need to use a separate gradient
+         for each side which only transitions close to the edge. -->
+    <item
+        android:gravity="center"
+        android:width="25dp"
+        android:height="25dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="2.5dp"/>
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#20ffffff"
+                android:centerX="0.125"
+                android:centerColor="#00ffffff"
+                android:endColor="#00ffffff"/>
+        </shape>
+    </item>
+    <item
+        android:gravity="center"
+        android:width="25dp"
+        android:height="25dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="2.5dp"/>
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#00ffffff"
+                android:centerX="0.875"
+                android:centerColor="#00ffffff"
+                android:endColor="#20ffffff"/>
+        </shape>
+    </item>
+</layer-list>

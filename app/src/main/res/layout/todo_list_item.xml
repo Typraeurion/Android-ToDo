@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="1dip"
-    android:background="@color/white"
+    android:background="@color/view_background"
     android:orientation="horizontal">
     <CheckBox style="@style/ListCheckbox"
         android:id="@+id/ToDoItemChecked"

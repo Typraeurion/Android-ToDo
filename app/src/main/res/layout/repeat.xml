@@ -3,7 +3,7 @@
   xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="@color/view_background"
     android:scrollbars="vertical"
     android:scrollbarAlwaysDrawVerticalTrack="false">
     <LinearLayout android:id="@+id/LinearLayout01"
@@ -45,7 +45,7 @@
                 android:text="@string/RepeatTextNone"
                 android:gravity="center"
                 android:padding="10dip"
-                android:textColor="@color/black"/>
+                android:textColor="@color/text_color"/>
 
             <LinearLayout android:id="@+id/RepeatLayout"
                 android:layout_width="match_parent"
@@ -76,7 +76,7 @@
                             android:text="@string/RepeatTextEvery"
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
-                            android:textColor="@color/black"
+                            android:textColor="@color/text_color"
                             android:layout_weight="1"
                             android:labelFor="@id/RepeatEditTextEvery"/>
                         <LinearLayout android:id="@+id/LinearLayout04"
@@ -95,7 +95,7 @@
                                 android:layout_height="match_parent"
                                 android:text="@string/RepeatTextDays"
                                 android:padding="5dip"
-                                android:textColor="@color/black"
+                                android:textColor="@color/text_color"
                                 android:layout_weight="1"
                                 android:gravity="start|center_vertical"/>
                         </LinearLayout>
@@ -110,7 +110,7 @@
                             android:text="@string/RepeatTextEndOn"
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
-                            android:textColor="@color/black"
+                            android:textColor="@color/text_color"
                             android:layout_weight="1"
                             android:labelFor="@id/RepeatButtonEndDate"/>
                         <Button android:id="@+id/RepeatButtonEndDate"
@@ -129,7 +129,7 @@
                             android:text="@string/RepeatTextRepeatOn"
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
-                            android:textColor="@color/black"
+                            android:textColor="@color/text_color"
                             android:layout_weight="1"/>
                         <LinearLayout android:id="@+id/LinearLayout05"
                             android:layout_width="wrap_content"
@@ -190,7 +190,7 @@
                             android:text="@string/RepeatLabelDirectionFromTarget"
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
-                            android:textColor="@color/black"
+                            android:textColor="@color/text_color"
                             android:layout_weight="1"/>
                         <RadioGroup android:id="@+id/RepeatRadioGroupAlternateDirection"
                             android:layout_width="wrap_content"
@@ -223,7 +223,7 @@
                             android:text="@string/RepeatTextRepeatBy"
                             android:gravity="end|center_vertical"
                             android:padding="5dip"
-                            android:textColor="@color/black"
+                            android:textColor="@color/text_color"
                             android:layout_weight="1"/>
                         <RadioGroup android:id="@+id/RepeatRadioGroupDayte"
                             android:layout_width="wrap_content"
@@ -247,15 +247,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="10dip"
-            android:background="@color/black">
+            android:background="@color/text_color">
             <TextView android:id="@+id/RepeatTextDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="1px"
-                android:background="@color/white"
+                android:background="@color/view_background"
                 android:padding="8dip"
                 android:text="@string/RepeatDescriptionNone"
-                android:textColor="@color/black"
+                android:textColor="@color/text_color"
                 android:lines="2"/>
         </LinearLayout>
     </LinearLayout>

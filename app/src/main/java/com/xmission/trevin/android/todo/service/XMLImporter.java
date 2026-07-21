@@ -1743,6 +1743,30 @@ public class XMLImporter extends org.xml.sax.helpers.DefaultHandler
         if (useLocalZone == Boolean.TRUE)
             prefsEditor.setTimeZoneLocal();
 
+        if (prefsMap.containsKey(TPREF_UI_THEME)) {
+            try {
+                ToDoPreferences.UITheme newTheme = ToDoPreferences.UITheme
+                        .valueOf(prefsMap.get(TPREF_UI_THEME));
+                if (newTheme != prefs.getUITheme())
+                    prefsEditor.setUITheme(newTheme);
+            } catch (IllegalArgumentException x) {
+                Log.e(LOG_TAG, "Invalid UI theme: "
+                        + prefsMap.get(TPREF_UI_THEME), x);
+                // Ignore this change
+            }
+        }
+
+        if (prefsMap.containsKey(TPREF_SCROLL_THRESHOLD)) {
+            try {
+                prefsEditor.setScrollBarThreshold(
+                        Float.parseFloat(prefsMap.get(TPREF_SCROLL_THRESHOLD)));
+            } catch (NumberFormatException x) {
+                Log.e(LOG_TAG, "Invalid scrollbar threshold: "
+                        + prefsMap.get(TPREF_SCROLL_THRESHOLD), x);
+                // Ignore this change
+            }
+        }
+
         prefsEditor.finish();
     }
 

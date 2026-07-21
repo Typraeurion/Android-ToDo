@@ -26,6 +26,7 @@ import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_IMPORT
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_LOCAL_TIME_ZONE;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_NOTIFICATION_SOUND;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_NOTIFICATION_VIBRATE;
+import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SCROLL_THRESHOLD;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SELECTED_CATEGORY;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SHOW_CATEGORY;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SHOW_CHECKED;
@@ -33,6 +34,7 @@ import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SHOW_D
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SHOW_ENCRYPTED;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SHOW_PRIORITY;
 import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_SHOW_PRIVATE;
+import static com.xmission.trevin.android.todo.data.ToDoPreferences.TPREF_UI_THEME;
 import static com.xmission.trevin.android.todo.service.XMLExporter.ATTR_CATEGORY_ID;
 import static com.xmission.trevin.android.todo.service.XMLExporter.ATTR_CHECKED;
 import static com.xmission.trevin.android.todo.service.XMLExporter.ATTR_COUNT;
@@ -291,6 +293,7 @@ public class XMLExporterTests {
                         .nextInt(ImportType.values().length)])
                 .setNotificationSound(RAND.nextLong() % 100000)
                 .setNotificationVibrate(RAND.nextBoolean())
+                .setScrollBarThreshold(RAND.nextFloat())
                 .setSelectedCategory(RAND.nextLong() % 100000)
                 .setShowCategory(RAND.nextBoolean())
                 .setShowChecked(RAND.nextBoolean())
@@ -298,6 +301,8 @@ public class XMLExporterTests {
                 .setShowEncrypted(RAND.nextBoolean())
                 .setShowPriority(RAND.nextBoolean())
                 .setShowPrivate(RAND.nextBoolean())
+                .setUITheme(ToDoPreferences.UITheme.values()[
+                        RAND.nextInt(ToDoPreferences.UITheme.values().length)])
                 .finish();
         if (RAND.nextBoolean())
             mockPrefs.setTimeZoneLocal();
@@ -377,6 +382,12 @@ public class XMLExporterTests {
         if (!mockPrefs.useLocalTimeZone())
             assertPreferenceEquals("Fixed Time Zone", TPREF_FIXED_TIME_ZONE,
                     mockPrefs.getTimeZone().getId(), doc);
+
+        assertPreferenceEquals("UI theme", TPREF_UI_THEME,
+                mockPrefs.getUITheme().name(), doc);
+
+        assertPreferenceEquals("Scroll bar threshold", TPREF_SCROLL_THRESHOLD,
+                Float.toString(mockPrefs.getScrollBarThreshold()), doc);
 
         MockProgressBar.Progress endProgress = progress.getEndProgress();
         assertNotNull("Final progress data", endProgress);

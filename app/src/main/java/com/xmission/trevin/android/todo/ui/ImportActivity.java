@@ -38,6 +38,7 @@ import android.widget.*;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.work.Data;
@@ -49,6 +50,7 @@ import androidx.work.WorkRequest;
 
 import com.xmission.trevin.android.todo.R;
 import com.xmission.trevin.android.todo.data.ToDoPreferences;
+import com.xmission.trevin.android.todo.data.ToDoPreferences.OnToDoPreferenceChangeListener;
 import com.xmission.trevin.android.todo.service.PalmImportWorker;
 import com.xmission.trevin.android.todo.service.PalmImporter;
 import com.xmission.trevin.android.todo.service.ProgressBarUpdater;
@@ -216,6 +218,8 @@ public class ImportActivity extends AppCompatActivity {
 
         encryptor = StringEncryption.holdGlobalEncryption();
         prefs = ToDoPreferences.getInstance(this);
+        prefs.registerOnToDoPreferenceChangeListener(
+                UIPreferenceChangeListener, ToDoPreferences.TPREF_UI_THEME);
 
         workManager = WorkManager.getInstance(this);
 
@@ -394,6 +398,8 @@ public class ImportActivity extends AppCompatActivity {
     /** Called when the activity is about to be destroyed */
     @Override
     public void onDestroy() {
+        prefs.unregisterOnToDoPreferenceChangeListener(
+                UIPreferenceChangeListener, ToDoPreferences.TPREF_UI_THEME);
         StringEncryption.releaseGlobalEncryption(this);
         super.onDestroy();
     }
@@ -653,7 +659,7 @@ public class ImportActivity extends AppCompatActivity {
             if (importType == AdapterView.INVALID_POSITION)
                 importType = 5;        // test
             // Make an educated guess about the file type, based on the extension.
-            if (realName.toLowerCase().endsWith(".dat")) {
+            if (realName.toLowerCase(Locale.ROOT).endsWith(".dat")) {
                 // Assume Palm data
                 importRequest = new OneTimeWorkRequest
                         .Builder(PalmImportWorker.class)
@@ -823,5 +829,21 @@ public class ImportActivity extends AppCompatActivity {
                     ProgressBarUpdater.PROGRESS_CURRENT_MODE));
         }
     }
+
+    /**
+     * This observer is called if the import modifies the UI theme preference.
+     */
+    private static final OnToDoPreferenceChangeListener
+            UIPreferenceChangeListener = new OnToDoPreferenceChangeListener() {
+        @Override
+        public void onToDoPreferenceChanged(ToDoPreferences prefs) {
+            int nightMode = switch (prefs.getUITheme()) {
+                case LIGHT -> AppCompatDelegate.MODE_NIGHT_NO;
+                case DARK -> AppCompatDelegate.MODE_NIGHT_YES;
+                default -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+            };
+            AppCompatDelegate.setDefaultNightMode(nightMode);
+        }
+    };
 
 }

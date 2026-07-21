@@ -21,6 +21,26 @@ global_settings {
     max_trace_level 24
 }
 
+// Default to light-mode colors
+#ifndef (DarkMode)
+    #declare DarkMode = 0;
+#end
+
+// The post-it colors depend on whether we're rendering
+// it for light mode (yellow with a red pin)
+// or dark mode (goldenrod with a scarlet pin).
+#if (DarkMode = 0)
+    // Light mode
+    #declare Global_Light_Color = color White;
+    #declare Note_Color = color Yellow;
+    #declare Pin_Color = color Red;
+#else
+    // Dark mode
+    #declare Global_Light_Color = color rgb < 0.7, 0.7, 0.7 >;
+    #declare Note_Color = color Goldenrod; // rgb < 0.85, 0.8, 0.5 >;
+    #declare Pin_Color = color Scarlet; // rgb < 0.75, 0.25, 0.25 >;
+#end
+
 camera {
     location <0, 0.75, -5>
     right x
@@ -37,7 +57,7 @@ sky_sphere {
 
 light_source {
     <-100, 100, -500>
-    color White
+    color Global_Light_Color
 }
 
 bicubic_patch {
@@ -49,7 +69,7 @@ bicubic_patch {
     <-1, 0.5, 0>, <-0.5, 0.5, 0>, <0.5, 0.5, 0>, <1, 0.5, 0>,
     <-1, -0.875, 0>, <-0.5, -0.875, 0>, <0.5, -0.875, 0>, <1, -0.875, 0>,
     <-1, -0.9375, -0.5>, <-0.5, -0.953125, -0.4375>, <0.75, -0.984375, -0.3125>, <1, -1, -0.25>
-    pigment { color Yellow }
+    pigment { color Note_Color }
     finish {
 	ambient 0.2
 	specular 0.15
@@ -69,7 +89,7 @@ union {
 	cone {
 	    <0, 0, -0.25>, 0.05, <0, 0, -0.505>, 0.125
 	}
-	pigment { color Red }
+	pigment { color Pin_Color }
 	finish {
 	    ambient 0.15
 	    specular 0.6

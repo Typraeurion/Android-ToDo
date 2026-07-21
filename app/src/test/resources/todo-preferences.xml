@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ToDoApp version="2" db-version="3" exported="2026-01-29T15:42:58.000Z" total-records="18">
-  <Preferences count="17">
+<ToDoApp version="2" db-version="3" exported="2026-01-29T15:42:58.000Z" total-records="20">
+  <Preferences count="19">
     <SortOrder>18237</SortOrder>
     <ShowChecked>false</ShowChecked>
     <ShowDueDate>true</ShowDueDate>
@@ -12,6 +12,8 @@
     <FixedTimeZone>Asia/Pyongyang</FixedTimeZone>
     <NotificationVibrate>true</NotificationVibrate>
     <NotificationSound>14570</NotificationSound>
+    <UITheme>LIGHT</UITheme>
+    <ScrollBarThreshold>0.507659912109375</ScrollBarThreshold>
     <SelectedCategory>17734</SelectedCategory>
     <ExportFile>/storage/emulated/0/todo-5fpk3XVpLqdDUH5l.xml</ExportFile>
     <ExportPrivate>false</ExportPrivate>

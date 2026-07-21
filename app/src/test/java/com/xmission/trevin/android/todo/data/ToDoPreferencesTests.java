@@ -437,6 +437,35 @@ public class ToDoPreferencesTests
                 mockPrefs.getPreference(TPREF_NOTIFICATION_SOUND));
     }
 
+    /** Test getting the current UI theme */
+    @Test
+    public void testGetUITheme() {
+        UITheme expectedTheme = UITheme.values()[
+                RAND.nextInt(UITheme.values().length)];
+        mockPrefs.initializePreference(TPREF_UI_THEME, expectedTheme.name());
+        assertEquals("UI theme", expectedTheme,
+                toDoPrefs.getUITheme());
+    }
+
+    /** Test getting the default UI theme */
+    @Test
+    public void testGetUIThemeDefault() {
+        assertEquals("Default UI theme", UITheme.SYSTEM_DEFAULT,
+                toDoPrefs.getUITheme());
+    }
+
+    /** Test setting the UI theme */
+    @Test
+    public void testSetUITheme() {
+        UITheme expectedTheme = UITheme.values()[
+                RAND.nextInt(UITheme.values().length)];
+        toDoPrefs.setUITheme(expectedTheme);
+        assertFalse("setUITheme did not close the editor!",
+                mockPrefs.isEditorOpen());
+        assertEquals("UI theme", expectedTheme.name(),
+                mockPrefs.getPreference(TPREF_UI_THEME));
+    }
+
     /** Test getting the selected category */
     @Test
     public void testGetSelectedCategory() {
@@ -664,7 +693,7 @@ public class ToDoPreferencesTests
             TPREF_SCROLL_THRESHOLD, TPREF_SELECTED_CATEGORY,
             TPREF_SHOW_CATEGORY, TPREF_SHOW_CHECKED, TPREF_SHOW_DUE_DATE,
             TPREF_SHOW_ENCRYPTED, TPREF_SHOW_PRIORITY,
-            TPREF_SHOW_PRIVATE, TPREF_SORT_ORDER
+            TPREF_SHOW_PRIVATE, TPREF_SORT_ORDER, TPREF_UI_THEME
     };
 
     /**
@@ -872,6 +901,22 @@ public class ToDoPreferencesTests
     public void testNotificationSoundIgnored() {
         runListenerNotCalledTest(TPREF_NOTIFICATION_SOUND, "setNotificationSound",
                 () -> toDoPrefs.setNotificationSound(RAND.nextInt(100)));
+    }
+
+    @Test
+    public void testUIThemeListener() {
+        final UITheme theme = UITheme.values()[
+                RAND.nextInt(UITheme.values().length)];
+        runListenerCalledTest(TPREF_UI_THEME, "setUITheme",
+                () -> toDoPrefs.setUITheme(theme));
+    }
+
+    @Test
+    public void testUIThemeIgnored() {
+        final UITheme theme = UITheme.values()[
+                RAND.nextInt(UITheme.values().length)];
+        runListenerNotCalledTest(TPREF_UI_THEME, "setUITheme",
+                () -> toDoPrefs.setUITheme(theme));
     }
 
     @Test

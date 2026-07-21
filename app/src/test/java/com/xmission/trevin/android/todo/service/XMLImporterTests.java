@@ -186,6 +186,9 @@ public class XMLImporterTests {
                 true, mockPrefs.notificationVibrate());
         assertEquals(TPREF_NOTIFICATION_SOUND,
                 14570L, mockPrefs.getNotificationSound());
+        assertEquals(TPREF_UI_THEME, UITheme.LIGHT, mockPrefs.getUITheme());
+        assertEquals(TPREF_SCROLL_THRESHOLD, 0.507659912109375,
+                mockPrefs.getScrollBarThreshold(), 0.0000001);
         assertEquals(TPREF_SELECTED_CATEGORY,
                 17734L, mockPrefs.getSelectedCategory());
         // We do not expect the importer to change any of the
@@ -206,8 +209,8 @@ public class XMLImporterTests {
 
         MockProgressBar.Progress endProgress = progress.getEndProgress();
         assertNotNull("Progress meter after import", endProgress);
-        assertEquals("Total records in file", 18, endProgress.total);
-        assertEquals("Number of records processed", 18, endProgress.current);
+        assertEquals("Total records in file", 20, endProgress.total);
+        assertEquals("Number of records processed", 20, endProgress.current);
     }
 
     /**

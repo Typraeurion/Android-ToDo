@@ -8,6 +8,9 @@
         <item name="searchViewStyle">@style/MenuSearchViewStyle</item>
     </style>
 
+    <color name="view_background">@color/white</color>
+    <color name="text_color">@color/black</color>
+
     <style name="DatePicker.Button" parent="@android:style/Widget.Button.Small">
         <item name="android:background">@drawable/btn_default_small</item>
         <item name="android:layout_height">wrap_content</item>

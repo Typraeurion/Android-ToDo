@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:background="@color/white"
+    android:background="@color/view_background"
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:fitsSystemWindows="true"
@@ -35,7 +35,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:autofillHints="no"
                     android:labelFor="@id/DetailEditTextPriority">
@@ -60,7 +60,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:labelFor="@id/DetailSpinnerCategory">
                 </TextView>
@@ -87,7 +87,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp">
                 </TextView>
 
@@ -108,7 +108,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:labelFor="@id/DetailButtonDueDate">
                 </TextView>
@@ -135,7 +135,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:labelFor="@id/DetailButtonHideUntil">
                 </TextView>
@@ -158,7 +158,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:labelFor="@id/DetailButtonAlarm">
                 </TextView>
@@ -186,7 +186,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:labelFor="@id/DetailButtonRepeat">
                 </TextView>
@@ -209,7 +209,7 @@
                     android:layout_width="wrap_content"
                     android:layout_weight="1"
                     android:layout_height="match_parent"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_color"
                     android:paddingRight="8sp"
                     android:labelFor="@id/DetailCheckBoxPrivate">
                 </TextView>

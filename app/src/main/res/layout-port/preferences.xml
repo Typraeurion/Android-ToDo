@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/Preferences"
-    android:background="@color/white"
+    android:background="@color/view_background"
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:fitsSystemWindows="true"
@@ -95,6 +95,34 @@
                     android:layout_height="wrap_content"/>
             </TableRow>
         </TableLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="@string/PrefTextUITheme"/>
+            <RadioGroup android:id="@+id/PrefsRadioGroupUITheme"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <RadioButton android:id="@+id/PrefsRadioLightTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/PrefTextLightTheme"/>
+                <RadioButton android:id="@+id/PrefsRadioDarkTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/PrefTextDarkTheme"/>
+                <RadioButton android:id="@+id/PrefsRadioSystemTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/PrefTextDefaultTheme"
+                    android:checked="true"/>
+            </RadioGroup>
+        </LinearLayout>
 
         <TextView android:id="@+id/PrefsTextScrollbarShow"
             android:text="@string/PrefTextScrollbarShow"

@@ -2,7 +2,7 @@
 <resources>
 
     <string name="InfoPopupText">To Do\n
-version 1.6.3 (2026.06.11)\n
+version 1.6.4 (2026.07.21)\n
 by Trevin Beattie\n
 \n
 Documentation for this app can be found on its GitHub project page:
@@ -314,6 +314,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
     <string name="PrefSortByDueDateAlpha">Due Date, Alphabetically</string>
     <string name="PrefTextAlarmSound">Alarm Sound:</string>
     <string name="PrefTextAlarmVibrate">Alarm vibrate</string>
+    <string name="PrefTextDarkTheme">Dark</string>
+    <string name="PrefTextDefaultTheme">System Default</string>
+    <string name="PrefTextLightTheme">Light</string>
     <string name="PrefTextNoSound">No sound</string>
     <string name="PrefTextPassword">Password:</string>
     <string name="PrefTextShowChecked">Show completed and hidden tasks</string>
@@ -332,6 +335,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n
         <item quantity="other">%s pages</item>
     </plurals>
     <string name="PrefTextTimeZone">Time zone:</string>
+    <string name="PrefTextUITheme">UI Theme:</string>
     <string name="PrefTextUseLocalTimeZone">Use system time zone</string>
     <string name="ProgressMessageDecrypting">Decrypting private records with the old password&#8230;</string>
     <string name="ProgressMessageEncrypting">Encrypting private records with the new password&#8230;</string>

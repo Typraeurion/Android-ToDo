@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="38"
+    android:viewportHeight="38">
+
+    <!-- Checkbox outline: 2 vp padding, 2.5 vp stroke -->
+    <path
+        android:pathData="M 3,3 L 35,3 35,35 3,35 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#ffffffff"
+        android:strokeWidth="2.5" />
+
+    <!-- Check mark: base ≈4.5 vp stroke, tip at upper-right corner of box -->
+    <path
+        android:pathData="m 13,14 c 1.84,1.43 3.77,4.09 4.73,6.04 C 20.72,16.42 28,6.17 37.64,1.17 29.63,8.34 24.67,18.92 16.95,25.95 15.5,22.61 11.67,18.03 9.95,16.91 10.75,16 11.9,14.87 13,13.92 Z"
+        android:fillColor="#ffffffff"
+        android:strokeColor="#00000000" />
+</vector>

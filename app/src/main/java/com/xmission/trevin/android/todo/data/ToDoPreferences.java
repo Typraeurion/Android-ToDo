@@ -87,6 +87,9 @@ public class ToDoPreferences
     /** Label for the currently selected category */
     public static final String TPREF_SELECTED_CATEGORY = "SelectedCategory";
 
+    /** Label for the preferences option "UI Theme" */
+    public static final String TPREF_UI_THEME = "UITheme";
+
     /**
      * Label for the preferences option "Threshold to show scrollbar in the note editor"
      */
@@ -118,6 +121,19 @@ public class ToDoPreferences
      * <i>must</i> be done on the main UI thread.
      */
     private final Handler uiHandler;
+
+    /** Values for the UI theme */
+    public enum UITheme {
+        /**
+         * Light mode (black text on white background);
+         * this was the only theme available in older versions.
+         */
+        LIGHT,
+        /** Dark mode (white text on black background) */
+        DARK,
+        /** Use the system-wide light/dark setting (default) */
+        SYSTEM_DEFAULT
+    }
 
     /**
      * Flag indicating how to merge items from the XML file
@@ -329,6 +345,18 @@ public class ToDoPreferences
         }
 
         /**
+         * Change the UI theme.
+         *
+         * @param theme the type of theme to use
+         *
+         * @return this Editor for chaining
+         */
+        public Editor setUITheme(UITheme theme) {
+            actualEditor.putString(TPREF_UI_THEME, theme.name());
+            return this;
+        }
+
+        /**
          * Change the selected category for To Do items.
          *
          * @param newCategory the index of the category to select,
@@ -463,6 +491,7 @@ public class ToDoPreferences
         listeners.put(TPREF_FIXED_TIME_ZONE, new LinkedList<>());
         listeners.put(TPREF_NOTIFICATION_VIBRATE, new LinkedList<>());
         listeners.put(TPREF_NOTIFICATION_SOUND, new LinkedList<>());
+        listeners.put(TPREF_UI_THEME, new LinkedList<>());
         listeners.put(TPREF_SELECTED_CATEGORY, new LinkedList<>());
         listeners.put(TPREF_SCROLL_THRESHOLD, new LinkedList<>());
         listeners.put(TPREF_EXPORT_FILE, new LinkedList<>());
@@ -736,6 +765,32 @@ public class ToDoPreferences
      */
     public void setNotificationSound(long soundId) {
         edit().setNotificationSound(soundId).finish();
+    }
+
+    /**
+     * @return which UI theme the user wants to view; may be
+     * {@link UITheme#SYSTEM_DEFAULT} if we should get the theme
+     * from Android&rsquo;s system-wide setting
+     */
+    public @NonNull UITheme getUITheme() {
+        String themeName = prefs.getString(TPREF_UI_THEME,
+                UITheme.SYSTEM_DEFAULT.name());
+        try {
+            return UITheme.valueOf(themeName);
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, String.format(Locale.US,
+                    "Invalid UI theme (%s) in preferences: ", themeName));
+            return UITheme.SYSTEM_DEFAULT;
+        }
+    }
+
+    /**
+     * Change the UI theme.
+     *
+     * @param theme the type of theme to use
+     */
+    public void setUITheme(@NonNull UITheme theme) {
+        edit().setUITheme(theme).finish();
     }
 
     /**

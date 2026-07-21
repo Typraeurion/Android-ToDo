@@ -498,6 +498,14 @@ descriptions is:
 povray +FN +AM3 +A0.3 +UA +W288 +H288 foo.pov
 @end example
 
+By default these icons are colored for light mode.  You will also need
+to generate alternative color icons for dark mode:
+
+@example
+povray +FN +AM3 +A0.3 +UA +W288 +H288 \
+    Declare=DarkMode=1 foo.pov
+@end example
+
 The alarm notification icon is a plain white vector drawing that was
 modeled after the checked box image, tweaked by hand in Inkscape, then
 translated to Android format in
@@ -696,15 +704,11 @@ versions:
 @item Quince Tart (Android 10, API 29) through Red Velvet Cake (Android 11, API 30)
 @item Snow Cone (Android 12, API 31--32)
 @item Tiramisu (Android 13, API 33) through Vanilla Ice Cream (Android 15, API 35)
-@item Baklava (Android 16, API 36), which is the current target version
+@item Baklava (Android 16, API 36) through Cinnamon Bun (Android 17, API 37), which is the current target version
 @end itemize
 
-Testing the following API's is suggested to ensure compatibility with
-new devices:
-
-@itemize @bullet
-@item Cinnamon Bun (Android 17, API 37) and up
-@end itemize
+Testing on any newer API's as they become available is suggested to
+ensure compatibility with new devices.
 
 On the last page finalize the details of the virtual device.  Give it
 a descriptive name which will distinguish it from other virtual

@@ -21,6 +21,23 @@ global_settings {
     max_trace_level 24
 }
 
+// Default to light-mode colors
+#ifndef (DarkMode)
+    #declare DarkMode = 0;
+#end
+
+// The arrow colors depend on whether we're rendering it for
+// light mode (bright green) or dark mode (dark green).
+#if (DarkMode = 0)
+    // Light mode
+    #declare Global_Light_Color = color White;
+    #declare Arrows_Color = color ForestGreen;
+#else
+    // Dark mode
+    #declare Global_Light_Color = color rgb < 0.7, 0.7, 0.7 >;
+    #declare Arrows_Color = color DarkGreen;
+#end
+
 camera {
     location <0, 0.75, -6.25>
     right x
@@ -37,7 +54,7 @@ sky_sphere {
 
 light_source {
     <-100, 100, -500>
-    color White
+    color Global_Light_Color
 }
 
 union {
@@ -67,7 +84,7 @@ union {
     }
     texture {
 	Dull
-	pigment { color ForestGreen }
+	pigment { color Arrows_Color }
     }
     scale <1, 0.35, 1>
     rotate -90 * x

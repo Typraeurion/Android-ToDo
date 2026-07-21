@@ -183,6 +183,7 @@ public class XMLExporterTests {
                         .nextInt(ToDoPreferences.ImportType.values().length)])
                 .setNotificationSound(RAND.nextLong(100000))
                 .setNotificationVibrate(RAND.nextBoolean())
+                .setScrollBarThreshold(RAND.nextFloat())
                 .setSelectedCategory(RAND.nextLong(100000))
                 .setShowCategory(RAND.nextBoolean())
                 .setShowChecked(RAND.nextBoolean())
@@ -190,6 +191,8 @@ public class XMLExporterTests {
                 .setShowEncrypted(RAND.nextBoolean())
                 .setShowPriority(RAND.nextBoolean())
                 .setShowPrivate(RAND.nextBoolean())
+                .setUITheme(ToDoPreferences.UITheme.values()[
+                        RAND.nextInt(ToDoPreferences.UITheme.values().length)])
                 .finish();
         if (RAND.nextBoolean())
             mockPrefs.setTimeZoneLocal();
@@ -269,6 +272,12 @@ public class XMLExporterTests {
         if (!mockPrefs.useLocalTimeZone())
             assertPreferenceEquals("Fixed Time Zone", TPREF_FIXED_TIME_ZONE,
                     mockPrefs.getTimeZone().getId(), doc);
+
+        assertPreferenceEquals("UI theme", TPREF_UI_THEME,
+                mockPrefs.getUITheme().name(), doc);
+
+        assertPreferenceEquals("Scroll bar threshold", TPREF_SCROLL_THRESHOLD,
+                Float.toString(mockPrefs.getScrollBarThreshold()), doc);
 
         MockProgressBar.Progress endProgress = progress.getEndProgress();
         assertNotNull("Final progress data", endProgress);

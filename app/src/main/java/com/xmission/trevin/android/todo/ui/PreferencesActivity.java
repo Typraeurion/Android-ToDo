@@ -39,6 +39,7 @@ import android.provider.MediaStore.Audio.Media;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
 import android.util.Log;
@@ -171,6 +172,15 @@ public class PreferencesActivity extends AppCompatActivity {
                 TextStyle.FULL, Locale.getDefault()));
         timeZoneButton.setEnabled(!prefs.useLocalTimeZone());
         timeZoneButton.setOnClickListener(TIME_ZONE_CLICK_LISTENER);
+
+        RadioGroup uiGroup = findViewById(R.id.PrefsRadioGroupUITheme);
+        int uiRadioSelection = switch (prefs.getUITheme()) {
+            case LIGHT -> R.id.PrefsRadioLightTheme;
+            case DARK -> R.id.PrefsRadioDarkTheme;
+            default -> R.id.PrefsRadioSystemTheme;
+        };
+        uiGroup.check(uiRadioSelection);
+        uiGroup.setOnCheckedChangeListener(new UIThemeChangeListener());
 
         ScrollBar scrollThresholdScrollBar = findViewById(R.id.PrefsScrollBar);
         // Compute the inverse of the exponential
@@ -443,6 +453,55 @@ public class PreferencesActivity extends AppCompatActivity {
             return true;
         }
     };
+
+    /**
+     * Called when the user changes the UI theme
+     */
+    private class UIThemeChangeListener
+            implements RadioGroup.OnCheckedChangeListener {
+        @Override
+        public void onCheckedChanged(@NonNull RadioGroup radioGroup, int i) {
+            if (i == -1) {
+                Log.d(LOG_TAG, "UIThemeChangeListener.onCheckedChanged(cleared)");
+                // The selection was cleared; re-select the current option.
+                radioGroup.check(switch (prefs.getUITheme()) {
+                    case LIGHT -> R.id.PrefsRadioLightTheme;
+                    case DARK -> R.id.PrefsRadioDarkTheme;
+                    default -> R.id.PrefsRadioSystemTheme;
+                });
+                return;
+            }
+            // Map the selected button ID to a UI theme
+            ToDoPreferences.UITheme checkedTheme;
+            int nightMode;
+            if (i == R.id.PrefsRadioLightTheme) {
+                checkedTheme = ToDoPreferences.UITheme.LIGHT;
+                nightMode = AppCompatDelegate.MODE_NIGHT_NO;
+            } else if (i == R.id.PrefsRadioDarkTheme) {
+                checkedTheme = ToDoPreferences.UITheme.DARK;
+                nightMode = AppCompatDelegate.MODE_NIGHT_YES;
+            } else if (i == R.id.PrefsRadioSystemTheme) {
+                checkedTheme = ToDoPreferences.UITheme.SYSTEM_DEFAULT;
+                nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+            } else {
+                Log.d(LOG_TAG, "UIThemeChangeListener.onCheckedChanged("
+                        + i + "): Ignoring unknown button ID");
+                return;
+            }
+            // Only act on a genuine change.  Programmatic check() calls and
+            // view-state restoration re-select the stored preference; applying
+            // the night mode again would recreate the activity and loop forever.
+            if (checkedTheme == prefs.getUITheme()) {
+                Log.d(LOG_TAG, "UIThemeChangeListener.onCheckedChanged("
+                        + checkedTheme + "): unchanged, ignoring");
+                return;
+            }
+            Log.d(LOG_TAG, "UIThemeChangeListener.onCheckedChanged("
+                    + checkedTheme + ")");
+            prefs.setUITheme(checkedTheme);
+            AppCompatDelegate.setDefaultNightMode(nightMode);
+        }
+    }
 
     /**
      * Fraction characters.  The n/5 and n/6 characters were not supported

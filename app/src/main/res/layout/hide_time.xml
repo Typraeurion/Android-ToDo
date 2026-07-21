@@ -2,14 +2,14 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
-    android:background="@color/white"
+    android:background="@color/view_background"
     android:layout_height="match_parent"
     android:layout_width="match_parent">
     <CheckBox android:id="@+id/HideCheckBox"
         android:layout_height="wrap_content"
         android:text="@string/HideTextHide"
         android:layout_width="match_parent"
-        android:textColor="@color/black"/>
+        android:textColor="@color/text_color"/>
 
     <LinearLayout android:id="@+id/LinearLayout01"
         android:layout_width="wrap_content"
@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/HideTextDaysEarlier"
-            android:textColor="@color/black"
+            android:textColor="@color/text_color"
             android:padding="4sp"
             android:labelFor="@id/HideEditDaysEarlier"/>
     </LinearLayout>
@@ -37,7 +37,7 @@
         android:layout_gravity="center"
         android:layout_width="wrap_content"
         android:lines="2"
-        android:textColor="@color/black"
+        android:textColor="@color/text_color"
         android:text="@string/HideTextShow"/>
 
     <LinearLayout android:id="@+id/LinearLayout02"

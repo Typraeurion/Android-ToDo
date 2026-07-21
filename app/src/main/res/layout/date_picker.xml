@@ -2,7 +2,7 @@
 <ScrollView
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:id="@+id/DatePicker"
-  android:background="@color/white"
+  android:background="@color/view_background"
   android:layout_height="match_parent"
   android:layout_width="match_parent"
   android:scrollbars="vertical"
@@ -20,7 +20,7 @@
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
             android:text="2025"
-            android:textColor="@color/black">
+            android:textColor="@color/text_color">
         </TextView>
         <Button style="@style/DatePicker.Button.Year"
             android:id="@+id/DatePickerPriorYearButton"
